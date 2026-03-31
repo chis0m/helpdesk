@@ -1,5 +1,14 @@
 # Frontend Setup
 
+## Tools used (and why)
+
+- **Vue 3**: Used to build the frontend UI in reusable components. It is simple, fast, and good for building screens like login, dashboard, and ticket pages.
+- **TypeScript**: Used for type safety. It catches many mistakes early and makes the code easier to maintain as the project grows.
+- **Vite**: Used as the dev server and build tool. It starts quickly and gives a fast development experience.
+- **Tailwind CSS**: Used for styling. It helps build clean UI faster with utility classes and keeps styling consistent.
+- **ESLint (Vue + TypeScript rules)**: Used to enforce code quality and consistency, and to catch common errors before submission.
+- **vite-plugin-checker**: Used to run TypeScript/Vue checks during development and show issues early in terminal/overlay.
+
 ## Commands used to initialize this app
 
 ```bash
