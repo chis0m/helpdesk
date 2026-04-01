@@ -9,6 +9,7 @@ import (
 	"helpdesk/backend/internal/container"
 	"helpdesk/backend/internal/database"
 	"helpdesk/backend/internal/routes"
+	"helpdesk/backend/seed"
 )
 
 type App struct {
@@ -19,9 +20,16 @@ type App struct {
 func NewApp() (*App, error) {
 	cfg := config.Load()
 
+	if err := database.RunMigrations(cfg.MySQLDSN()); err != nil {
+		return nil, fmt.Errorf("run migrations: %w", err)
+	}
+
 	db, err := database.Connect(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("connect db: %w", err)
+	}
+	if err := seed.SeedAll(db, cfg); err != nil {
+		return nil, fmt.Errorf("seed data: %w", err)
 	}
 
 	c := container.New(db)

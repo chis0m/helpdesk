@@ -20,6 +20,6 @@ func (s *UserService) CreateUser(input requests.CreateUserInput) (*models.User, 
 	return s.userRepo.Create(input)
 }
 
-func (s *UserService) UpdateUser(userID uuid.UUID, input requests.UpdateUserInput) (*models.User, error) {
-	return s.userRepo.Update(userID, input)
+func (s *UserService) UpdateUser(userUUID uuid.UUID, input requests.UpdateUserInput) (*models.User, error) {
+	return s.userRepo.Update(userUUID, input)
 }

@@ -25,7 +25,7 @@ func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, e
 	}
 
 	user := &models.User{
-		ID:           uuid.New(),
+		UUID:         uuid.New(),
 		Email:        input.Email,
 		PasswordHash: input.PasswordHash,
 		FirstName:    input.FirstName,
@@ -42,9 +42,9 @@ func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, e
 	return user, nil
 }
 
-func (r *UserRepository) Update(userID uuid.UUID, input requests.UpdateUserInput) (*models.User, error) {
+func (r *UserRepository) Update(userUUID uuid.UUID, input requests.UpdateUserInput) (*models.User, error) {
 	var user models.User
-	if err := r.db.First(&user, "id = ?", userID).Error; err != nil {
+	if err := r.db.First(&user, "uuid = ?", userUUID).Error; err != nil {
 		return nil, err
 	}
 
@@ -75,7 +75,7 @@ func (r *UserRepository) Update(userID uuid.UUID, input requests.UpdateUserInput
 	if err := r.db.Model(&user).Updates(updates).Error; err != nil {
 		return nil, err
 	}
-	if err := r.db.First(&user, "id = ?", userID).Error; err != nil {
+	if err := r.db.First(&user, "uuid = ?", userUUID).Error; err != nil {
 		return nil, errors.New("user updated but failed to reload")
 	}
 

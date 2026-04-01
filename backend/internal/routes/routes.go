@@ -9,7 +9,7 @@ import (
 func Register(r *gin.Engine, c *container.Container) {
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
-			"message": "Welcome to Secure Web Help Desk",
+			"message": "welcome to secure web helpdesk",
 		})
 	})
 

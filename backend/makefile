@@ -37,4 +37,4 @@ check:
 tidy:
 	go mod tidy
 
-.PHONY: goose_operations serve check tidy
+.PHONY: goose_operations gm gs gu guo gd gr serve check tidy
