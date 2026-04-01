@@ -12,3 +12,5 @@ Database: `MySQL`.
 Backend architecture: `MVC` with dependency injection.
 
 Password hashing: `Argon2id`.
+
+Logging: `zerolog` (pretty logs in development, structured logs in production).

@@ -33,7 +33,7 @@ Health check: `GET http://localhost:8080/api/health`
 - `godotenv`: local `.env` loading for configuration.
 - `go-playground/validator`: request payload validation.
 - `Argon2id` (`golang.org/x/crypto/argon2`): modern password hashing.
-- `zap`: structured logs for debugging and audit-friendly logs.
+- `zerolog`: structured logging with clean pretty logs in development.
 - `gin-contrib/cors`: CORS setup between Vue frontend and Go API.
 - `paseto`: secure token format for auth implementation.
 

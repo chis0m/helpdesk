@@ -1,8 +1,7 @@
-package seed
+package seeds
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/google/uuid"
@@ -10,20 +9,27 @@ import (
 
 	"helpdesk/backend/internal/auth"
 	"helpdesk/backend/internal/config"
+	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/models"
 )
 
-func seedAdminUser(db *gorm.DB, cfg config.Config) error {
+func SeedAdminUser(db *gorm.DB, cfg config.Config) error {
+	log := logger.L()
+	log.Info().Msg("checking admin user seed")
+
 	email := strings.TrimSpace(cfg.SeedAdminEmail)
 	if email == "" {
+		log.Error().Msg("seed admin email is empty")
 		return errors.New("SEED_ADMIN_EMAIL cannot be empty")
 	}
 	if strings.TrimSpace(cfg.SeedAdminPassword) == "" {
+		log.Error().Msg("seed admin password is empty")
 		return errors.New("SEED_ADMIN_PASSWORD cannot be empty")
 	}
 
 	hash, err := auth.HashPassword(cfg.SeedAdminPassword)
 	if err != nil {
+		log.Error().Err(err).Msg("failed to hash seed admin password")
 		return err
 	}
 
@@ -47,12 +53,13 @@ func seedAdminUser(db *gorm.DB, cfg config.Config) error {
 	admin := models.User{Email: email}
 	result := db.Where("email = ?", email).Attrs(attrs).FirstOrCreate(&admin)
 	if result.Error != nil {
+		log.Error().Err(result.Error).Msg("failed creating/finding seed admin user")
 		return result.Error
 	}
 	if result.RowsAffected > 0 {
-		fmt.Printf("[seed] admin user created: %s\n", email)
+		log.Info().Str("email", email).Msg("admin user created")
 	} else {
-		fmt.Printf("[seed] admin user already exists: %s\n", email)
+		log.Info().Str("email", email).Msg("admin user already exists")
 	}
 	return nil
 }
