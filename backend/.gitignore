@@ -1,0 +1,26 @@
+.env
+.env.local
+.env.*.local
+
+# Binaries and build outputs
+bin/
+dist/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+
+# Logs and temp files
+*.log
+tmp/
+.tmp/
+
+# IDE / OS files
+.DS_Store
+.idea/
+.vscode/
