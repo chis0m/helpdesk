@@ -12,4 +12,15 @@
 //     https://pkg.go.dev/golang.org/x/crypto/argon2#hdr-Argon2id
 //   - Alex Edwards blog post on hashing/verifying with Argon2 in Go:
 //     https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go
+//
+// |--------------------------------------------------------------------------
+// | PASETO + Payload
+// |--------------------------------------------------------------------------
+//
+// PASETO helpers in this package are used to:
+//   - generate access and refresh tokens
+//   - verify token validity and token type
+//
+// Payload contains the core auth claims used in this project:
+// iss, sub, role, aud, iat, exp, jti, type, and sess_id.
 package auth
