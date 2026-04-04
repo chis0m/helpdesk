@@ -24,3 +24,5 @@ tmp/
 .DS_Store
 .idea/
 .vscode/
+TASK.md
+TODO.md
