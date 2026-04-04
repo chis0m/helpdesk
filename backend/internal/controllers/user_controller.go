@@ -24,6 +24,109 @@ func NewUserController(userService *services.UserService) *UserController {
 	return &UserController{userService: userService}
 }
 
+func (u *UserController) Create(c *gin.Context) {
+	log := logger.L()
+
+	var req requests.CreateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Warn().Err(err).Msg("create user failed: invalid request payload")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
+		return
+	}
+
+	user, err := u.userService.CreateUserFromRequest(req)
+	if err != nil {
+		log.Error().Err(err).Msg("create user failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusCreated, gin.H{
+		"user_id":    user.ID,
+		"user_uuid":  user.UUID.String(),
+		"email":      user.Email,
+		"role":       user.Role,
+		"is_active":  user.IsActive,
+	}, "user created")
+}
+
+func (u *UserController) GetByID(c *gin.Context) {
+	log := logger.L()
+
+	userIDParam := c.Param("id")
+	userID, err := strconv.ParseUint(userIDParam, 10, 64)
+	if err != nil {
+		log.Warn().Err(err).Str("user_id", userIDParam).Msg("get user failed: invalid id")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+		return
+	}
+
+	user, err := u.userService.GetByID(userID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Warn().Uint64("user_id", userID).Msg("get user failed: user not found")
+			response.FailureWithAbort(c, http.StatusNotFound, "user not found", "user not found")
+			return
+		}
+		log.Error().Err(err).Uint64("user_id", userID).Msg("get user failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusOK, gin.H{
+		"user_id":    user.ID,
+		"user_uuid":  user.UUID.String(),
+		"email":      user.Email,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+		"middle_name": user.MiddleName,
+		"role":       user.Role,
+		"is_active":  user.IsActive,
+	}, "user fetched")
+}
+
+func (u *UserController) UpdateByID(c *gin.Context) {
+	log := logger.L()
+
+	userIDParam := c.Param("id")
+	userID, err := strconv.ParseUint(userIDParam, 10, 64)
+	if err != nil {
+		log.Warn().Err(err).Str("user_id", userIDParam).Msg("update user failed: invalid id")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+		return
+	}
+
+	var req requests.UpdateUserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Warn().Err(err).Msg("update user failed: invalid request payload")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
+		return
+	}
+
+	user, err := u.userService.UpdateByID(userID, req)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Warn().Uint64("user_id", userID).Msg("update user failed: user not found")
+			response.FailureWithAbort(c, http.StatusNotFound, "user not found", "user not found")
+			return
+		}
+		log.Error().Err(err).Uint64("user_id", userID).Msg("update user failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusOK, gin.H{
+		"user_id":    user.ID,
+		"user_uuid":  user.UUID.String(),
+		"email":      user.Email,
+		"first_name": user.FirstName,
+		"last_name":  user.LastName,
+		"middle_name": user.MiddleName,
+		"role":       user.Role,
+		"is_active":  user.IsActive,
+	}, "user updated")
+}
+
 func (u *UserController) UpdateRoleByUserID(c *gin.Context) {
 	log := logger.L()
 

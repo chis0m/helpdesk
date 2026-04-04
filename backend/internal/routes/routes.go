@@ -24,27 +24,20 @@ func Register(r *gin.Engine, c *container.Container) {
 	{
 		api.GET("/health", c.HealthController.Ping)
 		api.GET("/auth/public-csrf-token", c.AuthController.PublicAuthCSRFToken)
-		api.POST("/auth/login", 
-			loginRateLimiter.Middleware(), 
-			middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), 
-			c.AuthController.Login,
-		)
-		api.POST("/auth/signup", 
-			signupRateLimiter.Middleware(), 
-			middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), 
-			c.AuthController.Signup,
-		)
-		api.POST("/auth/refresh", 
-			middleware.RefreshTokenRequired(c.TokenMaker, auth.RefreshCookieName), 
-			middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), 
-			c.AuthController.Refresh,
-		)
+		api.POST("/auth/login", loginRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Login)
+		api.POST("/auth/signup", signupRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Signup)
+		api.POST("/auth/refresh", middleware.RefreshTokenRequired(c.TokenMaker, auth.RefreshCookieName), middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.Refresh)
 
 		protected := api.Group("")
 		protected.Use(middleware.AuthRequired(c.TokenMaker, auth.AccessCookieName), middleware.ActiveSessionRequired(c.SessionRepo))
 		{
 			protected.GET("/auth/csrf-token", c.AuthController.CSRFToken)
-
+			protected.GET("/auth/me", c.AuthController.Me)
+			protected.POST("/auth/logout", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.Logout)
+			protected.POST("/auth/change-password", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.ChangePassword)
+			protected.POST("/users", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.Create)
+			protected.GET("/users/:id", c.UserController.GetByID)
+			protected.PATCH("/users/:id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.UpdateByID)
 			// VULN-03: admin authorization hardening is intentionally weak; privilege escalation is possible.
 			protected.PATCH("/admin/users/:user_id/role", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.UpdateRoleByUserID)
 		}

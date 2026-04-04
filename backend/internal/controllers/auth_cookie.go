@@ -36,3 +36,14 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 	c.SetCookie(auth.AccessCookieName, tokens.AccessToken, accessMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 	c.SetCookie(auth.RefreshCookieName, tokens.RefreshToken, refreshMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 }
+
+func clearAuthCookies(c *gin.Context) {
+	secureCookie := false
+	httpOnlyCookie := false
+	cookiePath := "/"
+	cookieDomain := ""
+
+	c.SetSameSite(http.SameSiteNoneMode)
+	c.SetCookie(auth.AccessCookieName, "", -1, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
+	c.SetCookie(auth.RefreshCookieName, "", -1, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
+}

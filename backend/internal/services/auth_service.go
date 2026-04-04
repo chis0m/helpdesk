@@ -21,6 +21,7 @@ var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrInvalidRefreshToken = errors.New("invalid refresh token")
 var ErrInvalidSession = errors.New("invalid session")
 var ErrSignupFailed = errors.New("unable to complete signup")
+var ErrInvalidPassword = errors.New("invalid password")
 
 type LoginResult struct {
 	User   *models.User
@@ -300,4 +301,53 @@ func (s *AuthService) GetOrIssueCSRFToken(session *models.AuthSession) (*auth.CS
 	}
 
 	return s.IssueCSRFToken(session.SessionID)
+}
+
+func (s *AuthService) Logout(sessionID string) error {
+	sessionUUID, err := uuid.Parse(strings.TrimSpace(sessionID))
+	if err != nil {
+		return ErrInvalidSession
+	}
+	if err := s.sessionRepo.RevokeBySessionID(sessionUUID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AuthService) GetMe(userUUID string) (*models.User, error) {
+	parsed, err := uuid.Parse(strings.TrimSpace(userUUID))
+	if err != nil {
+		return nil, ErrInvalidSession
+	}
+	return s.userRepo.GetByUUID(parsed)
+}
+
+func (s *AuthService) ChangePassword(userUUID, currentPassword, newPassword string) error {
+	parsed, err := uuid.Parse(strings.TrimSpace(userUUID))
+	if err != nil {
+		return ErrInvalidSession
+	}
+
+	user, err := s.userRepo.GetByUUID(parsed)
+	if err != nil {
+		return err
+	}
+
+	ok, err := auth.VerifyPassword(strings.TrimSpace(currentPassword), user.PasswordHash)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrInvalidPassword
+	}
+
+	newHash, err := auth.HashPassword(strings.TrimSpace(newPassword))
+	if err != nil {
+		return err
+	}
+
+	if err := s.userRepo.UpdatePasswordByUUID(parsed, newHash, false, time.Now().UTC()); err != nil {
+		return err
+	}
+	return nil
 }
