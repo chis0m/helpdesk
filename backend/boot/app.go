@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"helpdesk/backend/internal/auth"
 	"helpdesk/backend/internal/config"
 	"helpdesk/backend/internal/container"
 	"helpdesk/backend/internal/database"
@@ -40,7 +41,13 @@ func NewApp() (*App, error) {
 	}
 	log.Info().Msg("seed process completed")
 
-	c := container.New(db)
+	tokenMaker, err := auth.NewPasetoMaker(cfg.PasetoSymmetricKey)
+	if err != nil {
+		return nil, fmt.Errorf("initialize paseto maker: %w", err)
+	}
+	log.Info().Msg("paseto maker initialized")
+
+	c := container.New(db, tokenMaker)
 
 	engine := gin.Default()
 	routes.Register(engine, c)
