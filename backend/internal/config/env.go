@@ -41,7 +41,7 @@ func Load() Config {
 		DBUsername:           getEnv("DB_USERNAME", "admin"),
 		DBPassword:           getEnv("DB_PASSWORD", "password"),
 		DBPort:               getEnv("DB_PORT", "3306"),
-		SeedAdminEmail:       getEnv("SEED_ADMIN_EMAIL", "x25166280@Student.ncirl.ie"),
+		SeedAdminEmail:       getEnv("SEED_ADMIN_EMAIL", "admin@helpdesk.ie"),
 		SeedAdminPassword:    getEnv("SEED_ADMIN_PASSWORD", "password"),
 		SeedAdminFirstName:   getEnv("SEED_ADMIN_FIRST_NAME", "cyber"),
 		SeedAdminMiddleName:  getEnv("SEED_ADMIN_MIDDLE_NAME", ""),
