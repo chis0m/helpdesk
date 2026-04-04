@@ -26,6 +26,7 @@ type Config struct {
 	PasetoSymmetricKey   string
 	AccessTokenDuration  string
 	RefreshTokenDuration string
+	CSRFTokenDuration    string
 	GoEnv                string
 	LogLevel             string
 }
@@ -51,6 +52,7 @@ func Load() Config {
 		PasetoSymmetricKey:   getEnv("PASETO_SYMMETRIC_KEY", "12345678901234567890123456789012"),
 		AccessTokenDuration:  getEnv("ACCESS_TOKEN_DURATION", "15m"),
 		RefreshTokenDuration: getEnv("REFRESH_TOKEN_DURATION", "168h"),
+		CSRFTokenDuration:    getEnv("CSRF_TOKEN_DURATION", "60m"),
 		LogLevel:             getEnv("LOG_LEVEL", "info"),
 	}
 }
@@ -80,6 +82,10 @@ func (c Config) AccessTokenTTL() time.Duration {
 
 func (c Config) RefreshTokenTTL() time.Duration {
 	return parseDuration(c.RefreshTokenDuration, 7*24*time.Hour)
+}
+
+func (c Config) CSRFTTL() time.Duration {
+	return parseDuration(c.CSRFTokenDuration, 60*time.Minute)
 }
 
 func (c Config) TokenIssuer() string {

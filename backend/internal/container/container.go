@@ -17,16 +17,18 @@ type Container struct {
 	AuthController   *controllers.AuthController
 	UserService      *services.UserService
 	TokenMaker       auth.MakerInterface
+	LoginCSRFStore   *auth.LoginCSRFStore
 	SessionRepo      *repositories.AuthSessionRepository
 }
 
 func New(db *gorm.DB, cfg config.Config, tokenMaker auth.MakerInterface) *Container {
 	userRepo := repositories.NewUserRepository(db)
 	sessionRepo := repositories.NewAuthSessionRepository(db)
+	loginCSRFStore := auth.NewLoginCSRFStore(cfg.CSRFTTL())
 	userService := services.NewUserService(userRepo)
 	authService := services.NewAuthService(cfg, tokenMaker, userRepo, sessionRepo)
 	healthController := controllers.NewHealthController()
-	authController := controllers.NewAuthController(cfg, authService)
+	authController := controllers.NewAuthController(cfg, authService, loginCSRFStore)
 
 	return &Container{
 		DB:               db,
@@ -34,6 +36,7 @@ func New(db *gorm.DB, cfg config.Config, tokenMaker auth.MakerInterface) *Contai
 		AuthController:   authController,
 		UserService:      userService,
 		TokenMaker:       tokenMaker,
+		LoginCSRFStore:   loginCSRFStore,
 		SessionRepo:      sessionRepo,
 	}
 }

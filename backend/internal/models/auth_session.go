@@ -12,6 +12,8 @@ type AuthSession struct {
 	UserUUID         uuid.UUID  `gorm:"type:char(36);index;not null"`
 	RefreshJTI       string     `gorm:"type:char(36);index;not null"`
 	RefreshExpiresAt time.Time  `gorm:"type:datetime(3);not null"`
+	CSRFToken        *string    `gorm:"type:varchar(128)"`
+	CSRFExpiresAt    *time.Time `gorm:"type:datetime(3)"`
 	RevokedAt        *time.Time `gorm:"type:datetime(3);index"`
 	CreatedAt        time.Time
 	UpdatedAt        time.Time

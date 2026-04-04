@@ -19,12 +19,18 @@ import (
 type AuthController struct {
 	cfg         config.Config
 	authService *services.AuthService
+	loginCSRF   *auth.LoginCSRFStore
 }
 
-func NewAuthController(cfg config.Config, authService *services.AuthService) *AuthController {
+func NewAuthController(
+	cfg config.Config,
+	authService *services.AuthService,
+	loginCSRF *auth.LoginCSRFStore,
+) *AuthController {
 	return &AuthController{
 		cfg:         cfg,
 		authService: authService,
+		loginCSRF:   loginCSRF,
 	}
 }
 
@@ -62,7 +68,18 @@ func (a *AuthController) Login(c *gin.Context) {
 		"role":                  result.User.Role,
 		"must_change_password":  result.User.MustChangePassword,
 		"access_expires_at_utc": result.Tokens.AccessExpires.UTC(),
+		"csrf_token":            result.CSRF.Token,
+		"csrf_expires_at_utc":   result.CSRF.ExpiresAt.UTC(),
 	}, "login successful")
+}
+
+func (a *AuthController) LoginCSRFToken(c *gin.Context) {
+	result := a.loginCSRF.Issue()
+
+	response.Success(c, http.StatusOK, gin.H{
+		"csrf_token":          result.Token,
+		"csrf_expires_at_utc": result.ExpiresAt.UTC(),
+	}, "login csrf token ready")
 }
 
 func (a *AuthController) Refresh(c *gin.Context) {
@@ -97,5 +114,47 @@ func (a *AuthController) Refresh(c *gin.Context) {
 	setAuthCookies(c, a.cfg, *result)
 	response.Success(c, http.StatusOK, gin.H{
 		"access_expires_at_utc": result.AccessExpires.UTC(),
+		"csrf_token":            result.CSRFToken,
+		"csrf_expires_at_utc":   result.CSRFExpiresAt.UTC(),
 	}, "refresh successful")
+}
+
+func (a *AuthController) CSRFToken(c *gin.Context) {
+	log := logger.L()
+
+	sessionIDRaw, ok := c.Get(middleware.CtxSessionID)
+	if !ok {
+		log.Warn().Msg("csrf token issue failed: missing session id in context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "invalid session", "invalid session")
+		return
+	}
+
+	sessionID, ok := sessionIDRaw.(string)
+	if !ok || strings.TrimSpace(sessionID) == "" {
+		log.Warn().Msg("csrf token issue failed: invalid session id in context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "invalid session", "invalid session")
+		return
+	}
+
+	result, err := a.authService.IssueCSRFTokenBySessionID(sessionID)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidSession) {
+			log.Warn().
+				Str("session_id", strings.TrimSpace(sessionID)).
+				Msg("csrf token issue failed: invalid session")
+			response.FailureWithAbort(c, http.StatusUnauthorized, "invalid session", "invalid session")
+			return
+		}
+		log.Error().Err(err).Msg("csrf token issue failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	log.Info().
+		Str("session_id", strings.TrimSpace(sessionID)).
+		Msg("csrf token issued")
+	response.Success(c, http.StatusOK, gin.H{
+		"csrf_token":          result.Token,
+		"csrf_expires_at_utc": result.ExpiresAt.UTC(),
+	}, "csrf token ready")
 }

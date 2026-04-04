@@ -23,14 +23,16 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 		refreshMaxAge = 0
 	}
 
-	// VULN-01: Insecure cookie settings
+	// Baseline branch (intentionally weak cookie security):
+	// - Secure=false
+	// - HttpOnly=false
+	// - SameSite=None
 	secureCookie := false
 	httpOnlyCookie := false
-	sameSiteMode := http.SameSiteNoneMode
 	cookiePath := "/"
 	cookieDomain := ""
 
-	c.SetSameSite(sameSiteMode)
+	c.SetSameSite(http.SameSiteNoneMode)
 	c.SetCookie(auth.AccessCookieName, tokens.AccessToken, accessMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 	c.SetCookie(auth.RefreshCookieName, tokens.RefreshToken, refreshMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 }

@@ -18,10 +18,12 @@ import (
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrInvalidRefreshToken = errors.New("invalid refresh token")
+var ErrInvalidSession = errors.New("invalid session")
 
 type LoginResult struct {
 	User   *models.User
 	Tokens auth.TokenPair
+	CSRF   auth.CSRFToken
 }
 
 type AuthService struct {
@@ -53,7 +55,6 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 
 	user, err := s.userRepo.GetByEmail(email)
 	if err != nil {
-		log.Error().Err(err).Msg("get user by email failed")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrInvalidCredentials
 		}
@@ -62,11 +63,9 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 
 	ok, err := auth.VerifyPassword(password, user.PasswordHash)
 	if err != nil {
-		log.Error().Err(err).Msg("verify password failed")
 		return nil, err
 	}
 	if !ok {
-		log.Error().Err(ErrInvalidCredentials).Msg("invalid credentials")
 		return nil, ErrInvalidCredentials
 	}
 
@@ -83,7 +82,6 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 	}
 	accessToken, accessPayload, err := s.tokenMaker.CreateAccessToken(accessClaims)
 	if err != nil {
-		log.Error().Err(err).Msg("create access token failed")
 		return nil, fmt.Errorf("create access token: %w", err)
 	}
 
@@ -98,13 +96,16 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 	}
 	refreshToken, refreshPayload, err := s.tokenMaker.CreateRefreshToken(refreshClaims)
 	if err != nil {
-		log.Error().Err(err).Msg("create refresh token failed")
 		return nil, fmt.Errorf("create refresh token: %w", err)
 	}
 
 	if _, err := s.sessionRepo.Create(user.UUID, sessionID, refreshPayload.Jti, refreshPayload.Exp); err != nil {
-		log.Error().Err(err).Msg("create auth session failed")
 		return nil, fmt.Errorf("create auth session: %w", err)
+	}
+
+	csrfToken, err := s.IssueCSRFToken(sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("issue csrf token: %w", err)
 	}
 
 	log.Info().
@@ -119,7 +120,10 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 			RefreshToken:   refreshToken,
 			AccessExpires:  accessPayload.Exp,
 			RefreshExpires: refreshPayload.Exp,
+			CSRFToken:      csrfToken.Token,
+			CSRFExpiresAt:  csrfToken.ExpiresAt,
 		},
+		CSRF: *csrfToken,
 	}, nil
 }
 
@@ -127,19 +131,16 @@ func (s *AuthService) Refresh(refreshPayload *auth.Payload) (*auth.TokenPair, er
 	log := logger.L()
 
 	if refreshPayload == nil || refreshPayload.Type != auth.TokenTypeRefresh {
-		log.Error().Err(ErrInvalidRefreshToken).Msg("refresh token required")
 		return nil, ErrInvalidRefreshToken
 	}
 
 	sessionID, err := uuid.Parse(refreshPayload.SessID)
 	if err != nil {
-		log.Error().Err(err).Msg("parse session ID failed")
 		return nil, ErrInvalidRefreshToken
 	}
 
 	session, err := s.sessionRepo.GetActiveBySessionID(sessionID)
 	if err != nil {
-		log.Error().Err(err).Msg("get active session by session ID failed")
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrInvalidRefreshToken
 		}
@@ -147,7 +148,6 @@ func (s *AuthService) Refresh(refreshPayload *auth.Payload) (*auth.TokenPair, er
 	}
 
 	if session.RefreshExpiresAt.UTC().Before(time.Now().UTC()) {
-		log.Error().Err(ErrInvalidRefreshToken).Msg("refresh token expired")
 		return nil, ErrInvalidRefreshToken
 	}
 
@@ -191,10 +191,63 @@ func (s *AuthService) Refresh(refreshPayload *auth.Payload) (*auth.TokenPair, er
 		return nil, fmt.Errorf("rotate refresh token: %w", err)
 	}
 
+	csrfToken, err := s.GetOrIssueCSRFToken(session)
+	if err != nil {
+		return nil, fmt.Errorf("get or issue csrf token: %w", err)
+	}
+
 	return &auth.TokenPair{
 		AccessToken:    accessToken,
 		RefreshToken:   refreshToken,
 		AccessExpires:  accessPayload.Exp,
 		RefreshExpires: newRefreshPayload.Exp,
+		CSRFToken:      csrfToken.Token,
+		CSRFExpiresAt:  csrfToken.ExpiresAt,
 	}, nil
+}
+
+func (s *AuthService) IssueCSRFToken(sessionID uuid.UUID) (*auth.CSRFToken, error) {
+	tokenID := uuid.NewString()
+	expiresAt := time.Now().UTC().Add(s.cfg.CSRFTTL())
+
+	if err := s.sessionRepo.UpsertCSRFToken(sessionID, tokenID, expiresAt); err != nil {
+		return nil, err
+	}
+
+	return &auth.CSRFToken{
+		Token:     tokenID,
+		ExpiresAt: expiresAt,
+	}, nil
+}
+
+func (s *AuthService) IssueCSRFTokenBySessionID(sessionID string) (*auth.CSRFToken, error) {
+	sessionUUID, err := uuid.Parse(strings.TrimSpace(sessionID))
+	if err != nil {
+		return nil, ErrInvalidSession
+	}
+
+	session, err := s.sessionRepo.GetActiveBySessionID(sessionUUID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrInvalidSession
+		}
+		return nil, err
+	}
+
+	return s.GetOrIssueCSRFToken(session)
+}
+
+func (s *AuthService) GetOrIssueCSRFToken(session *models.AuthSession) (*auth.CSRFToken, error) {
+	if session == nil {
+		return nil, ErrInvalidSession
+	}
+
+	if session.CSRFToken != nil && session.CSRFExpiresAt != nil && session.CSRFExpiresAt.UTC().After(time.Now().UTC()) {
+		return &auth.CSRFToken{
+			Token:     *session.CSRFToken,
+			ExpiresAt: session.CSRFExpiresAt.UTC(),
+		}, nil
+	}
+
+	return s.IssueCSRFToken(session.SessionID)
 }

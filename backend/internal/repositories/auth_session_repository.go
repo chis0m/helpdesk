@@ -66,3 +66,16 @@ func (r *AuthSessionRepository) RevokeBySessionID(sessionID uuid.UUID) error {
 		Where("session_id = ? AND revoked_at IS NULL", sessionID).
 		Update("revoked_at", now).Error
 }
+
+func (r *AuthSessionRepository) UpsertCSRFToken(
+	sessionID uuid.UUID,
+	token string,
+	expiresAt time.Time,
+) error {
+	return r.db.Model(&models.AuthSession{}).
+		Where("session_id = ? AND revoked_at IS NULL", sessionID).
+		Updates(map[string]any{
+			"csrf_token":      token,
+			"csrf_expires_at": expiresAt.UTC(),
+		}).Error
+}

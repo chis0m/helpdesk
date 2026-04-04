@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
   user_uuid CHAR(36) NOT NULL,
   refresh_jti CHAR(36) NOT NULL,
   refresh_expires_at DATETIME(3) NOT NULL,
+  csrf_token VARCHAR(128) NULL,
+  csrf_expires_at DATETIME(3) NULL,
   revoked_at DATETIME(3) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -17,6 +19,7 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
   INDEX idx_auth_sessions_session_id (session_id),
   INDEX idx_auth_sessions_user_uuid (user_uuid),
   INDEX idx_auth_sessions_refresh_jti (refresh_jti),
+  INDEX idx_auth_sessions_csrf_expires_at (csrf_expires_at),
   INDEX idx_auth_sessions_revoked_at (revoked_at)
 );
 -- +goose StatementEnd
