@@ -1,6 +1,10 @@
 package requests
 
-import "helpdesk/backend/internal/models"
+import (
+	"time"
+
+	"helpdesk/backend/internal/models"
+)
 
 type CreateUserInput struct {
 	Email        string
@@ -9,6 +13,9 @@ type CreateUserInput struct {
 	LastName     string
 	MiddleName   *string
 	Role         models.UserRole
+	IsActive           *bool
+	MustChangePassword *bool
+	PasswordChangedAt  *time.Time
 }
 
 type UpdateUserInput struct {
@@ -18,4 +25,8 @@ type UpdateUserInput struct {
 	MiddleName *string
 	Role       *models.UserRole
 	IsActive   *bool
+}
+
+type UpdateUserRoleRequest struct {
+	Role models.UserRole `json:"role" binding:"required,oneof=user staff admin"`
 }

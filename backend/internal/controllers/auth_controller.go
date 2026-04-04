@@ -19,18 +19,18 @@ import (
 type AuthController struct {
 	cfg         config.Config
 	authService *services.AuthService
-	loginCSRF   *auth.LoginCSRFStore
+	publicAuthCSRF *auth.PublicAuthCSRFStore
 }
 
 func NewAuthController(
 	cfg config.Config,
 	authService *services.AuthService,
-	loginCSRF *auth.LoginCSRFStore,
+	publicAuthCSRF *auth.PublicAuthCSRFStore,
 ) *AuthController {
 	return &AuthController{
 		cfg:         cfg,
 		authService: authService,
-		loginCSRF:   loginCSRF,
+		publicAuthCSRF: publicAuthCSRF,
 	}
 }
 
@@ -39,6 +39,7 @@ func (a *AuthController) Login(c *gin.Context) {
 
 	var req requests.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Warn().Err(err).Msg("login failed: invalid request payload")
 		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
 		return
 	}
@@ -73,13 +74,44 @@ func (a *AuthController) Login(c *gin.Context) {
 	}, "login successful")
 }
 
-func (a *AuthController) LoginCSRFToken(c *gin.Context) {
-	result := a.loginCSRF.Issue()
+func (a *AuthController) PublicAuthCSRFToken(c *gin.Context) {
+	result := a.publicAuthCSRF.Issue()
 
 	response.Success(c, http.StatusOK, gin.H{
 		"csrf_token":          result.Token,
 		"csrf_expires_at_utc": result.ExpiresAt.UTC(),
-	}, "login csrf token ready")
+	}, "public auth csrf token ready")
+}
+
+func (a *AuthController) Signup(c *gin.Context) {
+	log := logger.L()
+
+	var req requests.SignupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Warn().Err(err).Msg("signup failed: invalid request payload")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
+		return
+	}
+
+	user, err := a.authService.Signup(req)
+	if err != nil {
+		if errors.Is(err, services.ErrSignupFailed) {
+			log.Warn().
+				Str("email", strings.TrimSpace(req.Email)).
+				Msg("signup failed")
+			response.FailureWithAbort(c, http.StatusBadRequest, "unable to complete signup", "unable to complete signup")
+			return
+		}
+		log.Error().Err(err).Msg("signup failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusCreated, gin.H{
+		"user_uuid":    user.UUID.String(),
+		"email":        user.Email,
+		"redirect_to":  "/login",
+	}, "signup successful")
 }
 
 func (a *AuthController) Refresh(c *gin.Context) {
@@ -87,12 +119,14 @@ func (a *AuthController) Refresh(c *gin.Context) {
 
 	value, ok := c.Get(middleware.CtxAuthPayload)
 	if !ok {
+		log.Warn().Msg("refresh failed: missing auth payload in context")
 		response.FailureWithAbort(c, http.StatusUnauthorized, "invalid refresh token", "invalid refresh token")
 		return
 	}
 
 	refreshPayload, ok := value.(*auth.Payload)
 	if !ok || refreshPayload == nil {
+		log.Warn().Msg("refresh failed: invalid auth payload type in context")
 		response.FailureWithAbort(c, http.StatusUnauthorized, "invalid refresh token", "invalid refresh token")
 		return
 	}

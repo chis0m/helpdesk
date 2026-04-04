@@ -1,12 +1,14 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/repositories"
@@ -56,7 +58,18 @@ func CSRFRequired(sessionRepo *repositories.AuthSessionRepository, headerName st
 
 		session, err := sessionRepo.GetActiveBySessionID(sessionUUID)
 		if err != nil {
-			log.Warn().Err(err).Str("session_id", sessionID).Msg("csrf validation failed: active session not found")
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				log.Warn().
+					Err(err).
+					Str("session_id", sessionID).
+					Msg("csrf validation failed: active session not found")
+				response.FailureWithAbort(c, http.StatusForbidden, "csrf validation failed", "csrf validation failed")
+				return
+			}
+			log.Error().
+				Err(err).
+				Str("session_id", sessionID).
+				Msg("csrf validation failed: session lookup error")
 			response.FailureWithAbort(c, http.StatusForbidden, "csrf validation failed", "csrf validation failed")
 			return
 		}
@@ -92,10 +105,9 @@ func CSRFRequired(sessionRepo *repositories.AuthSessionRepository, headerName st
 			return
 		}
 
-		// VULN-02: improper CSRF validation.
-		// The current validation only ensures that csrf token is non-empty and unexpired.
-		// The provided token is NOT compared to stored token, so replay attacks are possible.
-		// You can literarily supply any random token and it will be accepted.
+		// VULN-07 (baseline): improper CSRF validation.
+		// We only require a non-empty header plus unexpired session CSRF metadata.
+		// The provided token is NOT compared to stored token, so replay across forms/actions is possible.
 		c.Next()
 	}
 }

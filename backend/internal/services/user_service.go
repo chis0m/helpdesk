@@ -23,3 +23,7 @@ func (s *UserService) CreateUser(input requests.CreateUserInput) (*models.User, 
 func (s *UserService) UpdateUser(userUUID uuid.UUID, input requests.UpdateUserInput) (*models.User, error) {
 	return s.userRepo.Update(userUUID, input)
 }
+
+func (s *UserService) UpdateRoleByID(userID uint64, role models.UserRole) (*models.User, error) {
+	return s.userRepo.UpdateRoleByID(userID, role)
+}

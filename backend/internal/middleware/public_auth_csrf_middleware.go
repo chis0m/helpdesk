@@ -12,8 +12,8 @@ import (
 	"helpdesk/backend/internal/response"
 )
 
-// LoginCSRFRequired protects login endpoint using synchronizer token check.
-func LoginCSRFRequired(store *auth.LoginCSRFStore, headerName string) gin.HandlerFunc {
+// PublicAuthCSRFRequired protects public auth endpoints using synchronizer token check.
+func PublicAuthCSRFRequired(store *auth.PublicAuthCSRFStore, headerName string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		log := logger.L()
 
@@ -23,17 +23,17 @@ func LoginCSRFRequired(store *auth.LoginCSRFStore, headerName string) gin.Handle
 				Str("path", c.Request.URL.Path).
 				Str("method", c.Request.Method).
 				Str("header_name", headerName).
-				Msg("login csrf failed: missing csrf header")
+				Msg("public auth csrf failed: missing csrf header")
 			response.FailureWithAbort(c, http.StatusForbidden, "csrf token is required", "csrf token is required")
 			return
 		}
 
 		if err := store.ValidateAndConsume(headerToken); err != nil {
-			if errors.Is(err, auth.ErrLoginCSRFExpired) {
+			if errors.Is(err, auth.ErrPublicAuthCSRFExpired) {
 				log.Warn().
 					Str("path", c.Request.URL.Path).
 					Str("method", c.Request.Method).
-					Msg("login csrf failed: token expired")
+					Msg("public auth csrf failed: token expired")
 				response.FailureWithAbort(c, http.StatusForbidden, "csrf token expired", "csrf token expired")
 				return
 			}
@@ -42,7 +42,7 @@ func LoginCSRFRequired(store *auth.LoginCSRFStore, headerName string) gin.Handle
 				Err(err).
 				Str("path", c.Request.URL.Path).
 				Str("method", c.Request.Method).
-				Msg("login csrf failed: token invalid")
+				Msg("public auth csrf failed: token invalid")
 			response.FailureWithAbort(c, http.StatusForbidden, "csrf validation failed", "csrf validation failed")
 			return
 		}

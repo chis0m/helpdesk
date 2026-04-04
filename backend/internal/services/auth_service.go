@@ -14,11 +14,13 @@ import (
 	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/models"
 	"helpdesk/backend/internal/repositories"
+	"helpdesk/backend/internal/requests"
 )
 
 var ErrInvalidCredentials = errors.New("invalid credentials")
 var ErrInvalidRefreshToken = errors.New("invalid refresh token")
 var ErrInvalidSession = errors.New("invalid session")
+var ErrSignupFailed = errors.New("unable to complete signup")
 
 type LoginResult struct {
 	User   *models.User
@@ -125,6 +127,54 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 		},
 		CSRF: *csrfToken,
 	}, nil
+}
+
+func (s *AuthService) Signup(input requests.SignupRequest) (*models.User, error) {
+	email := strings.ToLower(strings.TrimSpace(input.Email))
+	firstName := strings.TrimSpace(input.FirstName)
+	lastName := strings.TrimSpace(input.LastName)
+	password := strings.TrimSpace(input.Password)
+
+	var middleName *string
+	if input.MiddleName != nil {
+		trimmed := strings.TrimSpace(*input.MiddleName)
+		if trimmed != "" {
+			middleName = &trimmed
+		}
+	}
+
+	if _, err := s.userRepo.GetByEmail(email); err == nil {
+		return nil, ErrSignupFailed
+	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, err
+	}
+
+	passwordHash, err := auth.HashPassword(password)
+	if err != nil {
+		return nil, err
+	}
+
+	isActive := true
+	mustChangePassword := false
+	changedAt := time.Now().UTC()
+	createInput := requests.CreateUserInput{
+		Email:              email,
+		PasswordHash:       passwordHash,
+		FirstName:          firstName,
+		LastName:           lastName,
+		MiddleName:         middleName,
+		Role:               models.RoleUser,
+		IsActive:           &isActive,
+		MustChangePassword: &mustChangePassword,
+		PasswordChangedAt:  &changedAt,
+	}
+
+	user, err := s.userRepo.Create(createInput)
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
 }
 
 func (s *AuthService) Refresh(refreshPayload *auth.Payload) (*auth.TokenPair, error) {

@@ -1,10 +1,12 @@
 package middleware
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/repositories"
@@ -50,11 +52,20 @@ func ActiveSessionRequired(sessionRepo *repositories.AuthSessionRepository) gin.
 		}
 
 		if _, err := sessionRepo.GetActiveBySessionID(sessionUUID); err != nil {
-			log.Warn().
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				log.Warn().
+					Err(err).
+					Str("path", c.Request.URL.Path).
+					Str("method", c.Request.Method).
+					Msg("auth failed: inactive or revoked session")
+				response.FailureWithAbort(c, http.StatusUnauthorized, "session is not active", "session is not active")
+				return
+			}
+			log.Error().
 				Err(err).
 				Str("path", c.Request.URL.Path).
 				Str("method", c.Request.Method).
-				Msg("auth failed: inactive or revoked session")
+				Msg("auth failed: session lookup error")
 			response.FailureWithAbort(c, http.StatusUnauthorized, "session is not active", "session is not active")
 			return
 		}

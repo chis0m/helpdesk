@@ -28,10 +28,26 @@ func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
 	return &user, nil
 }
 
+func (r *UserRepository) GetByID(userID uint64) (*models.User, error) {
+	var user models.User
+	if err := r.db.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, error) {
 	role := input.Role
 	if role == "" {
 		role = models.RoleUser
+	}
+	isActive := true
+	if input.IsActive != nil {
+		isActive = *input.IsActive
+	}
+	mustChangePassword := true
+	if input.MustChangePassword != nil {
+		mustChangePassword = *input.MustChangePassword
 	}
 
 	user := &models.User{
@@ -42,7 +58,9 @@ func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, e
 		LastName:     input.LastName,
 		MiddleName:   input.MiddleName,
 		Role:         role,
-		IsActive:     true,
+		IsActive:           isActive,
+		MustChangePassword: mustChangePassword,
+		PasswordChangedAt:  input.PasswordChangedAt,
 	}
 
 	if err := r.db.Create(user).Error; err != nil {
@@ -50,6 +68,23 @@ func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, e
 	}
 
 	return user, nil
+}
+
+func (r *UserRepository) UpdateRoleByID(userID uint64, role models.UserRole) (*models.User, error) {
+	var user models.User
+	if err := r.db.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, err
+	}
+
+	if err := r.db.Model(&user).Update("role", role).Error; err != nil {
+		return nil, err
+	}
+
+	if err := r.db.First(&user, "id = ?", userID).Error; err != nil {
+		return nil, errors.New("user role updated but failed to reload")
+	}
+
+	return &user, nil
 }
 
 func (r *UserRepository) Update(userUUID uuid.UUID, input requests.UpdateUserInput) (*models.User, error) {

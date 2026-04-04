@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 
 	"helpdesk/backend/internal/auth"
@@ -9,6 +11,9 @@ import (
 )
 
 func Register(r *gin.Engine, c *container.Container) {
+	loginRateLimiter := middleware.NewIPRateLimiter(10, time.Minute)
+	signupRateLimiter := middleware.NewIPRateLimiter(5, time.Minute)
+
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
 			"message": "welcome to secure web helpdesk",
@@ -18,11 +23,18 @@ func Register(r *gin.Engine, c *container.Container) {
 	api := r.Group("/api")
 	{
 		api.GET("/health", c.HealthController.Ping)
-		api.GET("/auth/login-csrf-token", c.AuthController.LoginCSRFToken)
+		api.GET("/auth/public-csrf-token", c.AuthController.PublicAuthCSRFToken)
 		api.POST(
 			"/auth/login",
-			middleware.LoginCSRFRequired(c.LoginCSRFStore, auth.CSRFHeaderName),
+			loginRateLimiter.Middleware(),
+			middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName),
 			c.AuthController.Login,
+		)
+		api.POST(
+			"/auth/signup",
+			signupRateLimiter.Middleware(),
+			middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName),
+			c.AuthController.Signup,
 		)
 		api.POST(
 			"/auth/refresh",
@@ -38,6 +50,11 @@ func Register(r *gin.Engine, c *container.Container) {
 		)
 		{
 			protected.GET("/auth/csrf-token", c.AuthController.CSRFToken)
+			protected.PATCH(
+				"/admin/users/:user_id/role",
+				middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName),
+				c.UserController.UpdateRoleByUserID,
+			)
 		}
 	}
 }
