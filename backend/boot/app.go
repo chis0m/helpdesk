@@ -47,9 +47,10 @@ func NewApp() (*App, error) {
 	}
 	log.Info().Msg("paseto maker initialized")
 
-	c := container.New(db, tokenMaker)
+	c := container.New(db, cfg, tokenMaker)
 
 	engine := gin.Default()
+	applyCORS(engine, cfg)
 	routes.Register(engine, c)
 
 	return &App{

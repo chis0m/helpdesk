@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	Port                 string
+	FrontendURL          string
 	DBHost               string
 	DBDatabase           string
 	DBUsername           string
@@ -35,6 +36,7 @@ func Load() Config {
 	return Config{
 		AppName:              getEnv("APP_NAME", "secure-web-helpdesk"),
 		Port:                 getEnv("PORT", "8080"),
+		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:5173"),
 		GoEnv:                getEnv("GO_ENV", "development"),
 		DBHost:               getEnv("DB_HOST", "localhost"),
 		DBDatabase:           getEnv("DB_DATABASE", "helpdesk"),

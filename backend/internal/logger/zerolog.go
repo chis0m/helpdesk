@@ -37,7 +37,7 @@ func Init(cfg config.Config) error {
 		log.Logger = zerolog.New(console).With().Timestamp().Logger()
 	}
 
-	log.Info().Msg("logger initialized")
+	log.Info().Msg("zerolog logger initialized")
 	return nil
 }
 

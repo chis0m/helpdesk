@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -16,6 +17,15 @@ type UserRepository struct {
 
 func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
+}
+
+func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
+	var user models.User
+	normalized := strings.ToLower(strings.TrimSpace(email))
+	if err := r.db.First(&user, "email = ?", normalized).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }
 
 func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, error) {

@@ -3,6 +3,7 @@ module helpdesk/backend
 go 1.26.1
 
 require (
+	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-gonic/gin v1.12.0
 	github.com/google/uuid v1.6.0
 	github.com/joho/godotenv v1.5.1

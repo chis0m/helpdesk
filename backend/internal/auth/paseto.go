@@ -9,7 +9,10 @@ import (
 
 type MakerInterface interface {
 	CreateToken(claims Claims) (string, *Payload, error)
+	CreateAccessToken(claims Claims) (string, *Payload, error)
+	CreateRefreshToken(claims Claims) (string, *Payload, error)
 	VerifyToken(token string) (*Payload, error)
+	VerifyTokenType(token string, expectedType TokenType) (*Payload, error)
 }
 
 const symmetricKeySize = 32

@@ -16,5 +16,6 @@ func Register(r *gin.Engine, c *container.Container) {
 	api := r.Group("/api")
 	{
 		api.GET("/health", c.HealthController.Ping)
+		api.POST("/auth/login", c.AuthController.Login)
 	}
 }
