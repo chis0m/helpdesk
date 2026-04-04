@@ -8,13 +8,6 @@ import (
 	"github.com/google/uuid"
 )
 
-type TokenType string
-
-const (
-	TokenTypeAccess  TokenType = "access"
-	TokenTypeRefresh TokenType = "refresh"
-)
-
 type Claims struct {
 	Issuer    string        `json:"issuer"`
 	Subject   string        `json:"subject"`

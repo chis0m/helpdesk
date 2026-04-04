@@ -6,37 +6,31 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"helpdesk/backend/internal/auth"
 	"helpdesk/backend/internal/config"
 )
 
-const (
-	accessCookieName  = "access_token"
-	refreshCookieName = "refresh_token"
-)
-
-func setAuthCookies(c *gin.Context, cfg config.Config, accessToken, refreshToken string, accessExp, refreshExp time.Time) {
+func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 	_ = cfg
 
-	accessMaxAge := int(time.Until(accessExp).Seconds())
+	accessMaxAge := int(time.Until(tokens.AccessExpires).Seconds())
 	if accessMaxAge < 0 {
 		accessMaxAge = 0
 	}
 
-	refreshMaxAge := int(time.Until(refreshExp).Seconds())
+	refreshMaxAge := int(time.Until(tokens.RefreshExpires).Seconds())
 	if refreshMaxAge < 0 {
 		refreshMaxAge = 0
 	}
 
-	// Baseline branch (intentionally weak cookie security):
-	// - Secure=false
-	// - HttpOnly=false
-	// - SameSite=None
+	// VULN-01: Insecure cookie settings
 	secureCookie := false
 	httpOnlyCookie := false
+	sameSiteMode := http.SameSiteNoneMode
 	cookiePath := "/"
 	cookieDomain := ""
 
-	c.SetSameSite(http.SameSiteNoneMode)
-	c.SetCookie(accessCookieName, accessToken, accessMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
-	c.SetCookie(refreshCookieName, refreshToken, refreshMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
+	c.SetSameSite(sameSiteMode)
+	c.SetCookie(auth.AccessCookieName, tokens.AccessToken, accessMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
+	c.SetCookie(auth.RefreshCookieName, tokens.RefreshToken, refreshMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 }

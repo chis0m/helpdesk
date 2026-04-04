@@ -7,8 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"helpdesk/backend/internal/auth"
 	"helpdesk/backend/internal/config"
 	"helpdesk/backend/internal/logger"
+	"helpdesk/backend/internal/middleware"
 	"helpdesk/backend/internal/requests"
 	"helpdesk/backend/internal/response"
 	"helpdesk/backend/internal/services"
@@ -52,13 +54,48 @@ func (a *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	setAuthCookies(c, a.cfg, result.AccessToken, result.RefreshToken, result.AccessExpires, result.RefreshExpires)
+	setAuthCookies(c, a.cfg, result.Tokens)
 
 	response.Success(c, http.StatusOK, gin.H{
 		"user_uuid":             result.User.UUID.String(),
 		"email":                 result.User.Email,
 		"role":                  result.User.Role,
 		"must_change_password":  result.User.MustChangePassword,
-		"access_expires_at_utc": result.AccessExpires.UTC(),
+		"access_expires_at_utc": result.Tokens.AccessExpires.UTC(),
 	}, "login successful")
+}
+
+func (a *AuthController) Refresh(c *gin.Context) {
+	log := logger.L()
+
+	value, ok := c.Get(middleware.CtxAuthPayload)
+	if !ok {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "invalid refresh token", "invalid refresh token")
+		return
+	}
+
+	refreshPayload, ok := value.(*auth.Payload)
+	if !ok || refreshPayload == nil {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "invalid refresh token", "invalid refresh token")
+		return
+	}
+
+	result, err := a.authService.Refresh(refreshPayload)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidRefreshToken) {
+			log.Warn().
+				Str("session_id", refreshPayload.SessID).
+				Msg("refresh failed: invalid refresh token")
+			response.FailureWithAbort(c, http.StatusUnauthorized, "invalid refresh token", "invalid refresh token")
+			return
+		}
+		log.Error().Err(err).Msg("refresh failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	setAuthCookies(c, a.cfg, *result)
+	response.Success(c, http.StatusOK, gin.H{
+		"access_expires_at_utc": result.AccessExpires.UTC(),
+	}, "refresh successful")
 }
