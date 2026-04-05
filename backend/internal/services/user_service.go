@@ -1,6 +1,7 @@
 package services
 
 import (
+	"errors"
 	"strings"
 	"time"
 
@@ -11,6 +12,8 @@ import (
 	"helpdesk/backend/internal/repositories"
 	"helpdesk/backend/internal/requests"
 )
+
+var ErrUserRoleChangeForbidden = errors.New("forbidden role change")
 
 type UserService struct {
 	userRepo *repositories.UserRepository
@@ -32,8 +35,38 @@ func (s *UserService) UpdateRoleByID(userID uint64, role models.UserRole) (*mode
 	return s.userRepo.UpdateRoleByID(userID, role)
 }
 
+func (s *UserService) UpdateRoleByIDAsActor(userID uint64, targetRole models.UserRole, actorRole models.UserRole) (*models.User, error) {
+	targetUser, err := s.userRepo.GetByID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	switch actorRole {
+	case models.RoleSuperAdmin:
+		return s.userRepo.UpdateRoleByID(userID, targetRole)
+	case models.RoleAdmin:
+		if targetRole != models.RoleUser && targetRole != models.RoleStaff {
+			return nil, ErrUserRoleChangeForbidden
+		}
+		if targetUser.Role == models.RoleAdmin || targetUser.Role == models.RoleSuperAdmin {
+			return nil, ErrUserRoleChangeForbidden
+		}
+		return s.userRepo.UpdateRoleByID(userID, targetRole)
+	default:
+		return nil, ErrUserRoleChangeForbidden
+	}
+}
+
 func (s *UserService) GetByID(userID uint64) (*models.User, error) {
 	return s.userRepo.GetByID(userID)
+}
+
+func (s *UserService) GetByUUIDString(userUUID string) (*models.User, error) {
+	parsed, err := uuid.Parse(strings.TrimSpace(userUUID))
+	if err != nil {
+		return nil, err
+	}
+	return s.userRepo.GetByUUID(parsed)
 }
 
 func (s *UserService) CreateUserFromRequest(req requests.CreateUserRequest) (*models.User, error) {
@@ -44,16 +77,43 @@ func (s *UserService) CreateUserFromRequest(req requests.CreateUserRequest) (*mo
 
 	mustChangePassword := false
 	changedAt := time.Now().UTC()
+	isActive := true
 	input := requests.CreateUserInput{
 		Email:              strings.ToLower(strings.TrimSpace(req.Email)),
 		PasswordHash:       passwordHash,
 		FirstName:          strings.TrimSpace(req.FirstName),
 		LastName:           strings.TrimSpace(req.LastName),
 		MiddleName:         req.MiddleName,
-		Role:               req.Role,
-		IsActive:           req.IsActive,
+		Role:               models.RoleUser,
+		IsActive:           &isActive,
 		MustChangePassword: &mustChangePassword,
 		PasswordChangedAt:  &changedAt,
+	}
+
+	return s.userRepo.Create(input)
+}
+
+func (s *UserService) CreateStaffFromRequest(req requests.CreateStaffRequest) (*models.User, error) {
+	passwordHash, err := auth.HashPassword(strings.TrimSpace(req.Password))
+	if err != nil {
+		return nil, err
+	}
+
+	isActive := true
+	if req.IsActive != nil {
+		isActive = *req.IsActive
+	}
+	mustChangePassword := true
+	input := requests.CreateUserInput{
+		Email:              strings.ToLower(strings.TrimSpace(req.Email)),
+		PasswordHash:       passwordHash,
+		FirstName:          strings.TrimSpace(req.FirstName),
+		LastName:           strings.TrimSpace(req.LastName),
+		MiddleName:         req.MiddleName,
+		Role:               models.RoleStaff,
+		IsActive:           &isActive,
+		MustChangePassword: &mustChangePassword,
+		PasswordChangedAt:  nil,
 	}
 
 	return s.userRepo.Create(input)
@@ -65,7 +125,6 @@ func (s *UserService) UpdateByID(userID uint64, req requests.UpdateUserRequest) 
 		FirstName:  req.FirstName,
 		LastName:   req.LastName,
 		MiddleName: req.MiddleName,
-		Role:       req.Role,
 		IsActive:   req.IsActive,
 	}
 	return s.userRepo.UpdateByID(userID, input)

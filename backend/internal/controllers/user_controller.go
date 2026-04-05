@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm"
 
 	"helpdesk/backend/internal/logger"
-	"helpdesk/backend/internal/models"
 	"helpdesk/backend/internal/middleware"
+	"helpdesk/backend/internal/models"
 	"helpdesk/backend/internal/requests"
 	"helpdesk/backend/internal/response"
 	"helpdesk/backend/internal/services"
@@ -42,11 +42,11 @@ func (u *UserController) Create(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusCreated, gin.H{
-		"user_id":    user.ID,
-		"user_uuid":  user.UUID.String(),
-		"email":      user.Email,
-		"role":       user.Role,
-		"is_active":  user.IsActive,
+		"user_id":   user.ID,
+		"user_uuid": user.UUID.String(),
+		"email":     user.Email,
+		"role":      user.Role,
+		"is_active": user.IsActive,
 	}, "user created")
 }
 
@@ -74,14 +74,14 @@ func (u *UserController) GetByID(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, gin.H{
-		"user_id":    user.ID,
-		"user_uuid":  user.UUID.String(),
-		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
+		"user_id":     user.ID,
+		"user_uuid":   user.UUID.String(),
+		"email":       user.Email,
+		"first_name":  user.FirstName,
+		"last_name":   user.LastName,
 		"middle_name": user.MiddleName,
-		"role":       user.Role,
-		"is_active":  user.IsActive,
+		"role":        user.Role,
+		"is_active":   user.IsActive,
 	}, "user fetched")
 }
 
@@ -116,14 +116,14 @@ func (u *UserController) UpdateByID(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, gin.H{
-		"user_id":    user.ID,
-		"user_uuid":  user.UUID.String(),
-		"email":      user.Email,
-		"first_name": user.FirstName,
-		"last_name":  user.LastName,
+		"user_id":     user.ID,
+		"user_uuid":   user.UUID.String(),
+		"email":       user.Email,
+		"first_name":  user.FirstName,
+		"last_name":   user.LastName,
 		"middle_name": user.MiddleName,
-		"role":       user.Role,
-		"is_active":  user.IsActive,
+		"role":        user.Role,
+		"is_active":   user.IsActive,
 	}, "user updated")
 }
 
@@ -137,9 +137,10 @@ func (u *UserController) UpdateRoleByUserID(c *gin.Context) {
 		return
 	}
 	roleStr, ok := roleValue.(string)
-	if !ok || models.UserRole(roleStr) != models.RoleAdmin {
-		log.Warn().Str("role", roleStr).Msg("update role failed: admin access required")
-		response.FailureWithAbort(c, http.StatusForbidden, "admin access required", "admin access required")
+	actorRole := models.UserRole(roleStr)
+	if !ok || (actorRole != models.RoleAdmin && actorRole != models.RoleSuperAdmin) {
+		log.Warn().Str("role", roleStr).Msg("update role failed: admin or super_admin access required")
+		response.FailureWithAbort(c, http.StatusForbidden, "admin or super_admin access required", "admin or super_admin access required")
 		return
 	}
 
@@ -158,8 +159,13 @@ func (u *UserController) UpdateRoleByUserID(c *gin.Context) {
 		return
 	}
 
-	user, err := u.userService.UpdateRoleByID(userID, req.Role)
+	user, err := u.userService.UpdateRoleByIDAsActor(userID, req.Role, actorRole)
 	if err != nil {
+		if errors.Is(err, services.ErrUserRoleChangeForbidden) {
+			log.Warn().Uint64("user_id", userID).Str("actor_role", string(actorRole)).Str("target_role", string(req.Role)).Msg("update role failed: forbidden role change")
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden role change", "forbidden role change")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Warn().Uint64("user_id", userID).Msg("update role failed: user not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "user not found", "user not found")
@@ -175,4 +181,44 @@ func (u *UserController) UpdateRoleByUserID(c *gin.Context) {
 		"user_uuid": user.UUID.String(),
 		"role":      user.Role,
 	}, "user role updated")
+}
+
+func (u *UserController) CreateStaff(c *gin.Context) {
+	log := logger.L()
+
+	roleValue, ok := c.Get(middleware.CtxUserRole)
+	if !ok {
+		log.Warn().Msg("create staff failed: missing user role in context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	roleStr, ok := roleValue.(string)
+	actorRole := models.UserRole(roleStr)
+	if !ok || (actorRole != models.RoleAdmin && actorRole != models.RoleSuperAdmin) {
+		log.Warn().Str("role", roleStr).Msg("create staff failed: admin or super_admin access required")
+		response.FailureWithAbort(c, http.StatusForbidden, "admin or super_admin access required", "admin or super_admin access required")
+		return
+	}
+
+	var req requests.CreateStaffRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Warn().Err(err).Msg("create staff failed: invalid request payload")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
+		return
+	}
+
+	user, err := u.userService.CreateStaffFromRequest(req)
+	if err != nil {
+		log.Error().Err(err).Msg("create staff failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusCreated, gin.H{
+		"user_id":   user.ID,
+		"user_uuid": user.UUID.String(),
+		"email":     user.Email,
+		"role":      user.Role,
+		"is_active": user.IsActive,
+	}, "staff created")
 }

@@ -6,6 +6,7 @@ import (
 	"helpdesk/backend/internal/auth"
 	"helpdesk/backend/internal/config"
 	"helpdesk/backend/internal/controllers"
+	"helpdesk/backend/internal/mail"
 	"helpdesk/backend/internal/repositories"
 	"helpdesk/backend/internal/services"
 )
@@ -16,6 +17,7 @@ type Container struct {
 	HealthController    *controllers.HealthController
 	AuthController      *controllers.AuthController
 	UserController      *controllers.UserController
+	InviteController    *controllers.InviteController
 	TicketController    *controllers.TicketController
 	UserService         *services.UserService
 	TicketService       *services.TicketService
@@ -26,16 +28,20 @@ type Container struct {
 
 func New(db *gorm.DB, cfg config.Config, tokenMaker auth.MakerInterface) *Container {
 	userRepo := repositories.NewUserRepository(db)
+	inviteRepo := repositories.NewInviteRepository(db)
 	ticketRepo := repositories.NewTicketRepository(db)
 	ticketCommentRepo := repositories.NewTicketCommentRepository(db)
 	sessionRepo := repositories.NewAuthSessionRepository(db)
 	publicAuthCSRFStore := auth.NewPublicAuthCSRFStore(cfg.CSRFTTL())
 	userService := services.NewUserService(userRepo)
+	inviteNotifier := mail.NewLogStaffInviteNotifier()
+	inviteService := services.NewInviteService(cfg, inviteRepo, userRepo, inviteNotifier)
 	ticketService := services.NewTicketService(ticketRepo, ticketCommentRepo, userRepo)
 	authService := services.NewAuthService(cfg, tokenMaker, userRepo, sessionRepo)
 	healthController := controllers.NewHealthController()
 	authController := controllers.NewAuthController(cfg, authService, publicAuthCSRFStore)
 	userController := controllers.NewUserController(userService)
+	inviteController := controllers.NewInviteController(inviteService, userService)
 	ticketController := controllers.NewTicketController(ticketService)
 
 	return &Container{
@@ -43,6 +49,7 @@ func New(db *gorm.DB, cfg config.Config, tokenMaker auth.MakerInterface) *Contai
 		HealthController:    healthController,
 		AuthController:      authController,
 		UserController:      userController,
+		InviteController:    inviteController,
 		TicketController:    ticketController,
 		UserService:         userService,
 		TicketService:       ticketService,

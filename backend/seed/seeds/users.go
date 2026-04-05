@@ -44,7 +44,7 @@ func SeedAdminUser(db *gorm.DB, cfg config.Config) error {
 		FirstName:          strings.TrimSpace(cfg.SeedAdminFirstName),
 		MiddleName:         middleName,
 		LastName:           strings.TrimSpace(cfg.SeedAdminLastName),
-		Role:               models.RoleAdmin,
+		Role:               models.RoleSuperAdmin,
 		IsActive:           true,
 		MustChangePassword: true,
 		PasswordChangedAt:  nil,
@@ -56,10 +56,16 @@ func SeedAdminUser(db *gorm.DB, cfg config.Config) error {
 		log.Error().Err(result.Error).Msg("failed creating/finding seed admin user")
 		return result.Error
 	}
+	if admin.Role != models.RoleSuperAdmin {
+		if err := db.Model(&admin).Update("role", models.RoleSuperAdmin).Error; err != nil {
+			log.Error().Err(err).Str("email", email).Msg("failed to enforce super admin role for seeded user")
+			return err
+		}
+	}
 	if result.RowsAffected > 0 {
-		log.Info().Str("email", email).Msg("admin user created")
+		log.Info().Str("email", email).Msg("super admin user created")
 	} else {
-		log.Info().Str("email", email).Msg("admin user already exists")
+		log.Info().Str("email", email).Msg("super admin user already exists")
 	}
 	return nil
 }

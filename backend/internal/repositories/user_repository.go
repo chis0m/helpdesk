@@ -60,13 +60,13 @@ func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, e
 	}
 
 	user := &models.User{
-		UUID:         uuid.New(),
-		Email:        input.Email,
-		PasswordHash: input.PasswordHash,
-		FirstName:    input.FirstName,
-		LastName:     input.LastName,
-		MiddleName:   input.MiddleName,
-		Role:         role,
+		UUID:               uuid.New(),
+		Email:              input.Email,
+		PasswordHash:       input.PasswordHash,
+		FirstName:          input.FirstName,
+		LastName:           input.LastName,
+		MiddleName:         input.MiddleName,
+		Role:               role,
 		IsActive:           isActive,
 		MustChangePassword: mustChangePassword,
 		PasswordChangedAt:  input.PasswordChangedAt,
@@ -115,9 +115,6 @@ func (r *UserRepository) UpdateByID(userID uint64, input requests.UpdateUserInpu
 	if input.MiddleName != nil {
 		updates["middle_name"] = *input.MiddleName
 	}
-	if input.Role != nil {
-		updates["role"] = *input.Role
-	}
 	if input.IsActive != nil {
 		updates["is_active"] = *input.IsActive
 	}
@@ -164,9 +161,6 @@ func (r *UserRepository) Update(userUUID uuid.UUID, input requests.UpdateUserInp
 	}
 	if input.MiddleName != nil {
 		updates["middle_name"] = *input.MiddleName
-	}
-	if input.Role != nil {
-		updates["role"] = *input.Role
 	}
 	if input.IsActive != nil {
 		updates["is_active"] = *input.IsActive

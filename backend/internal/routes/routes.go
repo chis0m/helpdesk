@@ -13,6 +13,7 @@ import (
 func Register(r *gin.Engine, c *container.Container) {
 	loginRateLimiter := middleware.NewIPRateLimiter(10, time.Minute)
 	signupRateLimiter := middleware.NewIPRateLimiter(5, time.Minute)
+	invitePublicRateLimiter := middleware.NewIPRateLimiter(30, time.Minute)
 
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
@@ -26,6 +27,8 @@ func Register(r *gin.Engine, c *container.Container) {
 		api.GET("/auth/public-csrf-token", c.AuthController.PublicAuthCSRFToken)
 		api.POST("/auth/login", loginRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Login)
 		api.POST("/auth/signup", signupRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Signup)
+		api.GET("/invites/verify", invitePublicRateLimiter.Middleware(), c.InviteController.VerifyInvite)
+		api.POST("/invites/accept", invitePublicRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.InviteController.AcceptInvite)
 		api.POST("/auth/refresh", middleware.RefreshTokenRequired(c.TokenMaker, auth.RefreshCookieName), middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.Refresh)
 
 		protected := api.Group("")
@@ -36,6 +39,8 @@ func Register(r *gin.Engine, c *container.Container) {
 			protected.POST("/auth/logout", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.Logout)
 			protected.POST("/auth/change-password", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.ChangePassword)
 			protected.POST("/users", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.Create)
+			protected.POST("/admin/staff", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.CreateStaff)
+			protected.POST("/admin/invites/staff", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.InviteController.CreateStaffInvite)
 			protected.GET("/users/:id", c.UserController.GetByID)
 			protected.PATCH("/users/:id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.UpdateByID)
 			protected.POST("/tickets", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.Create)
@@ -49,7 +54,7 @@ func Register(r *gin.Engine, c *container.Container) {
 			protected.GET("/tickets/:id/comments", c.TicketController.ListComments)
 			protected.PATCH("/tickets/:id/comments/:commentId", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.UpdateComment)
 			protected.DELETE("/tickets/:id/comments/:commentId", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.DeleteComment)
-			// VULN-03: admin authorization hardening is intentionally weak; privilege escalation is possible.
+			// Role management is restricted by controller/service authorization checks.
 			protected.PATCH("/admin/users/:user_id/role", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.UpdateRoleByUserID)
 		}
 	}

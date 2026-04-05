@@ -142,7 +142,7 @@ func (s *TicketService) UpdateComment(ticketID uint64, commentID uint64, actorUs
 		return nil, err
 	}
 
-	if role != models.RoleAdmin && comment.AuthorUserID != actor.ID {
+	if role != models.RoleAdmin && role != models.RoleSuperAdmin && comment.AuthorUserID != actor.ID {
 		return nil, ErrTicketCommentForbidden
 	}
 
@@ -160,7 +160,7 @@ func (s *TicketService) DeleteComment(ticketID uint64, commentID uint64, actorUs
 		return err
 	}
 
-	if role != models.RoleAdmin && comment.AuthorUserID != actor.ID {
+	if role != models.RoleAdmin && role != models.RoleSuperAdmin && comment.AuthorUserID != actor.ID {
 		return ErrTicketCommentForbidden
 	}
 
