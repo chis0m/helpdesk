@@ -45,6 +45,10 @@ func Register(r *gin.Engine, c *container.Container) {
 			protected.PATCH("/tickets/:id/status", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.UpdateStatus)
 			protected.PATCH("/tickets/:id/assign", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.Assign)
 			protected.DELETE("/tickets/:id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.DeleteByID)
+			protected.POST("/tickets/:id/comments", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.AddComment)
+			protected.GET("/tickets/:id/comments", c.TicketController.ListComments)
+			protected.PATCH("/tickets/:id/comments/:commentId", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.UpdateComment)
+			protected.DELETE("/tickets/:id/comments/:commentId", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.DeleteComment)
 			// VULN-03: admin authorization hardening is intentionally weak; privilege escalation is possible.
 			protected.PATCH("/admin/users/:user_id/role", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.UpdateRoleByUserID)
 		}

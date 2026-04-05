@@ -64,6 +64,7 @@ func (t *TicketController) Create(c *gin.Context) {
 
 func (t *TicketController) List(c *gin.Context) {
 	log := logger.L()
+	// VULN-05: Missing ownership authorization; IDOR is possible.
 
 	var query requests.ListTicketsQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -118,6 +119,7 @@ func (t *TicketController) List(c *gin.Context) {
 
 func (t *TicketController) GetByID(c *gin.Context) {
 	log := logger.L()
+	// VULN-05: Missing ownership authorization; IDOR is possible.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -143,6 +145,7 @@ func (t *TicketController) GetByID(c *gin.Context) {
 
 func (t *TicketController) UpdateByID(c *gin.Context) {
 	log := logger.L()
+	// VULN-05: Missing ownership authorization; IDOR is possible.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -175,6 +178,7 @@ func (t *TicketController) UpdateByID(c *gin.Context) {
 
 func (t *TicketController) UpdateStatus(c *gin.Context) {
 	log := logger.L()
+	// VULN-05: Missing ownership authorization; IDOR is possible.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -212,6 +216,7 @@ func (t *TicketController) UpdateStatus(c *gin.Context) {
 
 func (t *TicketController) Assign(c *gin.Context) {
 	log := logger.L()
+	// VULN-05: Missing ownership authorization; IDOR is possible.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -244,6 +249,7 @@ func (t *TicketController) Assign(c *gin.Context) {
 
 func (t *TicketController) DeleteByID(c *gin.Context) {
 	log := logger.L()
+	// VULN-05: Missing ownership authorization; IDOR is possible.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -272,12 +278,207 @@ func (t *TicketController) DeleteByID(c *gin.Context) {
 	response.Success(c, http.StatusOK, gin.H{"ticket_id": ticketID}, "ticket deleted")
 }
 
+func (t *TicketController) AddComment(c *gin.Context) {
+	log := logger.L()
+	// VULN-05: Missing ownership authorization; IDOR is possible.
+
+	ticketID, ok := parseUintID(c.Param("id"))
+	if !ok {
+		log.Warn().Str("ticket_id", c.Param("id")).Msg("add ticket comment failed: invalid ticket id")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+		return
+	}
+
+	userUUID, _, ok := getAuthenticatedUser(c)
+	if !ok {
+		log.Warn().Uint64("ticket_id", ticketID).Msg("add ticket comment failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	var req requests.CreateTicketCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Warn().Err(err).Uint64("ticket_id", ticketID).Msg("add ticket comment failed: invalid request payload")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
+		return
+	}
+
+	comment, err := t.ticketService.AddComment(ticketID, userUUID, req.Body)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Warn().Uint64("ticket_id", ticketID).Msg("add ticket comment failed: ticket or actor not found")
+			response.FailureWithAbort(c, http.StatusNotFound, "resource not found", "resource not found")
+			return
+		}
+		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("add ticket comment failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusCreated, gin.H{
+		"comment_id":     comment.ID,
+		"ticket_id":      comment.TicketID,
+		"author_user_id": comment.AuthorUserID,
+		"body":           comment.Body,
+		"created_at":     comment.CreatedAt,
+		"updated_at":     comment.UpdatedAt,
+	}, "ticket comment created")
+}
+
+func (t *TicketController) ListComments(c *gin.Context) {
+	log := logger.L()
+	// VULN-05: Missing ownership authorization; IDOR is possible.
+
+	ticketID, ok := parseUintID(c.Param("id"))
+	if !ok {
+		log.Warn().Str("ticket_id", c.Param("id")).Msg("list ticket comments failed: invalid ticket id")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+		return
+	}
+
+	comments, err := t.ticketService.ListComments(ticketID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Warn().Uint64("ticket_id", ticketID).Msg("list ticket comments failed: ticket not found")
+			response.FailureWithAbort(c, http.StatusNotFound, "ticket not found", "ticket not found")
+			return
+		}
+		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("list ticket comments failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusOK, gin.H{"items": comments}, "ticket comments fetched")
+}
+
+func (t *TicketController) UpdateComment(c *gin.Context) {
+	log := logger.L()
+
+	ticketID, ok := parseUintID(c.Param("id"))
+	if !ok {
+		log.Warn().Str("ticket_id", c.Param("id")).Msg("update ticket comment failed: invalid ticket id")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+		return
+	}
+	commentID, ok := parseUintID(c.Param("commentId"))
+	if !ok {
+		log.Warn().Str("comment_id", c.Param("commentId")).Msg("update ticket comment failed: invalid comment id")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid comment id", "invalid comment id")
+		return
+	}
+
+	userUUID, role, ok := getAuthenticatedUser(c)
+	if !ok {
+		log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("update ticket comment failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	var req requests.UpdateTicketCommentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Warn().Err(err).Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("update ticket comment failed: invalid request payload")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
+		return
+	}
+
+	comment, err := t.ticketService.UpdateComment(ticketID, commentID, userUUID, role, req.Body)
+	if err != nil {
+		if errors.Is(err, services.ErrTicketCommentForbidden) {
+			log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Str("actor_role", string(role)).Msg("update ticket comment failed: forbidden")
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("update ticket comment failed: comment not found")
+			response.FailureWithAbort(c, http.StatusNotFound, "comment not found", "comment not found")
+			return
+		}
+		log.Error().Err(err).Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("update ticket comment failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusOK, gin.H{
+		"comment_id":     comment.ID,
+		"ticket_id":      comment.TicketID,
+		"author_user_id": comment.AuthorUserID,
+		"body":           comment.Body,
+		"created_at":     comment.CreatedAt,
+		"updated_at":     comment.UpdatedAt,
+	}, "ticket comment updated")
+}
+
+func (t *TicketController) DeleteComment(c *gin.Context) {
+	log := logger.L()
+
+	ticketID, ok := parseUintID(c.Param("id"))
+	if !ok {
+		log.Warn().Str("ticket_id", c.Param("id")).Msg("delete ticket comment failed: invalid ticket id")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+		return
+	}
+	commentID, ok := parseUintID(c.Param("commentId"))
+	if !ok {
+		log.Warn().Str("comment_id", c.Param("commentId")).Msg("delete ticket comment failed: invalid comment id")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid comment id", "invalid comment id")
+		return
+	}
+
+	userUUID, role, ok := getAuthenticatedUser(c)
+	if !ok {
+		log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("delete ticket comment failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	err := t.ticketService.DeleteComment(ticketID, commentID, userUUID, role)
+	if err != nil {
+		if errors.Is(err, services.ErrTicketCommentForbidden) {
+			log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Str("actor_role", string(role)).Msg("delete ticket comment failed: forbidden")
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("delete ticket comment failed: comment not found")
+			response.FailureWithAbort(c, http.StatusNotFound, "comment not found", "comment not found")
+			return
+		}
+		log.Error().Err(err).Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("delete ticket comment failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusOK, gin.H{"comment_id": commentID, "ticket_id": ticketID}, "ticket comment deleted")
+}
+
 func parseUintID(raw string) (uint64, bool) {
 	value, err := strconv.ParseUint(raw, 10, 64)
 	if err != nil {
 		return 0, false
 	}
 	return value, true
+}
+
+func getAuthenticatedUser(c *gin.Context) (string, models.UserRole, bool) {
+	userUUIDValue, ok := c.Get(middleware.CtxUserUUID)
+	if !ok {
+		return "", "", false
+	}
+	userUUID, ok := userUUIDValue.(string)
+	if !ok || userUUID == "" {
+		return "", "", false
+	}
+
+	roleValue, ok := c.Get(middleware.CtxUserRole)
+	if !ok {
+		return "", "", false
+	}
+	roleStr, ok := roleValue.(string)
+	if !ok || roleStr == "" {
+		return "", "", false
+	}
+
+	return userUUID, models.UserRole(roleStr), true
 }
 
 func formatTicket(ticket *models.Ticket) gin.H {

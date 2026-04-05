@@ -27,10 +27,11 @@ type Container struct {
 func New(db *gorm.DB, cfg config.Config, tokenMaker auth.MakerInterface) *Container {
 	userRepo := repositories.NewUserRepository(db)
 	ticketRepo := repositories.NewTicketRepository(db)
+	ticketCommentRepo := repositories.NewTicketCommentRepository(db)
 	sessionRepo := repositories.NewAuthSessionRepository(db)
 	publicAuthCSRFStore := auth.NewPublicAuthCSRFStore(cfg.CSRFTTL())
 	userService := services.NewUserService(userRepo)
-	ticketService := services.NewTicketService(ticketRepo, userRepo)
+	ticketService := services.NewTicketService(ticketRepo, ticketCommentRepo, userRepo)
 	authService := services.NewAuthService(cfg, tokenMaker, userRepo, sessionRepo)
 	healthController := controllers.NewHealthController()
 	authController := controllers.NewAuthController(cfg, authService, publicAuthCSRFStore)

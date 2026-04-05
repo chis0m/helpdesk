@@ -3,6 +3,7 @@ package requests
 import "helpdesk/backend/internal/models"
 
 type CreateTicketRequest struct {
+	// VULN-04: Input validation is weak; stored XSS is possible.
 	Title       string `json:"title" binding:"required,min=3,max=180"`
 	Description string `json:"description" binding:"required,min=5,max=5000"`
 	Category    string `json:"category" binding:"required,min=2,max=80"`
@@ -16,6 +17,7 @@ type CreateTicketInput struct {
 }
 
 type UpdateTicketRequest struct {
+	// VULN-04: Input validation is weak; stored XSS is possible.
 	Title       *string `json:"title" binding:"omitempty,min=3,max=180"`
 	Description *string `json:"description" binding:"omitempty,min=5,max=5000"`
 	Category    *string `json:"category" binding:"omitempty,min=2,max=80"`

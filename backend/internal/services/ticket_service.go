@@ -12,16 +12,23 @@ import (
 )
 
 var ErrInvalidTicketStatusTransition = errors.New("invalid ticket status transition")
+var ErrTicketCommentForbidden = errors.New("forbidden comment action")
 
 type TicketService struct {
-	ticketRepo *repositories.TicketRepository
-	userRepo   *repositories.UserRepository
+	ticketRepo  *repositories.TicketRepository
+	commentRepo *repositories.TicketCommentRepository
+	userRepo    *repositories.UserRepository
 }
 
-func NewTicketService(ticketRepo *repositories.TicketRepository, userRepo *repositories.UserRepository) *TicketService {
+func NewTicketService(
+	ticketRepo *repositories.TicketRepository,
+	commentRepo *repositories.TicketCommentRepository,
+	userRepo *repositories.UserRepository,
+) *TicketService {
 	return &TicketService{
-		ticketRepo: ticketRepo,
-		userRepo:   userRepo,
+		ticketRepo:  ticketRepo,
+		commentRepo: commentRepo,
+		userRepo:    userRepo,
 	}
 }
 
@@ -97,6 +104,75 @@ func (s *TicketService) Assign(ticketID uint64, assignedUserID *uint64, unassign
 
 func (s *TicketService) DeleteByID(ticketID uint64) error {
 	return s.ticketRepo.DeleteByID(ticketID)
+}
+
+func (s *TicketService) AddComment(ticketID uint64, actorUserUUID string, body string) (*models.TicketComment, error) {
+	if _, err := s.ticketRepo.GetByID(ticketID); err != nil {
+		return nil, err
+	}
+
+	actor, err := s.getActorByUUID(actorUserUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	input := requests.CreateTicketCommentInput{
+		TicketID:     ticketID,
+		AuthorUserID: actor.ID,
+		Body:         strings.TrimSpace(body),
+	}
+	return s.commentRepo.Create(input)
+}
+
+func (s *TicketService) ListComments(ticketID uint64) ([]models.TicketCommentWithAuthor, error) {
+	if _, err := s.ticketRepo.GetByID(ticketID); err != nil {
+		return nil, err
+	}
+	return s.commentRepo.ListByTicketID(ticketID)
+}
+
+func (s *TicketService) UpdateComment(ticketID uint64, commentID uint64, actorUserUUID string, role models.UserRole, body string) (*models.TicketComment, error) {
+	comment, err := s.commentRepo.GetByIDAndTicketID(commentID, ticketID)
+	if err != nil {
+		return nil, err
+	}
+
+	actor, err := s.getActorByUUID(actorUserUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	if role != models.RoleAdmin && comment.AuthorUserID != actor.ID {
+		return nil, ErrTicketCommentForbidden
+	}
+
+	return s.commentRepo.UpdateBody(commentID, strings.TrimSpace(body))
+}
+
+func (s *TicketService) DeleteComment(ticketID uint64, commentID uint64, actorUserUUID string, role models.UserRole) error {
+	comment, err := s.commentRepo.GetByIDAndTicketID(commentID, ticketID)
+	if err != nil {
+		return err
+	}
+
+	actor, err := s.getActorByUUID(actorUserUUID)
+	if err != nil {
+		return err
+	}
+
+	if role != models.RoleAdmin && comment.AuthorUserID != actor.ID {
+		return ErrTicketCommentForbidden
+	}
+
+	return s.commentRepo.DeleteByID(commentID)
+}
+
+func (s *TicketService) getActorByUUID(actorUserUUID string) (*models.User, error) {
+	parsedUUID, err := uuid.Parse(actorUserUUID)
+	if err != nil {
+		return nil, err
+	}
+	return s.userRepo.GetByUUID(parsedUUID)
 }
 
 func isAllowedTransition(from models.TicketStatus, to models.TicketStatus) bool {
