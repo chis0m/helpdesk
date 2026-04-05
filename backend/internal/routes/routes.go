@@ -13,6 +13,7 @@ import (
 func Register(r *gin.Engine, c *container.Container) {
 	loginRateLimiter := middleware.NewIPRateLimiter(10, time.Minute)
 	signupRateLimiter := middleware.NewIPRateLimiter(5, time.Minute)
+	forgotPasswordRateLimiter := middleware.NewIPRateLimiter(5, time.Minute)
 	invitePublicRateLimiter := middleware.NewIPRateLimiter(30, time.Minute)
 
 	r.GET("/", func(ctx *gin.Context) {
@@ -27,6 +28,8 @@ func Register(r *gin.Engine, c *container.Container) {
 		api.GET("/auth/public-csrf-token", c.AuthController.PublicAuthCSRFToken)
 		api.POST("/auth/login", loginRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Login)
 		api.POST("/auth/signup", signupRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Signup)
+		api.POST("/auth/forgot-password", forgotPasswordRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.ForgotPassword)
+		api.POST("/auth/reset-password", forgotPasswordRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.ResetPassword)
 		api.GET("/invites/verify", invitePublicRateLimiter.Middleware(), c.InviteController.VerifyInvite)
 		api.POST("/invites/accept", invitePublicRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.InviteController.AcceptInvite)
 		api.POST("/auth/refresh", middleware.RefreshTokenRequired(c.TokenMaker, auth.RefreshCookieName), middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.Refresh)
@@ -36,9 +39,13 @@ func Register(r *gin.Engine, c *container.Container) {
 		{
 			protected.GET("/auth/csrf-token", c.AuthController.CSRFToken)
 			protected.GET("/auth/me", c.AuthController.Me)
+			protected.GET("/auth/sessions", c.AuthController.ListSessions)
+			protected.POST("/auth/sessions/revoke-my-other-sessions", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.RevokeMyOtherSessions)
+			protected.DELETE("/auth/sessions/:session_id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.RevokeSession)
 			protected.POST("/auth/logout", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.Logout)
 			protected.POST("/auth/change-password", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.ChangePassword)
 			protected.POST("/users", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.Create)
+			protected.GET("/admin/users", c.UserController.ListAdmin)
 			protected.POST("/admin/staff", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.CreateStaff)
 			protected.POST("/admin/invites/staff", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.InviteController.CreateStaffInvite)
 			protected.GET("/users/:id", c.UserController.GetByID)

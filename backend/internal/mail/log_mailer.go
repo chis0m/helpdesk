@@ -24,3 +24,23 @@ func (n *LogStaffInviteNotifier) SendStaffInvite(toEmail, inviteURL string) erro
 		Msg("CA: staff invite link (email not sent; copy URL from logs)")
 	return nil
 }
+
+// Password reset uses the same CA pattern as staff invites: log the URL, no SMTP.
+
+type PasswordResetNotifier interface {
+	SendPasswordReset(toEmail, resetURL string) error
+}
+
+type LogPasswordResetNotifier struct{}
+
+func NewLogPasswordResetNotifier() *LogPasswordResetNotifier {
+	return &LogPasswordResetNotifier{}
+}
+
+func (n *LogPasswordResetNotifier) SendPasswordReset(toEmail, resetURL string) error {
+	logger.L().Info().
+		Str("to", toEmail).
+		Str("reset_url", resetURL).
+		Msg("CA: password reset link (email not sent; copy URL from logs)")
+	return nil
+}

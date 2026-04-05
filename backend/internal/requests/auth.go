@@ -17,3 +17,12 @@ type ChangePasswordRequest struct {
 	CurrentPassword string `json:"current_password" binding:"required,min=8,max=128"`
 	NewPassword     string `json:"new_password" binding:"required,min=8,max=128"`
 }
+
+type ForgotPasswordRequest struct {
+	Email string `json:"email" binding:"required,email,max=120"`
+}
+
+type ResetPasswordRequest struct {
+	Token       string `json:"token" binding:"required,len=64"`
+	NewPassword string `json:"new_password" binding:"required,min=8,max=128"`
+}

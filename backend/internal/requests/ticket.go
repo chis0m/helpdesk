@@ -54,4 +54,6 @@ type ListTicketsFilter struct {
 	Category       *string
 	ReporterUserID *uint64
 	AssignedUserID *uint64
+	// ScopeToUserID limits rows to tickets the user reported or is assigned to (non-admin list).
+	ScopeToUserID *uint64
 }

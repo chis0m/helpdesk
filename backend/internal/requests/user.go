@@ -46,6 +46,12 @@ type UpdateUserRequest struct {
 	IsActive   *bool   `json:"is_active" binding:"omitempty"`
 }
 
+type ListUsersQuery struct {
+	Page  int    `form:"page"`
+	Limit int    `form:"limit"`
+	Role  string `form:"role" binding:"omitempty,oneof=user staff admin super_admin"`
+}
+
 type CreateStaffRequest struct {
 	Email      string  `json:"email" binding:"required,email,max=120"`
 	Password   string  `json:"password" binding:"required,min=8,max=128"`

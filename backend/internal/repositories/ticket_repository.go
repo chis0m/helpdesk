@@ -54,6 +54,10 @@ func (r *TicketRepository) List(filter requests.ListTicketsFilter) ([]models.Tic
 	if filter.AssignedUserID != nil {
 		query = query.Where("assigned_user_id = ?", *filter.AssignedUserID)
 	}
+	if filter.ScopeToUserID != nil {
+		uid := *filter.ScopeToUserID
+		query = query.Where("(reporter_user_id = ? OR assigned_user_id = ?)", uid, uid)
+	}
 
 	var total int64
 	if err := query.Count(&total).Error; err != nil {

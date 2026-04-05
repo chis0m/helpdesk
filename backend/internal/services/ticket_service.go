@@ -13,6 +13,7 @@ import (
 
 var ErrInvalidTicketStatusTransition = errors.New("invalid ticket status transition")
 var ErrTicketCommentForbidden = errors.New("forbidden comment action")
+var ErrTicketListForbidden = errors.New("forbidden ticket list filters")
 
 type TicketService struct {
 	ticketRepo  *repositories.TicketRepository
@@ -62,6 +63,45 @@ func (s *TicketService) List(filter requests.ListTicketsFilter) ([]models.Ticket
 	if filter.Limit > 100 {
 		filter.Limit = 100
 	}
+	return s.ticketRepo.List(filter)
+}
+
+// ListForActor applies authorization: only admin and super_admin may list without scope;
+// other roles only see tickets they reported or are assigned to.
+func (s *TicketService) ListForActor(actorUserUUID string, actorRole models.UserRole, filter requests.ListTicketsFilter) ([]models.Ticket, int64, error) {
+	if filter.Page < 1 {
+		filter.Page = 1
+	}
+	if filter.Limit < 1 {
+		filter.Limit = 20
+	}
+	if filter.Limit > 100 {
+		filter.Limit = 100
+	}
+
+	parsedUUID, err := uuid.Parse(strings.TrimSpace(actorUserUUID))
+	if err != nil {
+		return nil, 0, err
+	}
+	actor, err := s.userRepo.GetByUUID(parsedUUID)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if actorRole == models.RoleAdmin || actorRole == models.RoleSuperAdmin {
+		filter.ScopeToUserID = nil
+		return s.ticketRepo.List(filter)
+	}
+
+	if filter.ReporterUserID != nil && *filter.ReporterUserID != actor.ID {
+		return nil, 0, ErrTicketListForbidden
+	}
+	if filter.AssignedUserID != nil && *filter.AssignedUserID != actor.ID {
+		return nil, 0, ErrTicketListForbidden
+	}
+
+	scope := actor.ID
+	filter.ScopeToUserID = &scope
 	return s.ticketRepo.List(filter)
 }
 

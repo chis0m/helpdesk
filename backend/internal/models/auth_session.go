@@ -14,6 +14,8 @@ type AuthSession struct {
 	RefreshExpiresAt time.Time  `gorm:"type:datetime(3);not null"`
 	CSRFToken        *string    `gorm:"type:varchar(128)"`
 	CSRFExpiresAt    *time.Time `gorm:"type:datetime(3)"`
+	UserAgent        *string    `gorm:"type:varchar(512)"`
+	IP               *string    `gorm:"column:ip;type:varchar(45)"`
 	RevokedAt        *time.Time `gorm:"type:datetime(3);index"`
 	CreatedAt        time.Time
 	UpdatedAt        time.Time

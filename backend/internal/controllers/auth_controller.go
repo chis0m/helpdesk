@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"helpdesk/backend/internal/auth"
@@ -48,7 +49,7 @@ func (a *AuthController) Login(c *gin.Context) {
 	req.Email = strings.TrimSpace(req.Email)
 	req.Password = strings.TrimSpace(req.Password)
 
-	result, err := a.authService.Login(req.Email, req.Password)
+	result, err := a.authService.Login(req.Email, req.Password, c.Request.UserAgent(), c.ClientIP())
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidCredentials) {
 			log.Warn().
@@ -316,4 +317,207 @@ func (a *AuthController) ChangePassword(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusOK, nil, "password changed successfully")
+}
+
+func (a *AuthController) ForgotPassword(c *gin.Context) {
+	log := logger.L()
+
+	var req requests.ForgotPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Warn().Err(err).Msg("forgot password failed: invalid request payload")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
+		return
+	}
+
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+	if err := a.authService.RequestPasswordReset(req.Email); err != nil {
+		log.Error().Err(err).Str("email", req.Email).Msg("forgot password failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	// Same response whether or not the email exists (avoid account enumeration).
+	response.Success(c, http.StatusOK, nil,
+		"If that email is registered, a password reset link was written to the server logs (CA: no email delivery).")
+}
+
+func (a *AuthController) ResetPassword(c *gin.Context) {
+	log := logger.L()
+
+	var req requests.ResetPasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		log.Warn().Err(err).Msg("reset password failed: invalid request payload")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
+		return
+	}
+
+	if err := a.authService.CompletePasswordReset(req.Token, req.NewPassword); err != nil {
+		if errors.Is(err, services.ErrPasswordResetInvalid) ||
+			errors.Is(err, services.ErrPasswordResetExpired) ||
+			errors.Is(err, services.ErrPasswordResetUsed) {
+			log.Warn().Err(err).Msg("reset password failed: invalid or expired token")
+			response.FailureWithAbort(c, http.StatusBadRequest, "invalid or expired reset token", "invalid or expired reset token")
+			return
+		}
+		log.Error().Err(err).Msg("reset password failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusOK, gin.H{"redirect_to": "/login"}, "password reset successful")
+}
+
+func (a *AuthController) ListSessions(c *gin.Context) {
+	log := logger.L()
+
+	userUUIDRaw, ok := c.Get(middleware.CtxUserUUID)
+	if !ok {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	userUUID, ok := userUUIDRaw.(string)
+	if !ok || strings.TrimSpace(userUUID) == "" {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	sessionIDRaw, ok := c.Get(middleware.CtxSessionID)
+	if !ok {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	sessionID, ok := sessionIDRaw.(string)
+	if !ok || strings.TrimSpace(sessionID) == "" {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	items, err := a.authService.ListSessionsForUser(userUUID, sessionID)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidSession) {
+			response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+			return
+		}
+		log.Error().Err(err).Msg("list sessions failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	out := make([]gin.H, 0, len(items))
+	for _, it := range items {
+		var ua any
+		if it.UserAgent != nil {
+			ua = *it.UserAgent
+		}
+		var ip any
+		if it.IP != nil {
+			ip = *it.IP
+		}
+		out = append(out, gin.H{
+			"session_id": it.SessionID,
+			"created_at": it.CreatedAt,
+			"user_agent": ua,
+			"ip":         ip,
+			"is_current": it.IsCurrent,
+		})
+	}
+
+	response.Success(c, http.StatusOK, gin.H{"items": out}, "sessions fetched")
+}
+
+func (a *AuthController) RevokeSession(c *gin.Context) {
+	log := logger.L()
+
+	userUUIDRaw, ok := c.Get(middleware.CtxUserUUID)
+	if !ok {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	userUUID, ok := userUUIDRaw.(string)
+	if !ok || strings.TrimSpace(userUUID) == "" {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	sessionIDRaw, ok := c.Get(middleware.CtxSessionID)
+	if !ok {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	currentSessionID, ok := sessionIDRaw.(string)
+	if !ok || strings.TrimSpace(currentSessionID) == "" {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	target := strings.TrimSpace(c.Param("session_id"))
+	if _, err := uuid.Parse(target); err != nil {
+		log.Warn().Err(err).Str("session_id", target).Msg("revoke session failed: invalid session id")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid session id", "invalid session id")
+		return
+	}
+
+	isCurrent, err := a.authService.RevokeSessionForUser(userUUID, currentSessionID, target)
+	if err != nil {
+		if errors.Is(err, services.ErrInvalidSession) {
+			response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+			return
+		}
+		if errors.Is(err, services.ErrSessionRevokeNotFound) {
+			log.Warn().Str("target_session_id", target).Msg("revoke session failed: not found or denied")
+			response.FailureWithAbort(c, http.StatusNotFound, "session not found", "session not found")
+			return
+		}
+		log.Error().Err(err).Msg("revoke session failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	if isCurrent {
+		clearAuthCookies(c)
+	}
+
+	response.Success(c, http.StatusOK, gin.H{
+		"revoked_session_id": target,
+		"logged_out":         isCurrent,
+	}, "session revoked")
+}
+
+func (a *AuthController) RevokeMyOtherSessions(c *gin.Context) {
+	log := logger.L()
+
+	userUUIDRaw, ok := c.Get(middleware.CtxUserUUID)
+	if !ok {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	userUUID, ok := userUUIDRaw.(string)
+	if !ok || strings.TrimSpace(userUUID) == "" {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	sessionIDRaw, ok := c.Get(middleware.CtxSessionID)
+	if !ok {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	currentSessionID, ok := sessionIDRaw.(string)
+	if !ok || strings.TrimSpace(currentSessionID) == "" {
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	if err := a.authService.RevokeOtherSessionsForUser(userUUID, currentSessionID); err != nil {
+		if errors.Is(err, services.ErrInvalidSession) {
+			response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+			return
+		}
+		log.Error().Err(err).Msg("revoke other sessions failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	response.Success(c, http.StatusOK, nil, "other sessions revoked")
 }

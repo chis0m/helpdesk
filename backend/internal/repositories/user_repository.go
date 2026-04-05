@@ -45,6 +45,25 @@ func (r *UserRepository) GetByID(userID uint64) (*models.User, error) {
 	return &user, nil
 }
 
+func (r *UserRepository) List(page, limit int, role *models.UserRole) ([]models.User, int64, error) {
+	query := r.db.Model(&models.User{})
+	if role != nil && *role != "" {
+		query = query.Where("role = ?", *role)
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	var users []models.User
+	if err := query.Order("id ASC").Offset(offset).Limit(limit).Find(&users).Error; err != nil {
+		return nil, 0, err
+	}
+	return users, total, nil
+}
+
 func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, error) {
 	role := input.Role
 	if role == "" {

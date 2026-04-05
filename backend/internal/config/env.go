@@ -28,6 +28,7 @@ type Config struct {
 	RefreshTokenDuration string
 	CSRFTokenDuration    string
 	InviteDuration       string
+	PasswordResetDuration string
 	GoEnv                string
 	LogLevel             string
 }
@@ -54,8 +55,9 @@ func Load() Config {
 		AccessTokenDuration:  getEnv("ACCESS_TOKEN_DURATION", "15m"),
 		RefreshTokenDuration: getEnv("REFRESH_TOKEN_DURATION", "168h"),
 		CSRFTokenDuration:    getEnv("CSRF_TOKEN_DURATION", "60m"),
-		InviteDuration:       getEnv("INVITE_TTL", "72h"),
-		LogLevel:             getEnv("LOG_LEVEL", "info"),
+		InviteDuration:        getEnv("INVITE_TTL", "72h"),
+		PasswordResetDuration: getEnv("PASSWORD_RESET_TTL", "1h"),
+		LogLevel:              getEnv("LOG_LEVEL", "info"),
 	}
 }
 
@@ -92,6 +94,10 @@ func (c Config) CSRFTTL() time.Duration {
 
 func (c Config) InviteTTL() time.Duration {
 	return parseDuration(c.InviteDuration, 72*time.Hour)
+}
+
+func (c Config) PasswordResetTTL() time.Duration {
+	return parseDuration(c.PasswordResetDuration, time.Hour)
 }
 
 func (c Config) TokenIssuer() string {

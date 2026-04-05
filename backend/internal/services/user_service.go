@@ -61,6 +61,19 @@ func (s *UserService) GetByID(userID uint64) (*models.User, error) {
 	return s.userRepo.GetByID(userID)
 }
 
+func (s *UserService) ListAll(page, limit int, role *models.UserRole) ([]models.User, int64, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	return s.userRepo.List(page, limit, role)
+}
+
 func (s *UserService) GetByUUIDString(userUUID string) (*models.User, error) {
 	parsed, err := uuid.Parse(strings.TrimSpace(userUUID))
 	if err != nil {

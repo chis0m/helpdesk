@@ -1,8 +1,12 @@
 package services
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -12,6 +16,7 @@ import (
 	"helpdesk/backend/internal/auth"
 	"helpdesk/backend/internal/config"
 	"helpdesk/backend/internal/logger"
+	"helpdesk/backend/internal/mail"
 	"helpdesk/backend/internal/models"
 	"helpdesk/backend/internal/repositories"
 	"helpdesk/backend/internal/requests"
@@ -22,6 +27,10 @@ var ErrInvalidRefreshToken = errors.New("invalid refresh token")
 var ErrInvalidSession = errors.New("invalid session")
 var ErrSignupFailed = errors.New("unable to complete signup")
 var ErrInvalidPassword = errors.New("invalid password")
+var ErrPasswordResetInvalid = errors.New("invalid password reset token")
+var ErrPasswordResetExpired = errors.New("password reset token expired")
+var ErrPasswordResetUsed = errors.New("password reset token already used")
+var ErrSessionRevokeNotFound = errors.New("session not found or access denied")
 
 type LoginResult struct {
 	User   *models.User
@@ -30,10 +39,12 @@ type LoginResult struct {
 }
 
 type AuthService struct {
-	cfg         config.Config
-	tokenMaker  auth.MakerInterface
-	userRepo    *repositories.UserRepository
-	sessionRepo *repositories.AuthSessionRepository
+	cfg               config.Config
+	tokenMaker        auth.MakerInterface
+	userRepo          *repositories.UserRepository
+	sessionRepo       *repositories.AuthSessionRepository
+	passwordResetRepo *repositories.PasswordResetRepository
+	resetNotifier     mail.PasswordResetNotifier
 }
 
 func NewAuthService(
@@ -41,16 +52,67 @@ func NewAuthService(
 	tokenMaker auth.MakerInterface,
 	userRepo *repositories.UserRepository,
 	sessionRepo *repositories.AuthSessionRepository,
+	passwordResetRepo *repositories.PasswordResetRepository,
+	resetNotifier mail.PasswordResetNotifier,
 ) *AuthService {
 	return &AuthService{
-		cfg:         cfg,
-		tokenMaker:  tokenMaker,
-		userRepo:    userRepo,
-		sessionRepo: sessionRepo,
+		cfg:               cfg,
+		tokenMaker:        tokenMaker,
+		userRepo:          userRepo,
+		sessionRepo:       sessionRepo,
+		passwordResetRepo: passwordResetRepo,
+		resetNotifier:     resetNotifier,
 	}
 }
 
-func (s *AuthService) Login(email, password string) (*LoginResult, error) {
+// AuthSessionListItem is a safe subset of auth_sessions for the current user.
+type AuthSessionListItem struct {
+	SessionID string
+	CreatedAt time.Time
+	UserAgent *string
+	IP        *string
+	IsCurrent bool
+}
+
+func hashPasswordResetToken(raw string) string {
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
+}
+
+func generatePasswordResetRawToken() (string, error) {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
+}
+
+func truncateSessionUserAgent(ua string) *string {
+	ua = strings.TrimSpace(ua)
+	if ua == "" {
+		return nil
+	}
+	const maxRunes = 512
+	runes := []rune(ua)
+	if len(runes) > maxRunes {
+		ua = string(runes[:maxRunes])
+	}
+	return &ua
+}
+
+func truncateSessionIP(ip string) *string {
+	ip = strings.TrimSpace(ip)
+	if ip == "" {
+		return nil
+	}
+	const maxLen = 45
+	if len(ip) > maxLen {
+		ip = ip[:maxLen]
+	}
+	return &ip
+}
+
+func (s *AuthService) Login(email, password string, userAgent string, clientIP string) (*LoginResult, error) {
 	log := logger.L()
 
 	email = strings.ToLower(strings.TrimSpace(email))
@@ -102,7 +164,14 @@ func (s *AuthService) Login(email, password string) (*LoginResult, error) {
 		return nil, fmt.Errorf("create refresh token: %w", err)
 	}
 
-	if _, err := s.sessionRepo.Create(user.UUID, sessionID, refreshPayload.Jti, refreshPayload.Exp); err != nil {
+	if _, err := s.sessionRepo.Create(
+		user.UUID,
+		sessionID,
+		refreshPayload.Jti,
+		refreshPayload.Exp,
+		truncateSessionUserAgent(userAgent),
+		truncateSessionIP(clientIP),
+	); err != nil {
 		return nil, fmt.Errorf("create auth session: %w", err)
 	}
 
@@ -350,4 +419,147 @@ func (s *AuthService) ChangePassword(userUUID, currentPassword, newPassword stri
 		return err
 	}
 	return nil
+}
+
+// RequestPasswordReset always succeeds from the caller's perspective when the input is valid.
+// If the email is registered, a row is stored and the reset URL is logged (CA: no SMTP).
+func (s *AuthService) RequestPasswordReset(email string) error {
+	email = strings.ToLower(strings.TrimSpace(email))
+	user, err := s.userRepo.GetByEmail(email)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil
+		}
+		return err
+	}
+
+	now := time.Now().UTC()
+	if err := s.passwordResetRepo.InvalidateUnusedForUser(user.UUID, now); err != nil {
+		return err
+	}
+
+	rawToken, err := generatePasswordResetRawToken()
+	if err != nil {
+		return err
+	}
+
+	row := &models.PasswordReset{
+		UserUUID:  user.UUID,
+		TokenHash: hashPasswordResetToken(rawToken),
+		ExpiresAt: now.Add(s.cfg.PasswordResetTTL()),
+	}
+	if err := s.passwordResetRepo.Create(row); err != nil {
+		return err
+	}
+
+	base := strings.TrimSuffix(strings.TrimSpace(s.cfg.FrontendURL), "/")
+	resetURL := base + "/reset-password?token=" + url.QueryEscape(rawToken)
+	return s.resetNotifier.SendPasswordReset(user.Email, resetURL)
+}
+
+func (s *AuthService) CompletePasswordReset(rawToken, newPassword string) error {
+	rawToken = strings.TrimSpace(rawToken)
+	if len(rawToken) != 64 {
+		return ErrPasswordResetInvalid
+	}
+	if _, err := hex.DecodeString(rawToken); err != nil {
+		return ErrPasswordResetInvalid
+	}
+
+	row, err := s.passwordResetRepo.GetByTokenHash(hashPasswordResetToken(rawToken))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrPasswordResetInvalid
+		}
+		return err
+	}
+
+	now := time.Now().UTC()
+	if row.UsedAt != nil {
+		return ErrPasswordResetUsed
+	}
+	if !row.ExpiresAt.UTC().After(now) {
+		return ErrPasswordResetExpired
+	}
+
+	newHash, err := auth.HashPassword(strings.TrimSpace(newPassword))
+	if err != nil {
+		return err
+	}
+
+	if err := s.userRepo.UpdatePasswordByUUID(row.UserUUID, newHash, false, now); err != nil {
+		return err
+	}
+	if err := s.passwordResetRepo.MarkUsed(row.ID, now); err != nil {
+		return err
+	}
+	if err := s.sessionRepo.RevokeAllActiveForUser(row.UserUUID); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *AuthService) ListSessionsForUser(userUUIDStr, currentSessionIDStr string) ([]AuthSessionListItem, error) {
+	userUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		return nil, ErrInvalidSession
+	}
+	currentSessionID, err := uuid.Parse(strings.TrimSpace(currentSessionIDStr))
+	if err != nil {
+		return nil, ErrInvalidSession
+	}
+
+	rows, err := s.sessionRepo.ListActiveByUserUUID(userUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]AuthSessionListItem, 0, len(rows))
+	for _, sess := range rows {
+		out = append(out, AuthSessionListItem{
+			SessionID: sess.SessionID.String(),
+			CreatedAt: sess.CreatedAt.UTC(),
+			UserAgent: sess.UserAgent,
+			IP:        sess.IP,
+			IsCurrent: sess.SessionID == currentSessionID,
+		})
+	}
+	return out, nil
+}
+
+// RevokeSessionForUser revokes a session that belongs to the user. Returns whether the revoked session was the current one (caller may clear cookies).
+func (s *AuthService) RevokeSessionForUser(userUUIDStr, currentSessionIDStr, targetSessionIDStr string) (isCurrent bool, err error) {
+	userUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		return false, ErrInvalidSession
+	}
+	currentSessionID, err := uuid.Parse(strings.TrimSpace(currentSessionIDStr))
+	if err != nil {
+		return false, ErrInvalidSession
+	}
+	targetSessionID, err := uuid.Parse(strings.TrimSpace(targetSessionIDStr))
+	if err != nil {
+		return false, ErrInvalidSession
+	}
+
+	revoked, err := s.sessionRepo.RevokeActiveSessionForUser(targetSessionID, userUUID)
+	if err != nil {
+		return false, err
+	}
+	if !revoked {
+		return false, ErrSessionRevokeNotFound
+	}
+	return targetSessionID == currentSessionID, nil
+}
+
+func (s *AuthService) RevokeOtherSessionsForUser(userUUIDStr, currentSessionIDStr string) error {
+	userUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		return ErrInvalidSession
+	}
+	currentSessionID, err := uuid.Parse(strings.TrimSpace(currentSessionIDStr))
+	if err != nil {
+		return ErrInvalidSession
+	}
+	return s.sessionRepo.RevokeOtherActiveSessionsForUser(currentSessionID, userUUID)
 }

@@ -96,10 +96,10 @@ func (ic *InviteController) CreateStaffInvite(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusCreated, gin.H{
-		"invite_id":      inv.ID,
-		"email":          inv.Email,
-		"expires_at_utc": inv.ExpiresAt.UTC(),
-		"target_role":    inv.TargetRole,
+		"invite_id":       inv.ID,
+		"email":           inv.Email,
+		"expires_at_utc":  inv.ExpiresAt.UTC(),
+		"target_role":     inv.TargetRole,
 	}, "staff invite created; check server logs for invite URL")
 }
 
@@ -160,10 +160,10 @@ func (ic *InviteController) AcceptInvite(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusCreated, gin.H{
-		"user_id":     user.ID,
-		"user_uuid":   user.UUID.String(),
-		"email":       user.Email,
-		"role":        user.Role,
+		"user_id":   user.ID,
+		"user_uuid": user.UUID.String(),
+		"email":     user.Email,
+		"role":      user.Role,
 		"redirect_to": "/login",
 	}, "invite accepted; account created")
 }

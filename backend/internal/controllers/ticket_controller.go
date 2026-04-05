@@ -64,7 +64,7 @@ func (t *TicketController) Create(c *gin.Context) {
 
 func (t *TicketController) List(c *gin.Context) {
 	log := logger.L()
-	// VULN-05: Missing ownership authorization; IDOR is possible.
+	// Non-admin roles are scoped to tickets they report or are assigned to; admins may list all.
 
 	var query requests.ListTicketsQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -82,8 +82,20 @@ func (t *TicketController) List(c *gin.Context) {
 		AssignedUserID: query.AssignedUserID,
 	}
 
-	tickets, total, err := t.ticketService.List(filter)
+	userUUID, role, ok := getAuthenticatedUser(c)
+	if !ok {
+		log.Warn().Msg("list tickets failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	tickets, total, err := t.ticketService.ListForActor(userUUID, role, filter)
 	if err != nil {
+		if errors.Is(err, services.ErrTicketListForbidden) {
+			log.Warn().Str("user_uuid", userUUID).Msg("list tickets failed: forbidden filters for role")
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		log.Error().Err(err).Msg("list tickets failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
