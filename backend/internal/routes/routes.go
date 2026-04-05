@@ -38,6 +38,13 @@ func Register(r *gin.Engine, c *container.Container) {
 			protected.POST("/users", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.Create)
 			protected.GET("/users/:id", c.UserController.GetByID)
 			protected.PATCH("/users/:id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.UpdateByID)
+			protected.POST("/tickets", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.Create)
+			protected.GET("/tickets", c.TicketController.List)
+			protected.GET("/tickets/:id", c.TicketController.GetByID)
+			protected.PATCH("/tickets/:id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.UpdateByID)
+			protected.PATCH("/tickets/:id/status", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.UpdateStatus)
+			protected.PATCH("/tickets/:id/assign", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.Assign)
+			protected.DELETE("/tickets/:id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.DeleteByID)
 			// VULN-03: admin authorization hardening is intentionally weak; privilege escalation is possible.
 			protected.PATCH("/admin/users/:user_id/role", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.UpdateRoleByUserID)
 		}
