@@ -2,7 +2,9 @@ package boot
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 	"helpdesk/backend/internal/auth"
@@ -67,4 +69,34 @@ func (a *App) Run() error {
 	addr := fmt.Sprintf(":%s", a.cfg.Port)
 	logger.L().Info().Str("address", addr).Msg("starting HTTP server")
 	return a.engine.Run(addr)
+}
+
+func applyCORS(engine *gin.Engine, cfg config.Config) {
+	origin := cfg.FrontendURL
+	if origin == "" {
+		origin = "http://localhost:5173"
+	}
+	engine.Use(cors.New(cors.Config{
+		AllowOrigins: []string{
+			origin,
+		},
+		AllowMethods: []string{
+			"GET",
+			"POST",
+			"PUT",
+			"PATCH",
+			"DELETE",
+			"OPTIONS",
+		},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Accept",
+			"Authorization",
+			"X-CSRF-Token",
+		},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 }

@@ -19,8 +19,8 @@ import (
 )
 
 type AuthController struct {
-	cfg         config.Config
-	authService *services.AuthService
+	cfg            config.Config
+	authService    *services.AuthService
 	publicAuthCSRF *auth.PublicAuthCSRFStore
 }
 
@@ -30,8 +30,8 @@ func NewAuthController(
 	publicAuthCSRF *auth.PublicAuthCSRFStore,
 ) *AuthController {
 	return &AuthController{
-		cfg:         cfg,
-		authService: authService,
+		cfg:            cfg,
+		authService:    authService,
 		publicAuthCSRF: publicAuthCSRF,
 	}
 }
@@ -111,9 +111,9 @@ func (a *AuthController) Signup(c *gin.Context) {
 	}
 
 	response.Success(c, http.StatusCreated, gin.H{
-		"user_uuid":    user.UUID.String(),
-		"email":        user.Email,
-		"redirect_to":  "/login",
+		"user_uuid":   user.UUID.String(),
+		"email":       user.Email,
+		"redirect_to": "/login",
 	}, "signup successful")
 }
 

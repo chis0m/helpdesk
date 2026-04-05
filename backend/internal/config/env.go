@@ -10,51 +10,51 @@ import (
 )
 
 type Config struct {
-	Port                 string
-	FrontendURL          string
-	DBHost               string
-	DBDatabase           string
-	DBUsername           string
-	DBPassword           string
-	DBPort               string
-	SeedAdminEmail       string
-	SeedAdminPassword    string
-	SeedAdminFirstName   string
-	SeedAdminMiddleName  string
-	SeedAdminLastName    string
-	AppName              string
-	PasetoSymmetricKey   string
-	AccessTokenDuration  string
-	RefreshTokenDuration string
-	CSRFTokenDuration    string
-	InviteDuration       string
+	Port                  string
+	FrontendURL           string
+	DBHost                string
+	DBDatabase            string
+	DBUsername            string
+	DBPassword            string
+	DBPort                string
+	SeedAdminEmail        string
+	SeedAdminPassword     string
+	SeedAdminFirstName    string
+	SeedAdminMiddleName   string
+	SeedAdminLastName     string
+	AppName               string
+	PasetoSymmetricKey    string
+	AccessTokenDuration   string
+	RefreshTokenDuration  string
+	CSRFTokenDuration     string
+	InviteDuration        string
 	PasswordResetDuration string
-	GoEnv                string
-	LogLevel             string
+	GoEnv                 string
+	LogLevel              string
 }
 
 func Load() Config {
 	_ = godotenv.Load()
 
 	return Config{
-		AppName:              getEnv("APP_NAME", "secure-web-helpdesk"),
-		Port:                 getEnv("PORT", "8080"),
-		FrontendURL:          getEnv("FRONTEND_URL", "http://localhost:5173"),
-		GoEnv:                getEnv("GO_ENV", "development"),
-		DBHost:               getEnv("DB_HOST", "localhost"),
-		DBDatabase:           getEnv("DB_DATABASE", "helpdesk"),
-		DBUsername:           getEnv("DB_USERNAME", "admin"),
-		DBPassword:           getEnv("DB_PASSWORD", "password"),
-		DBPort:               getEnv("DB_PORT", "3306"),
-		SeedAdminEmail:       getEnv("SEED_ADMIN_EMAIL", "admin@helpdesk.ie"),
-		SeedAdminPassword:    getEnv("SEED_ADMIN_PASSWORD", "password"),
-		SeedAdminFirstName:   getEnv("SEED_ADMIN_FIRST_NAME", "cyber"),
-		SeedAdminMiddleName:  getEnv("SEED_ADMIN_MIDDLE_NAME", ""),
-		SeedAdminLastName:    getEnv("SEED_ADMIN_LAST_NAME", "security"),
-		PasetoSymmetricKey:   getEnv("PASETO_SYMMETRIC_KEY", "12345678901234567890123456789012"),
-		AccessTokenDuration:  getEnv("ACCESS_TOKEN_DURATION", "15m"),
-		RefreshTokenDuration: getEnv("REFRESH_TOKEN_DURATION", "168h"),
-		CSRFTokenDuration:    getEnv("CSRF_TOKEN_DURATION", "60m"),
+		AppName:               getEnv("APP_NAME", "secure-web-helpdesk"),
+		Port:                  getEnv("PORT", "8080"),
+		FrontendURL:           getEnv("FRONTEND_URL", "http://localhost:5173"),
+		GoEnv:                 getEnv("GO_ENV", "development"),
+		DBHost:                getEnv("DB_HOST", "localhost"),
+		DBDatabase:            getEnv("DB_DATABASE", "helpdesk"),
+		DBUsername:            getEnv("DB_USERNAME", "admin"),
+		DBPassword:            getEnv("DB_PASSWORD", "password"),
+		DBPort:                getEnv("DB_PORT", "3306"),
+		SeedAdminEmail:        getEnv("SEED_ADMIN_EMAIL", "admin@helpdesk.ie"),
+		SeedAdminPassword:     getEnv("SEED_ADMIN_PASSWORD", "password"),
+		SeedAdminFirstName:    getEnv("SEED_ADMIN_FIRST_NAME", "cyber"),
+		SeedAdminMiddleName:   getEnv("SEED_ADMIN_MIDDLE_NAME", ""),
+		SeedAdminLastName:     getEnv("SEED_ADMIN_LAST_NAME", "security"),
+		PasetoSymmetricKey:    getEnv("PASETO_SYMMETRIC_KEY", "12345678901234567890123456789012"),
+		AccessTokenDuration:   getEnv("ACCESS_TOKEN_DURATION", "15m"),
+		RefreshTokenDuration:  getEnv("REFRESH_TOKEN_DURATION", "168h"),
+		CSRFTokenDuration:     getEnv("CSRF_TOKEN_DURATION", "60m"),
 		InviteDuration:        getEnv("INVITE_TTL", "72h"),
 		PasswordResetDuration: getEnv("PASSWORD_RESET_TTL", "1h"),
 		LogLevel:              getEnv("LOG_LEVEL", "info"),

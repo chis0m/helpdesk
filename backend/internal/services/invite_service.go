@@ -20,11 +20,11 @@ import (
 )
 
 var (
-	ErrInviteNotFound    = errors.New("invite not found")
-	ErrInviteExpired     = errors.New("invite expired")
-	ErrInviteUsed        = errors.New("invite already used")
-	ErrInviteEmailTaken  = errors.New("email already registered")
-	ErrInviteForbidden   = errors.New("forbidden invite action")
+	ErrInviteNotFound      = errors.New("invite not found")
+	ErrInviteExpired       = errors.New("invite expired")
+	ErrInviteUsed          = errors.New("invite already used")
+	ErrInviteEmailTaken    = errors.New("email already registered")
+	ErrInviteForbidden     = errors.New("forbidden invite action")
 	ErrInvitePendingExists = errors.New("pending invite already exists for this email")
 )
 
