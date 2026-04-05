@@ -34,7 +34,7 @@ Mutating routes add **`CSRFRequired`** (session CSRF header). Read-only routes o
 
 ### Users & admin
 
-- `POST /api/users` — create user (CSRF).
+- **Registration:** `POST /api/auth/signup` (public; see unauthenticated routes). There is no `POST /api/users`.
 - `GET /api/admin/users`, `POST /api/admin/staff`, `POST /api/admin/invites/staff` — admin/staff flows (CSRF where mutating).
 - `GET/PATCH /users/:id` — profile read/update (PATCH CSRF).
 

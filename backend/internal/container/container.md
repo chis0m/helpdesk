@@ -9,7 +9,7 @@ The **dependency injection** root: one struct holds shared singletons (DB handle
 | `DB` | Shared `*gorm.DB` (same connection pool for all repos). |
 | `HealthController` | Liveness/health JSON. |
 | `AuthController` | Login, signup, refresh, logout, CSRF, sessions, password flows. |
-| `UserController` | User CRUD-ish, admin list/staff, role updates. |
+| `UserController` | Admin user list, staff creation, profile by id, role updates (signup is `AuthController`). |
 | `InviteController` | Staff invite verify/accept/create. |
 | `TicketController` | Tickets + comments HTTP API. |
 | `UserService` | User domain operations (also used by invite acceptance). |

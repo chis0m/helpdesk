@@ -3,7 +3,6 @@ package services
 import (
 	"errors"
 	"strings"
-	"time"
 
 	"github.com/google/uuid"
 
@@ -21,10 +20,6 @@ type UserService struct {
 
 func NewUserService(userRepo *repositories.UserRepository) *UserService {
 	return &UserService{userRepo: userRepo}
-}
-
-func (s *UserService) CreateUser(input requests.CreateUserInput) (*models.User, error) {
-	return s.userRepo.Create(input)
 }
 
 func (s *UserService) UpdateUser(userUUID uuid.UUID, input requests.UpdateUserInput) (*models.User, error) {
@@ -81,30 +76,6 @@ func (s *UserService) GetByUUIDString(userUUID string) (*models.User, error) {
 		return nil, err
 	}
 	return s.userRepo.GetByUUID(parsed)
-}
-
-func (s *UserService) CreateUserFromRequest(req requests.CreateUserRequest) (*models.User, error) {
-	passwordHash, err := auth.HashPassword(strings.TrimSpace(req.Password))
-	if err != nil {
-		return nil, err
-	}
-
-	mustChangePassword := false
-	changedAt := time.Now().UTC()
-	isActive := true
-	input := requests.CreateUserInput{
-		Email:              strings.ToLower(strings.TrimSpace(req.Email)),
-		PasswordHash:       passwordHash,
-		FirstName:          strings.TrimSpace(req.FirstName),
-		LastName:           strings.TrimSpace(req.LastName),
-		MiddleName:         req.MiddleName,
-		Role:               models.RoleUser,
-		IsActive:           &isActive,
-		MustChangePassword: &mustChangePassword,
-		PasswordChangedAt:  &changedAt,
-	}
-
-	return s.userRepo.Create(input)
 }
 
 func (s *UserService) CreateStaffFromRequest(req requests.CreateStaffRequest) (*models.User, error) {

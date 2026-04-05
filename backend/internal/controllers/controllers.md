@@ -18,7 +18,7 @@ Handlers read **`middleware` context keys** for user UUID, role, session id.
 
 ## `UserController`
 
-User creation, admin user list, staff creation, **GetByID** / **UpdateByID** by path id, **UpdateRoleByUserID** for admin role management. Authorization for admin-only actions is enforced in controller/service layers depending on the endpoint.
+Admin user list, **CreateStaff** (admin/super_admin), **GetByID** / **UpdateByID** by path id, **UpdateRoleByUserID**. End-user accounts are created via **`AuthController.Signup`** (`POST /api/auth/signup`), not this controller.
 
 ## `InviteController`
 

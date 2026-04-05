@@ -45,7 +45,6 @@ func Register(r *gin.Engine, c *container.Container) {
 			protected.DELETE("/auth/sessions/:session_id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.RevokeSession)
 			protected.POST("/auth/logout", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.Logout)
 			protected.POST("/auth/change-password", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.ChangePassword)
-			protected.POST("/users", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.Create)
 			protected.GET("/admin/users", c.UserController.ListAdmin)
 			protected.POST("/admin/staff", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.CreateStaff)
 			protected.POST("/admin/invites/staff", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.InviteController.CreateStaffInvite)

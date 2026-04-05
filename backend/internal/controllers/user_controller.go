@@ -24,32 +24,6 @@ func NewUserController(userService *services.UserService) *UserController {
 	return &UserController{userService: userService}
 }
 
-func (u *UserController) Create(c *gin.Context) {
-	log := logger.L()
-
-	var req requests.CreateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Warn().Err(err).Msg("create user failed: invalid request payload")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
-		return
-	}
-
-	user, err := u.userService.CreateUserFromRequest(req)
-	if err != nil {
-		log.Error().Err(err).Msg("create user failed")
-		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
-		return
-	}
-
-	response.Success(c, http.StatusCreated, gin.H{
-		"user_id":   user.ID,
-		"user_uuid": user.UUID.String(),
-		"email":     user.Email,
-		"role":      user.Role,
-		"is_active": user.IsActive,
-	}, "user created")
-}
-
 // VULN-02: IDOR on user profiles — GET /users/:id without checking path id matches authenticated user.
 func (u *UserController) GetByID(c *gin.Context) {
 	log := logger.L()
