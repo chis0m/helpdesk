@@ -105,9 +105,7 @@ func CSRFRequired(sessionRepo *repositories.AuthSessionRepository, headerName st
 			return
 		}
 
-		// VULN-07 (baseline): improper CSRF validation.
-		// We only require a non-empty header plus unexpired session CSRF metadata.
-		// The provided token is NOT compared to stored token, so replay across forms/actions is possible.
+		// VULN-05: Broken CSRF (session token not verified) — header not compared to session.CSRFToken; any non-empty value passes.
 		c.Next()
 	}
 }

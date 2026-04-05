@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -24,6 +25,7 @@ func NewTicketController(ticketService *services.TicketService) *TicketControlle
 	return &TicketController{ticketService: ticketService}
 }
 
+// VULN-03: Weak input validation / stored XSS risk — Create binds ticket JSON with no HTML/script sanitization.
 func (t *TicketController) Create(c *gin.Context) {
 	log := logger.L()
 
@@ -129,9 +131,38 @@ func (t *TicketController) List(c *gin.Context) {
 	}, "tickets fetched")
 }
 
+// VULN-07: SQL injection (ticket keyword search) — forwards q to repository Raw SQL without parameter binding.
+func (t *TicketController) Search(c *gin.Context) {
+	log := logger.L()
+
+	q := strings.TrimSpace(c.Query("q"))
+	if q == "" {
+		response.FailureWithAbort(c, http.StatusBadRequest, "query parameter q is required", "query parameter q is required")
+		return
+	}
+
+	tickets, err := t.ticketService.SearchTicketsUnsafe(q)
+	if err != nil {
+		log.Error().Err(err).Str("q", q).Msg("ticket search failed")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	result := make([]gin.H, 0, len(tickets))
+	for _, ticket := range tickets {
+		tk := ticket
+		result = append(result, formatTicket(&tk))
+	}
+
+	response.Success(c, http.StatusOK, gin.H{
+		"items": result,
+		"query": q,
+	}, "tickets search completed")
+}
+
 func (t *TicketController) GetByID(c *gin.Context) {
 	log := logger.L()
-	// VULN-05: Missing ownership authorization; IDOR is possible.
+	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -157,7 +188,7 @@ func (t *TicketController) GetByID(c *gin.Context) {
 
 func (t *TicketController) UpdateByID(c *gin.Context) {
 	log := logger.L()
-	// VULN-05: Missing ownership authorization; IDOR is possible.
+	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -190,7 +221,7 @@ func (t *TicketController) UpdateByID(c *gin.Context) {
 
 func (t *TicketController) UpdateStatus(c *gin.Context) {
 	log := logger.L()
-	// VULN-05: Missing ownership authorization; IDOR is possible.
+	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -228,7 +259,7 @@ func (t *TicketController) UpdateStatus(c *gin.Context) {
 
 func (t *TicketController) Assign(c *gin.Context) {
 	log := logger.L()
-	// VULN-05: Missing ownership authorization; IDOR is possible.
+	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -261,7 +292,7 @@ func (t *TicketController) Assign(c *gin.Context) {
 
 func (t *TicketController) DeleteByID(c *gin.Context) {
 	log := logger.L()
-	// VULN-05: Missing ownership authorization; IDOR is possible.
+	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -292,7 +323,7 @@ func (t *TicketController) DeleteByID(c *gin.Context) {
 
 func (t *TicketController) AddComment(c *gin.Context) {
 	log := logger.L()
-	// VULN-05: Missing ownership authorization; IDOR is possible.
+	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -339,7 +370,7 @@ func (t *TicketController) AddComment(c *gin.Context) {
 
 func (t *TicketController) ListComments(c *gin.Context) {
 	log := logger.L()
-	// VULN-05: Missing ownership authorization; IDOR is possible.
+	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -365,6 +396,7 @@ func (t *TicketController) ListComments(c *gin.Context) {
 
 func (t *TicketController) UpdateComment(c *gin.Context) {
 	log := logger.L()
+	// VULN-04: IDOR on tickets and comments — ticket id in path not access-controlled; comment edit is author/admin only.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -422,6 +454,7 @@ func (t *TicketController) UpdateComment(c *gin.Context) {
 
 func (t *TicketController) DeleteComment(c *gin.Context) {
 	log := logger.L()
+	// VULN-04: IDOR on tickets and comments — ticket id in path not access-controlled; comment delete is author/admin only.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {

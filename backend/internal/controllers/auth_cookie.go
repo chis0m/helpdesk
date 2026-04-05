@@ -23,10 +23,7 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 		refreshMaxAge = 0
 	}
 
-	// Baseline branch (intentionally weak cookie security):
-	// - Secure=false
-	// - HttpOnly=false
-	// - SameSite=None
+	// VULN-01: Weak session cookie flags — HttpOnly/Secure false, SameSite=None.
 	secureCookie := false
 	httpOnlyCookie := false
 	cookiePath := "/"
@@ -38,6 +35,7 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 }
 
 func clearAuthCookies(c *gin.Context) {
+	// VULN-01: Weak session cookie flags — clear uses same HttpOnly/Secure false and SameSite=None.
 	secureCookie := false
 	httpOnlyCookie := false
 	cookiePath := "/"

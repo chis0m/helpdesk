@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"errors"
+	"fmt"
 
 	"gorm.io/gorm"
 
@@ -137,4 +138,18 @@ func (r *TicketRepository) UpdateAssignment(ticketID uint64, assignedUserID *uin
 
 func (r *TicketRepository) DeleteByID(ticketID uint64) error {
 	return r.db.Delete(&models.Ticket{}, "id = ?", ticketID).Error
+}
+
+// VULN-07: SQL injection (ticket keyword search) — q concatenated into Raw SQL without parameter binding.
+func (r *TicketRepository) SearchByKeywordConcatUnsafe(q string) ([]models.Ticket, error) {
+	//nolint:gosec // G201
+	sqlStr := fmt.Sprintf(
+		"SELECT * FROM tickets WHERE deleted_at IS NULL AND (title LIKE '%%%s%%' OR description LIKE '%%%s%%' OR category LIKE '%%%s%%') ORDER BY created_at DESC LIMIT 100",
+		q, q, q,
+	)
+	var tickets []models.Ticket
+	if err := r.db.Raw(sqlStr).Scan(&tickets).Error; err != nil {
+		return nil, err
+	}
+	return tickets, nil
 }

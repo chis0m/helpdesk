@@ -57,6 +57,7 @@ func (s *UserService) UpdateRoleByIDAsActor(userID uint64, targetRole models.Use
 	}
 }
 
+// VULN-02: IDOR on user profiles — loads user by id with no actor-vs-target authorization.
 func (s *UserService) GetByID(userID uint64) (*models.User, error) {
 	return s.userRepo.GetByID(userID)
 }
@@ -132,6 +133,7 @@ func (s *UserService) CreateStaffFromRequest(req requests.CreateStaffRequest) (*
 	return s.userRepo.Create(input)
 }
 
+// VULN-02: IDOR on user profiles — updates user by id with no actor-vs-target authorization.
 func (s *UserService) UpdateByID(userID uint64, req requests.UpdateUserRequest) (*models.User, error) {
 	input := requests.UpdateUserInput{
 		Email:      req.Email,

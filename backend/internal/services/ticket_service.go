@@ -33,6 +33,7 @@ func NewTicketService(
 	}
 }
 
+// VULN-03: Weak input validation / stored XSS risk — persists ticket text with length-only validation.
 func (s *TicketService) CreateByUserUUID(userUUID string, req requests.CreateTicketRequest) (*models.Ticket, error) {
 	parsedUUID, err := uuid.Parse(userUUID)
 	if err != nil {
@@ -105,8 +106,19 @@ func (s *TicketService) ListForActor(actorUserUUID string, actorRole models.User
 	return s.ticketRepo.List(filter)
 }
 
+// VULN-04: IDOR on tickets and comments — GetByID through ListComments lack reporter/assignee/admin checks on ticket id.
+
 func (s *TicketService) GetByID(ticketID uint64) (*models.Ticket, error) {
 	return s.ticketRepo.GetByID(ticketID)
+}
+
+// VULN-07: SQL injection (ticket keyword search) — forwards q to Raw SQL built with string concatenation.
+func (s *TicketService) SearchTicketsUnsafe(keyword string) ([]models.Ticket, error) {
+	keyword = strings.TrimSpace(keyword)
+	if keyword == "" {
+		return []models.Ticket{}, nil
+	}
+	return s.ticketRepo.SearchByKeywordConcatUnsafe(keyword)
 }
 
 func (s *TicketService) UpdateByID(ticketID uint64, req requests.UpdateTicketRequest) (*models.Ticket, error) {

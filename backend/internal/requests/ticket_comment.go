@@ -1,7 +1,7 @@
 package requests
 
 type CreateTicketCommentRequest struct {
-	// VULN-04: Input validation is weak; stored XSS is possible.
+	// VULN-03: Weak input validation / stored XSS risk — no HTML/script sanitization on comment body.
 	Body string `json:"body" binding:"required,min=1,max=5000"`
 }
 
@@ -12,6 +12,6 @@ type CreateTicketCommentInput struct {
 }
 
 type UpdateTicketCommentRequest struct {
-	// VULN-04: Input validation is weak; stored XSS is possible.
+	// VULN-03: Weak input validation / stored XSS risk — no HTML/script sanitization on comment body.
 	Body string `json:"body" binding:"required,min=1,max=5000"`
 }

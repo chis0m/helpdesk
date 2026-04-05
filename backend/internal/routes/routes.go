@@ -34,6 +34,7 @@ func Register(r *gin.Engine, c *container.Container) {
 		api.POST("/invites/accept", invitePublicRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.InviteController.AcceptInvite)
 		api.POST("/auth/refresh", middleware.RefreshTokenRequired(c.TokenMaker, auth.RefreshCookieName), middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.Refresh)
 
+		// VULN-06: Insufficient security / audit logging — no audit middleware; sensitive routes use ad-hoc logs only.
 		protected := api.Group("")
 		protected.Use(middleware.AuthRequired(c.TokenMaker, auth.AccessCookieName), middleware.ActiveSessionRequired(c.SessionRepo))
 		{
@@ -52,6 +53,7 @@ func Register(r *gin.Engine, c *container.Container) {
 			protected.PATCH("/users/:id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.UserController.UpdateByID)
 			protected.POST("/tickets", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.Create)
 			protected.GET("/tickets", c.TicketController.List)
+			protected.GET("/tickets/search", c.TicketController.Search)
 			protected.GET("/tickets/:id", c.TicketController.GetByID)
 			protected.PATCH("/tickets/:id", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.UpdateByID)
 			protected.PATCH("/tickets/:id/status", middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.TicketController.UpdateStatus)

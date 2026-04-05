@@ -63,6 +63,7 @@ func (a *AuthController) Login(c *gin.Context) {
 		return
 	}
 
+	// VULN-01: Weak session cookie flags — HttpOnly/Secure false, SameSite=None.
 	setAuthCookies(c, a.cfg, result.Tokens)
 
 	response.Success(c, http.StatusOK, gin.H{
@@ -147,6 +148,7 @@ func (a *AuthController) Refresh(c *gin.Context) {
 		return
 	}
 
+	// VULN-01: Weak session cookie flags — HttpOnly/Secure false, SameSite=None.
 	setAuthCookies(c, a.cfg, *result)
 	response.Success(c, http.StatusOK, gin.H{
 		"access_expires_at_utc": result.AccessExpires.UTC(),

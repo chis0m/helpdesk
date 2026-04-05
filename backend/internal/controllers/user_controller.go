@@ -50,6 +50,7 @@ func (u *UserController) Create(c *gin.Context) {
 	}, "user created")
 }
 
+// VULN-02: IDOR on user profiles — GET /users/:id without checking path id matches authenticated user.
 func (u *UserController) GetByID(c *gin.Context) {
 	log := logger.L()
 
@@ -85,6 +86,7 @@ func (u *UserController) GetByID(c *gin.Context) {
 	}, "user fetched")
 }
 
+// VULN-02: IDOR on user profiles — PATCH /users/:id without checking path id matches authenticated user.
 func (u *UserController) UpdateByID(c *gin.Context) {
 	log := logger.L()
 
