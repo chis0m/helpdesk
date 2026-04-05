@@ -1,14 +1,47 @@
-# Services
+# Services (`internal/services`)
 
-### Auth Service
+**Domain / application layer**: orchestrates repositories, auth primitives, mail notifiers, and config. **No direct HTTP** — controllers translate Gin → request DTOs → service calls → JSON via `response` helpers.
 
-`AuthService` handles:
-- login credential verification
-- signup account creation
-- access/refresh token creation
-- refresh token rotation and replay checks
-- session-bound CSRF token issue/reuse
+## `AuthService` (`auth_service.go`)
 
-### User Service
+Central authentication lifecycle:
 
-`UserService` handles create and update user operations.
+- **Login** — verify Argon2id password, create/update **`auth_sessions`** row (refresh JTI, CSRF fields, user-agent/IP metadata), mint access + refresh PASETOs bound to session id.
+- **Signup** — create `user` row with default role; no session until login.
+- **Refresh** — validate refresh token + session, **rotate** refresh JTI on the session row (replay detection), re-issue access (+ optionally CSRF metadata in response).
+- **Logout / revoke** — mark session revoked or delete row as implemented.
+- **Session list** — returns safe subset for “my sessions” UI (mark current session).
+- **Change password** — re-hash, update user, may invalidate other sessions depending on implementation.
+- **Forgot / reset password** — generates opaque token, stores **hash** in `password_resets`, builds URL with `FRONTEND_URL`, calls **`PasswordResetNotifier`** (logs link in CA). Reset validates token, expiry, single-use.
+
+Password-reset and invite tokens use **SHA-256 hashes** of raw secrets in DB; raw token only appears in email/log.
+
+Exported **errors** (e.g. `ErrInvalidCredentials`, `ErrInvalidRefreshToken`) let controllers map to HTTP status codes.
+
+## `UserService` (`user_service.go`)
+
+User CRUD-style operations: get by id/UUID, list (admin), create from requests, staff creation, **role updates** with role-gating (who may promote whom). Some endpoints intentionally reflect **baseline IDOR** behavior documented in `ca2/Vulnerability.md` — secure branch should tighten checks here + in controllers.
+
+## `InviteService` (`invite_service.go`)
+
+Staff invitation flow:
+
+- **CreateStaffInvite** — admin/super_admin only; ensures email not registered and no conflicting pending invite; generates raw token, stores **hash**, sends notifier with accept URL.
+- **Verify** — validate token hash, expiry, used flag.
+- **Accept** — create staff user, mark invite used (transactional expectations in repo layer).
+
+Uses **`FRONTEND_URL`** to build links consistent with the SPA.
+
+## `TicketService` (`ticket_service.go`)
+
+Ticket and comment operations backed by `TicketRepository`, `TicketCommentRepository`, `UserRepository`.
+
+- **`ListForActor`** — **authorization for listing**: admins see all (subject to filters); non-admins are scoped to tickets they **report** or are **assigned** to. This is the main non-trivial policy method.
+- **By-id methods** (`GetByID`, updates, comments, etc.) — repository lookups by id; baseline intentionally **does not** re-check reporter/assignee on every by-id call (see VULN-04 in `Vulnerability.md`).
+- **Search** — delegates to repository search implementation (baseline may use unsafe SQL — see VULN-07).
+
+Domain errors: invalid status transition, forbidden comment action, forbidden list filters.
+
+## Where to add business rules
+
+Prefer **services** over controllers: same rules apply if you later add gRPC, jobs, or CLI. Controllers should stay thin (bind, call service, map errors to HTTP).

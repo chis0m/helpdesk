@@ -1,40 +1,37 @@
-# Container
+# Container (`internal/container`)
 
-### Dependency Wiring
+The **dependency injection** root: one struct holds shared singletons (DB handle, token maker, repositories’ consumers). **`routes.Register`** receives only `*Container` so route files never `new` services by hand.
 
-Container builds and holds shared instances: repositories, services, controllers, token maker, and public auth CSRF store.
+## `Container` fields (exported)
 
-### How Container Works
+| Field | Role |
+|-------|------|
+| `DB` | Shared `*gorm.DB` (same connection pool for all repos). |
+| `HealthController` | Liveness/health JSON. |
+| `AuthController` | Login, signup, refresh, logout, CSRF, sessions, password flows. |
+| `UserController` | User CRUD-ish, admin list/staff, role updates. |
+| `InviteController` | Staff invite verify/accept/create. |
+| `TicketController` | Tickets + comments HTTP API. |
+| `UserService` | User domain operations (also used by invite acceptance). |
+| `TicketService` | Ticket + comment domain logic. |
+| `TokenMaker` | `auth.MakerInterface` — PASETO create/verify (middleware + auth service). |
+| `PublicAuthCSRFStore` | In-memory tokens for **pre-login** routes (login, signup, forgot/reset password, invite accept). |
+| `SessionRepo` | Passed into middleware factories in `routes` for session + CSRF validation. |
 
-`container.New(db, cfg, tokenMaker)` is called during app boot.
+Internal-only dependencies (not on the struct but built inside `New`): `InviteService`, `AuthService`, invite/password-reset repositories, ticket comment repository, mail notifiers.
 
-Inside `New`:
+## `New(db, cfg, tokenMaker)` build order
 
-1. Repositories are created first (for database access):
-   - `UserRepository`
-   - `AuthSessionRepository`
-2. Shared in-memory stores are created:
-   - `PublicAuthCSRFStore`
-3. Services are created next and receive repositories:
-   - `UserService`
-   - `AuthService`
-4. Controllers are created last and receive services/stores:
-   - `HealthController`
-   - `AuthController`
-   - `UserController`
-5. All instances are stored in `Container` struct fields.
+1. **Repositories** — `User`, `Invite`, `Ticket`, `TicketComment`, `AuthSession`, `PasswordReset`.
+2. **`PublicAuthCSRFStore`** — TTL from `cfg.CSRFTTL()`.
+3. **Notifiers** — `LogStaffInviteNotifier`, `LogPasswordResetNotifier` (`internal/mail/log_mailer.go`; CA logs URLs instead of sending email).
+4. **Services** — `UserService` → `InviteService` → `TicketService` → `AuthService` (auth pulls in password reset + PASETO + sessions).
+5. **Controllers** — each gets the services/stores it needs.
 
-### Runtime Usage
+Order matters where constructors take dependencies: e.g. `AuthService` needs `PasswordResetRepository` and `resetNotifier`; `InviteService` needs `inviteRepo`, `userRepo`, notifier.
 
-Routes do not build dependencies directly.  
-Routes receive a single `Container` and pull what they need:
+## Why this pattern?
 
-- controller handlers (`AuthController`, `UserController`, `HealthController`)
-- middleware dependencies (`TokenMaker`, `SessionRepo`, `PublicAuthCSRFStore`)
-
-This keeps wiring in one place and avoids creating services/controllers inside route files.
-
-### Public Auth CSRF Store
-
-`PublicAuthCSRFStore` is initialized in memory for development/CA usage.  
-For production, I use Redis/shared storage.
+- **Single place** to change wiring (e.g. swap mail implementation, add a cache).
+- **Routes stay declarative** — only `c.SomeController.Method` and middleware closures with `c.TokenMaker`, `c.SessionRepo`, etc.
+- **Tests** can build a smaller container or pass mocks if you introduce interfaces later.

@@ -13,17 +13,25 @@ Health check: `GET http://localhost:8080/api/health`
 
 ## Project structure
 
-- `cmd/server`: application entrypoint.
-- `boot`: app bootstrap (config, db, container, router).
-- `internal/container`: dependency wiring (controllers/services/repositories).
-- `internal/controllers`: HTTP layer.
-- `internal/services`: business logic layer.
-- `internal/repositories`: data access layer.
-- `internal/database`: DB connection and migration helpers.
-- `internal/routes`: route registration.
-- `internal/models`: domain models.
+Docs for heavier packages: `boot`, `internal/database`, `internal/container`, `internal/auth`, `internal/middleware`, `internal/routes`, `internal/controllers`, `internal/services`, `internal/repositories` (each has a `*.md` next to the code where linked below).
+
+- `cmd/server`: application entrypoint (`main` → `boot.NewApp`).
+- `boot`: app bootstrap — [`boot/boot.md`](boot/boot.md).
+- `internal/config`: environment loading (`internal/config/env.go`).
+- `internal/logger`: zerolog init (`internal/logger/zerolog.go`).
+- `internal/database`: DB connection and Goose migrations — [`internal/database/database.md`](internal/database/database.md).
+- `internal/container`: dependency wiring — [`internal/container/container.md`](internal/container/container.md).
+- `internal/auth`: PASETO, passwords, token types — [`internal/auth/auth.md`](internal/auth/auth.md).
+- `internal/middleware`: auth, session, CSRF, rate limits — [`internal/middleware/middleware.md`](internal/middleware/middleware.md).
+- `internal/routes`: route registration — [`internal/routes/routes.md`](internal/routes/routes.md).
+- `internal/controllers`: HTTP layer — [`internal/controllers/controllers.md`](internal/controllers/controllers.md).
+- `internal/services`: business logic — [`internal/services/services.md`](internal/services/services.md).
+- `internal/repositories`: data access — [`internal/repositories/repositories.md`](internal/repositories/repositories.md).
+- `internal/mail`: notifier interfaces; CA build logs invite/reset URLs instead of SMTP.
+- `internal/models`: domain models (structs + GORM tags).
+- `internal/requests` / `internal/response`: request DTOs and JSON helpers.
 - `migrations`: Goose SQL migration files.
-- `seed`: database seed logic.
+- `seed`: boot-time admin seed (`seed/seeder.go`, `seed/seeds/`).
 
 ## Tools used and why
 

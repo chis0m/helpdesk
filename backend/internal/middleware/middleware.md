@@ -1,28 +1,64 @@
-# Middleware
+# Middleware (`internal/middleware`)
 
-### Access + Refresh Middleware
+HTTP **cross-cutting** concerns: authentication, session validity, CSRF, and rate limiting. Handlers assume context values set by these layers (see **context keys** below).
 
-`AuthRequired` validates access token from cookie.  
-`RefreshTokenRequired` validates refresh token for refresh endpoint.
+## Context keys — `context_keys.go`
 
-### Active Session Middleware
+Gin stores typed values for downstream handlers and nested middleware:
 
-`ActiveSessionRequired` checks `session_id` against `auth_sessions` table.  
-It blocks revoked or missing sessions.
+| Key | Set by | Typical use |
+|-----|--------|-------------|
+| `CtxAuthPayload` | `AuthRequired`, `RefreshTokenRequired` | `*auth.Payload` (claims). |
+| `CtxUserUUID` | `AuthRequired` | User UUID string from token `sub`. |
+| `CtxUserRole` | `AuthRequired` | Role string for authorization branches. |
+| `CtxSessionID` | `AuthRequired`, `RefreshTokenRequired` | Session id from token `sess_id`. |
+| `CtxTokenJTI` | `AuthRequired`, `RefreshTokenRequired` | Current access/refresh JTI for rotation checks. |
 
-### CSRF Middleware
+Controllers use **`middleware.CtxUserUUID`** etc. when calling services.
 
-`CSRFRequired` runs on state-changing methods only.  
-Baseline behavior is intentionally weak for CA vulnerability demo.
+## `AuthRequired(tokenMaker, accessCookieName)`
 
-`PublicAuthCSRFRequired` validates public auth CSRF tokens (login/signup) using in-memory synchronizer storage.
+1. Reads access token from the **named cookie**.
+2. Verifies PASETO and expiry, checks **access** token type.
+3. Loads **`CtxAuthPayload`**, **`CtxUserUUID`**, **`CtxUserRole`**, **`CtxSessionID`**, **`CtxTokenJTI`**.
 
-### Rate Limit Middleware
+Used on the **`protected`** route group together with `ActiveSessionRequired`.
 
-`IPRateLimiter` applies simple in-memory per-IP request throttling.  
-For production, I use Redis/shared limiter.
+## `ActiveSessionRequired(sessionRepo)`
 
-This implementation was guided by:
-- https://www.alexedwards.net/blog/how-to-rate-limit-http-requests
-- https://pkg.go.dev/sync#Mutex
-- https://go.dev/doc/faq#atomic_maps
+Ensures the session id in context still refers to a **non-revoked** row in `auth_sessions`. Blocks stale tokens after logout/revoke. Runs **after** `AuthRequired` so session id is known.
+
+## `RefreshTokenRequired(tokenMaker, refreshCookieName)`
+
+For **`POST /auth/refresh` only**: reads refresh cookie, verifies **refresh** token type, sets payload/session/JTI in context. Does **not** require an active session check in the same way as access (refresh flow validates + rotates in controller/service).
+
+## `CSRFRequired(sessionRepo, headerName)`
+
+Runs on **unsafe HTTP methods** (not GET/HEAD/OPTIONS). For authenticated session CSRF:
+
+1. Requires non-empty CSRF header.
+2. Loads session by id from context; checks CSRF token pointer + expiry on the **session row**.
+
+Baseline CA behavior: see **`Vulnerability.md`** VULN-05 — header is **not** compared to stored secret in code (intentional weak branch). On a secure branch, add constant-time comparison to `session.CSRFToken`.
+
+## `PublicAuthCSRFRequired(store, headerName)`
+
+For **pre-login** routes: validates token issued by **`PublicAuthCSRFStore`**, consumes it (one-time), and checks TTL. Stronger than session CSRF on baseline — login/signup depend on this.
+
+## `IPRateLimiter`
+
+In-memory **per-IP** sliding window (mutex + map). Used on login, signup, forgot-password, invite verify/accept. **Not distributed** — fine for single instance / coursework; use Redis for horizontal scale.
+
+References that informed the approach:
+
+- https://www.alexedwards.net/blog/how-to-rate-limit-http-requests  
+- https://pkg.go.dev/sync#Mutex  
+- https://go.dev/doc/faq#atomic_maps  
+
+## Typical request chains
+
+- **Public POST** — `RateLimit` → `PublicAuthCSRFRequired` → controller.  
+- **Protected GET** — `AuthRequired` → `ActiveSessionRequired` → controller.  
+- **Protected mutating** — `AuthRequired` → `ActiveSessionRequired` → `CSRFRequired` → controller.
+
+Order is important: CSRF middleware expects session id in context from `AuthRequired`.
