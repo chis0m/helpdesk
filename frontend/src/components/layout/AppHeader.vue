@@ -18,12 +18,14 @@
       <span
         class="hidden rounded-full bg-[var(--brand-green)] px-3 py-2 text-xs font-semibold text-[var(--text-on-green)] shadow-sm sm:inline"
       >Product support</span>
-      <RouterLink
-        to="/login"
-        class="rounded-full border border-[var(--border-subtle)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)] sm:px-4 sm:text-sm"
+      <button
+        type="button"
+        :disabled="loggingOut"
+        class="rounded-full border border-[var(--border-subtle)] px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-60 sm:px-4 sm:text-sm"
+        @click="onLogout"
       >
-        Log out
-      </RouterLink>
+        {{ loggingOut ? 'Signing out…' : 'Log out' }}
+      </button>
       <RouterLink
         :to="profilePath"
         class="flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-2 transition hover:bg-[var(--surface-hover)]"
@@ -51,14 +53,31 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { paths } from '@/constants/routes'
 import { getAuthUserSnapshot } from '@/stores/auth-session'
 import { displayFromEmail, initialsFromEmail } from '@/utils/user-display'
+import { performLogout } from '@/utils/perform-logout'
 
 defineProps<{
   title: string
 }>()
+
+const router = useRouter()
+const loggingOut = ref(false)
+
+async function onLogout() {
+  if (loggingOut.value)
+    return
+  loggingOut.value = true
+  try {
+    await performLogout(router)
+  }
+  finally {
+    loggingOut.value = false
+  }
+}
 
 const profilePath = computed(() => {
   const u = getAuthUserSnapshot()

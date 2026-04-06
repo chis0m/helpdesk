@@ -18,6 +18,20 @@ export interface LoginResponseData {
   csrf_expires_at_utc: string
 }
 
+export interface SignupResponseData {
+  user_uuid: string
+  email: string
+  redirect_to: string
+}
+
+export type SignupRequestBody = {
+  email: string
+  password: string
+  first_name: string
+  last_name: string
+  middle_name?: string
+}
+
 function errorMessage(body: unknown): string {
   if (!body || typeof body !== 'object')
     return 'Request failed'
@@ -87,5 +101,86 @@ export async function loginRequest(
     'login success envelope (dev — includes session CSRF in data)',
     json,
   )
+  return { ok: true, data: env.data }
+}
+
+export async function signupRequest(
+  body: SignupRequestBody,
+  publicCsrf: string,
+): Promise<{ ok: true; data: SignupResponseData } | { ok: false; status: number; message: string }> {
+  const url = apiUrl('/api/auth/signup')
+  const payload: Record<string, string> = {
+    email: body.email.trim(),
+    password: body.password,
+    first_name: body.first_name.trim(),
+    last_name: body.last_name.trim(),
+  }
+  const mid = body.middle_name?.trim()
+  if (mid)
+    payload.middle_name = mid
+
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: publicCsrf,
+    },
+    body: JSON.stringify(payload),
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `POST ${url} → ${res.status}`, {
+    email: payload.email,
+    first_name: payload.first_name,
+    last_name: payload.last_name,
+    middle_name: payload.middle_name,
+    'X-CSRF-Token (public)': publicCsrf,
+  })
+  if (!res.ok) {
+    logger.debug('api:auth', 'signup error envelope (dev)', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+
+  const env = json as ApiSuccessEnvelope<SignupResponseData>
+  if (!env.data) {
+    logger.debug('api:auth', 'signup missing data envelope (dev)', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  logger.debug('api:auth', 'signup success envelope (dev)', json)
+  return { ok: true, data: env.data }
+}
+
+export interface LogoutResponseData {
+  redirect_to: string
+}
+
+export async function logoutRequest(
+  sessionCsrf: string,
+): Promise<{ ok: true; data: LogoutResponseData } | { ok: false; status: number; message: string }> {
+  const url = apiUrl('/api/auth/logout')
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `POST ${url} → ${res.status}`, {
+    'X-CSRF-Token (session)': sessionCsrf,
+  })
+  if (!res.ok) {
+    logger.debug('api:auth', 'logout error envelope (dev)', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+
+  const env = json as ApiSuccessEnvelope<LogoutResponseData>
+  if (!env.data) {
+    logger.debug('api:auth', 'logout missing data envelope (dev)', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  logger.debug('api:auth', 'logout success envelope (dev)', json)
   return { ok: true, data: env.data }
 }

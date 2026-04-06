@@ -58,18 +58,21 @@
     </nav>
 
     <div class="mt-auto border-t border-[var(--border-subtle)] pt-3">
-      <RouterLink
-        to="/login"
-        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)]"
+      <button
+        type="button"
+        :disabled="loggingOut"
+        class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+        @click="onLogout"
       >
-        Log out
-      </RouterLink>
+        {{ loggingOut ? 'Signing out…' : 'Log out' }}
+      </button>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import SidebarLink from '@/components/layout/SidebarLink.vue'
 import IconHome from '@/components/icons/IconHome.vue'
 import IconTicket from '@/components/icons/IconTicket.vue'
@@ -77,6 +80,22 @@ import IconUser from '@/components/icons/IconUser.vue'
 import IconGear from '@/components/icons/IconGear.vue'
 import { paths } from '@/constants/routes'
 import { getAuthUserSnapshot } from '@/stores/auth-session'
+import { performLogout } from '@/utils/perform-logout'
+
+const router = useRouter()
+const loggingOut = ref(false)
+
+async function onLogout() {
+  if (loggingOut.value)
+    return
+  loggingOut.value = true
+  try {
+    await performLogout(router)
+  }
+  finally {
+    loggingOut.value = false
+  }
+}
 
 const profilePath = computed(() => {
   const u = getAuthUserSnapshot()

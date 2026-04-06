@@ -42,6 +42,8 @@
               name="given-name"
               autocomplete="given-name"
               required
+              minlength="2"
+              maxlength="100"
               class="auth-input w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-[var(--text-muted)] focus:border-transparent focus:ring-2 focus:ring-[var(--brand-green)]"
               placeholder="Jane"
             >
@@ -58,6 +60,8 @@
               name="family-name"
               autocomplete="family-name"
               required
+              minlength="2"
+              maxlength="100"
               class="auth-input w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-[var(--text-muted)] focus:border-transparent focus:ring-2 focus:ring-[var(--brand-green)]"
               placeholder="Doe"
             >
@@ -112,12 +116,13 @@
             name="new-password"
             autocomplete="new-password"
             required
-            minlength="1"
+            minlength="8"
+            maxlength="128"
             class="auth-input w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-[var(--text-muted)] focus:border-transparent focus:ring-2 focus:ring-[var(--brand-green)]"
             placeholder="Choose a password"
           >
           <p class="mt-1.5 text-xs text-[var(--text-muted)]">
-            Use 8+ characters for a strong password (UI demo — not enforced here).
+            At least 8 characters (required by the server).
           </p>
         </div>
 
@@ -131,7 +136,8 @@
             v-model="passwordConfirm"
             type="password"
             required
-            minlength="1"
+            minlength="8"
+            maxlength="128"
             class="auth-input w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3.5 text-sm text-[var(--text-primary)] shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-[var(--text-muted)] focus:border-transparent focus:ring-2 focus:ring-[var(--brand-green)]"
             placeholder="Repeat password"
           >
@@ -151,9 +157,10 @@
 
       <button
         type="submit"
-        class="auth-submit w-full rounded-full bg-[var(--brand-green)] py-3.5 text-sm font-semibold text-[var(--text-on-green)] shadow-md transition hover:brightness-95"
+        :disabled="submitting"
+        class="auth-submit w-full rounded-full bg-[var(--brand-green)] py-3.5 text-sm font-semibold text-[var(--text-on-green)] shadow-md transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Create account
+        {{ submitting ? 'Creating account…' : 'Create account' }}
       </button>
     </form>
 
@@ -172,6 +179,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { fetchPublicCsrfToken, signupRequest } from '@/api/auth'
 
 const router = useRouter()
 
@@ -182,18 +190,67 @@ const email = ref('')
 const password = ref('')
 const passwordConfirm = ref('')
 const errorMessage = ref('')
+const submitting = ref(false)
 
 const passwordsMatch = computed(
   () => password.value.length > 0 && password.value === passwordConfirm.value,
 )
 
-function onSubmit() {
+async function onSubmit() {
   errorMessage.value = ''
+  if (firstName.value.trim().length < 2 || lastName.value.trim().length < 2) {
+    errorMessage.value = 'First and last name must be at least 2 characters.'
+    return
+  }
+  if (password.value.length < 8) {
+    errorMessage.value = 'Password must be at least 8 characters.'
+    return
+  }
   if (password.value !== passwordConfirm.value) {
     errorMessage.value = 'Passwords do not match'
     return
   }
-  void router.replace({ name: 'login', query: { registered: '1' } })
+
+  submitting.value = true
+  try {
+    const csrf = await fetchPublicCsrfToken()
+    if (!csrf.ok) {
+      errorMessage.value = csrf.message
+      return
+    }
+
+    const result = await signupRequest(
+      {
+        email: email.value,
+        password: password.value,
+        first_name: firstName.value,
+        last_name: lastName.value,
+        middle_name: middleName.value.trim() || undefined,
+      },
+      csrf.token,
+    )
+    if (!result.ok) {
+      errorMessage.value = result.message
+      return
+    }
+
+    const redirect = result.data.redirect_to
+    if (redirect.startsWith('/')) {
+      await router.replace({ path: redirect, query: { registered: '1' } })
+    }
+    else {
+      await router.replace({ name: 'login', query: { registered: '1' } })
+    }
+  }
+  catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    errorMessage.value = msg.includes('fetch')
+      ? 'Could not reach the server. Check that the API is running and VITE_API_BASE_URL matches it (and CORS FRONTEND_URL matches this app).'
+      : 'Something went wrong. Please try again.'
+  }
+  finally {
+    submitting.value = false
+  }
 }
 </script>
 
