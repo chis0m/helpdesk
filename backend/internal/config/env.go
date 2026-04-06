@@ -22,6 +22,8 @@ type Config struct {
 	SeedAdminFirstName    string
 	SeedAdminMiddleName   string
 	SeedAdminLastName     string
+	// SeedCA enables CA assessment fixtures (customers, staff, tickets). See SEED_CA env.
+	SeedCA bool
 	AppName               string
 	PasetoSymmetricKey    string
 	AccessTokenDuration   string
@@ -46,11 +48,12 @@ func Load() Config {
 		DBUsername:            getEnv("DB_USERNAME", "admin"),
 		DBPassword:            getEnv("DB_PASSWORD", "password"),
 		DBPort:                getEnv("DB_PORT", "3306"),
-		SeedAdminEmail:        getEnv("SEED_ADMIN_EMAIL", "admin@helpdesk.ie"),
+		SeedAdminEmail:        getEnv("SEED_ADMIN_EMAIL", "admin@secweb.ie"),
 		SeedAdminPassword:     getEnv("SEED_ADMIN_PASSWORD", "password"),
 		SeedAdminFirstName:    getEnv("SEED_ADMIN_FIRST_NAME", "cyber"),
 		SeedAdminMiddleName:   getEnv("SEED_ADMIN_MIDDLE_NAME", ""),
 		SeedAdminLastName:     getEnv("SEED_ADMIN_LAST_NAME", "security"),
+		SeedCA:                getEnvBool("SEED_CA", true),
 		PasetoSymmetricKey:    getEnv("PASETO_SYMMETRIC_KEY", "12345678901234567890123456789012"),
 		AccessTokenDuration:   getEnv("ACCESS_TOKEN_DURATION", "15m"),
 		RefreshTokenDuration:  getEnv("REFRESH_TOKEN_DURATION", "168h"),
@@ -78,6 +81,22 @@ func getEnv(key, fallback string) string {
 		return fallback
 	}
 	return v
+}
+
+// getEnvBool parses SEED_CA-style flags: true/1/yes/on → true, false/0/no/off → false; empty → fallback.
+func getEnvBool(key string, fallback bool) bool {
+	v := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	if v == "" {
+		return fallback
+	}
+	switch v {
+	case "true", "1", "yes", "y", "on":
+		return true
+	case "false", "0", "no", "n", "off":
+		return false
+	default:
+		return fallback
+	}
 }
 
 func (c Config) AccessTokenTTL() time.Duration {
