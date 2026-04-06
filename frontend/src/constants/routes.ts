@@ -10,7 +10,11 @@ export const paths = {
     home: '/dashboard',
     tickets: '/dashboard/tickets',
     ticketDetail: (id: string) => `/dashboard/tickets/${encodeURIComponent(id)}`,
-    profile: '/dashboard/profile',
+    /** Numeric user id (vulnerable baseline); remediation may switch to UUID-only paths. */
+    profile: (userId: string | number) =>
+      `/dashboard/profile/${encodeURIComponent(String(userId))}`,
+    /** Use with router redirect so `/dashboard/profile` resolves to the signed-in user. */
+    profileRedirect: '/dashboard/profile',
     adminUsers: '/dashboard/admin/users',
     /** Internal staff directory (includes administrator flag per row). */
     adminStaff: '/dashboard/admin/staff',

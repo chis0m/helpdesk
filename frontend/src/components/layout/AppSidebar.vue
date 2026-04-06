@@ -25,9 +25,10 @@
         :active-prefix="paths.dashboard.tickets"
       />
       <SidebarLink
-        :to="paths.dashboard.profile"
+        :to="profilePath"
         :icon="IconUser"
         label="Profile"
+        active-prefix="/dashboard/profile"
       />
       <div class="mt-2 border-t border-[var(--border-subtle)] pt-2">
         <p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
@@ -68,10 +69,17 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import SidebarLink from '@/components/layout/SidebarLink.vue'
 import IconHome from '@/components/icons/IconHome.vue'
 import IconTicket from '@/components/icons/IconTicket.vue'
 import IconUser from '@/components/icons/IconUser.vue'
 import IconGear from '@/components/icons/IconGear.vue'
 import { paths } from '@/constants/routes'
+import { getAuthUserSnapshot } from '@/stores/auth-session'
+
+const profilePath = computed(() => {
+  const u = getAuthUserSnapshot()
+  return u ? paths.dashboard.profile(u.user_id) : paths.login
+})
 </script>

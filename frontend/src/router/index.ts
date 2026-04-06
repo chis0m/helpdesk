@@ -1,6 +1,7 @@
 /** App routes — landing, auth, and dashboard. */
 import { createRouter, createWebHistory } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { getAuthUserSnapshot } from '@/stores/auth-session'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -50,6 +51,15 @@ const router = createRouter({
         },
         {
           path: 'profile',
+          redirect() {
+            const u = getAuthUserSnapshot()
+            if (!u)
+              return { path: '/login', query: { redirect: '/dashboard/profile' } }
+            return { name: 'dashboard-profile', params: { userId: String(u.user_id) } }
+          },
+        },
+        {
+          path: 'profile/:userId',
           name: 'dashboard-profile',
           meta: { title: 'Your profile' },
           component: () => import('@/views/account/ProfileView.vue'),

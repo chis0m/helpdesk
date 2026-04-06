@@ -25,7 +25,7 @@
         Log out
       </RouterLink>
       <RouterLink
-        :to="paths.dashboard.profile"
+        :to="profilePath"
         class="flex items-center gap-2 rounded-full py-1.5 pl-1.5 pr-2 transition hover:bg-[var(--surface-hover)]"
       >
         <span
@@ -51,12 +51,27 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { paths } from '@/constants/routes'
-
-const displayName = 'Jordan Lee'
-const initials = 'JL'
+import { getAuthUserSnapshot } from '@/stores/auth-session'
+import { displayFromEmail, initialsFromEmail } from '@/utils/user-display'
 
 defineProps<{
   title: string
 }>()
+
+const profilePath = computed(() => {
+  const u = getAuthUserSnapshot()
+  return u ? paths.dashboard.profile(u.user_id) : paths.login
+})
+
+const displayName = computed(() => {
+  const u = getAuthUserSnapshot()
+  return u ? displayFromEmail(u.email) : 'Account'
+})
+
+const initials = computed(() => {
+  const u = getAuthUserSnapshot()
+  return u ? initialsFromEmail(u.email) : '?'
+})
 </script>

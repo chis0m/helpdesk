@@ -25,6 +25,14 @@
       class="mt-8 space-y-5"
       @submit.prevent="onSubmit"
     >
+      <div
+        v-if="errorMessage"
+        class="rounded-2xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-sm text-red-900"
+        role="alert"
+      >
+        {{ errorMessage }}
+      </div>
+
       <div>
         <label
           for="login-email"
@@ -63,7 +71,8 @@
             name="password"
             autocomplete="current-password"
             required
-            minlength="1"
+            minlength="8"
+            maxlength="128"
             class="auth-input w-full rounded-2xl border border-[var(--border-subtle)] bg-white py-3.5 pl-4 pr-14 text-sm text-[var(--text-primary)] shadow-sm outline-none transition-[box-shadow,border-color] placeholder:text-[var(--text-muted)] focus:border-transparent focus:ring-2 focus:ring-[var(--brand-green)]"
             placeholder="Your password"
           >
@@ -77,13 +86,17 @@
             {{ showPassword ? 'Hide' : 'Show' }}
           </button>
         </div>
+        <p class="mt-1.5 text-xs text-[var(--text-muted)]">
+          At least 8 characters (required by the server).
+        </p>
       </div>
 
       <button
         type="submit"
-        class="auth-submit mt-2 w-full rounded-full bg-[var(--brand-green)] py-3.5 text-sm font-semibold text-[var(--text-on-green)] shadow-md transition hover:brightness-95"
+        :disabled="submitting"
+        class="auth-submit mt-2 w-full rounded-full bg-[var(--brand-green)] py-3.5 text-sm font-semibold text-[var(--text-on-green)] shadow-md transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        Continue
+        {{ submitting ? 'Signing in…' : 'Continue' }}
       </button>
     </form>
 
@@ -102,6 +115,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { fetchPublicCsrfToken, loginRequest } from '@/api/auth'
+import { setAuthSessionFromLogin } from '@/stores/auth-session'
 
 const router = useRouter()
 const route = useRoute()
@@ -110,10 +125,45 @@ const justRegistered = computed(() => route.query.registered === '1')
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const submitting = ref(false)
+const errorMessage = ref('')
 
-function onSubmit() {
-  const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
-  void router.replace(redirect && redirect.startsWith('/') ? redirect : '/dashboard')
+async function onSubmit() {
+  errorMessage.value = ''
+  if (password.value.length < 8) {
+    errorMessage.value = 'Password must be at least 8 characters.'
+    return
+  }
+
+  submitting.value = true
+  try {
+    const csrf = await fetchPublicCsrfToken()
+    if (!csrf.ok) {
+      errorMessage.value = csrf.message
+      return
+    }
+
+    const result = await loginRequest(email.value, password.value, csrf.token)
+    if (!result.ok) {
+      errorMessage.value = result.message
+      return
+    }
+
+    setAuthSessionFromLogin(result.data)
+
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    const target = redirect && redirect.startsWith('/') ? redirect : '/dashboard'
+    await router.replace(target)
+  }
+  catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    errorMessage.value = msg.includes('fetch')
+      ? 'Could not reach the server. Check that the API is running and VITE_API_BASE_URL matches it (and CORS FRONTEND_URL matches this app).'
+      : 'Something went wrong. Please try again.'
+  }
+  finally {
+    submitting.value = false
+  }
 }
 </script>
 

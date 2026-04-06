@@ -66,7 +66,10 @@ func (a *AuthController) Login(c *gin.Context) {
 	// VULN-01: Weak session cookie flags — HttpOnly/Secure false, SameSite=None.
 	setAuthCookies(c, a.cfg, result.Tokens)
 
+	// user_id: exposed for vulnerable baseline (browser uses numeric id in routes/state, e.g. VULN-02 demos).
+	// Secure remediation: prefer user_uuid only in client and UUID-based routes.
 	response.Success(c, http.StatusOK, gin.H{
+		"user_id":               result.User.ID,
 		"user_uuid":             result.User.UUID.String(),
 		"email":                 result.User.Email,
 		"role":                  result.User.Role,
@@ -150,7 +153,17 @@ func (a *AuthController) Refresh(c *gin.Context) {
 
 	// VULN-01: Weak session cookie flags — HttpOnly/Secure false, SameSite=None.
 	setAuthCookies(c, a.cfg, *result)
+
+	user, err := a.authService.GetMe(refreshPayload.Sub)
+	if err != nil {
+		log.Error().Err(err).Str("user_uuid", refreshPayload.Sub).Msg("refresh succeeded but failed to load user for response")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
 	response.Success(c, http.StatusOK, gin.H{
+		"user_id":               user.ID,
+		"user_uuid":             user.UUID.String(),
 		"access_expires_at_utc": result.AccessExpires.UTC(),
 		"csrf_token":            result.CSRFToken,
 		"csrf_expires_at_utc":   result.CSRFExpiresAt.UTC(),
