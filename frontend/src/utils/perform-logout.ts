@@ -1,3 +1,4 @@
+// VULN-01: Logout calls API to clear session cookies issued under weak cookie flags (server-side VULN-01).
 import type { Router } from 'vue-router'
 import { logoutRequest } from '@/api/auth'
 import { paths } from '@/constants/routes'

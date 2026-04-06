@@ -1,4 +1,5 @@
 <template>
+  <!-- VULN-02: Profile UI is keyed by route `userId`; no check that it matches the signed-in user (backend IDOR). -->
   <div class="mx-auto max-w-xl space-y-6">
     <header>
       <h2 class="text-lg font-semibold text-[var(--text-primary)]">
@@ -109,12 +110,94 @@
         {{ saving ? 'Saving…' : 'Save changes' }}
       </button>
     </form>
+
+    <!-- VULN-01: Change password POST uses session cookies. VULN-05: `X-CSRF-Token` on POST; weak verification is backend CSRF middleware. -->
+    <section
+      v-if="!loading && !loadError"
+      class="space-y-5 rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-sm"
+    >
+      <h3 class="text-base font-semibold text-[var(--text-primary)]">
+        Change password
+      </h3>
+      <p class="text-sm text-[var(--text-secondary)]">
+        Updates the password for the account loaded in this view (same session as the profile above).
+      </p>
+      <div
+        v-if="pwSavedBanner"
+        class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
+        role="status"
+      >
+        Password updated.
+      </div>
+      <div
+        v-if="pwError"
+        class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+        role="alert"
+      >
+        {{ pwError }}
+      </div>
+      <form
+        class="space-y-4"
+        @submit.prevent="onChangePassword"
+      >
+        <div>
+          <label
+            for="pw-current"
+            class="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
+          >Current password</label>
+          <input
+            id="pw-current"
+            v-model="pwCurrent"
+            type="password"
+            autocomplete="current-password"
+            class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3 text-sm"
+          >
+        </div>
+        <div>
+          <label
+            for="pw-new"
+            class="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
+          >New password</label>
+          <input
+            id="pw-new"
+            v-model="pwNew"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3 text-sm"
+          >
+        </div>
+        <div>
+          <label
+            for="pw-new2"
+            class="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
+          >Confirm new password</label>
+          <input
+            id="pw-new2"
+            v-model="pwNew2"
+            type="password"
+            autocomplete="new-password"
+            minlength="8"
+            class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3 text-sm"
+          >
+        </div>
+        <button
+          type="submit"
+          class="rounded-full bg-[var(--brand-green)] px-6 py-3 text-sm font-semibold text-[var(--text-on-green)] shadow-sm transition hover:brightness-95 disabled:opacity-50"
+          :disabled="pwSaving"
+        >
+          {{ pwSaving ? 'Updating…' : 'Change password' }}
+        </button>
+      </form>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
+// VULN-02: fetch/patch user by numeric id from route — pairs with backend GET/PATCH /users/:id IDOR.
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { changePasswordRequest } from '@/api/auth'
 import { fetchUser, patchUser } from '@/api/users'
 import { getSessionCsrfToken } from '@/stores/auth-session'
 
@@ -131,6 +214,13 @@ const loadError = ref('')
 const saveError = ref('')
 const saving = ref(false)
 const savedBanner = ref(false)
+
+const pwCurrent = ref('')
+const pwNew = ref('')
+const pwNew2 = ref('')
+const pwError = ref('')
+const pwSaving = ref(false)
+const pwSavedBanner = ref(false)
 
 const form = reactive({
   email: '',
@@ -207,5 +297,43 @@ async function onSave() {
   window.setTimeout(() => {
     savedBanner.value = false
   }, 3000)
+}
+
+async function onChangePassword() {
+  pwError.value = ''
+  pwSavedBanner.value = false
+  if (pwNew.value !== pwNew2.value) {
+    pwError.value = 'New passwords do not match.'
+    return
+  }
+  if (pwNew.value.length < 8) {
+    pwError.value = 'New password must be at least 8 characters.'
+    return
+  }
+  const csrf = getSessionCsrfToken()
+  if (!csrf) {
+    pwError.value = 'Your session expired. Sign in again.'
+    return
+  }
+  pwSaving.value = true
+  const result = await changePasswordRequest(
+    {
+      current_password: pwCurrent.value,
+      new_password: pwNew.value,
+    },
+    csrf,
+  )
+  pwSaving.value = false
+  if (!result.ok) {
+    pwError.value = result.message
+    return
+  }
+  pwCurrent.value = ''
+  pwNew.value = ''
+  pwNew2.value = ''
+  pwSavedBanner.value = true
+  window.setTimeout(() => {
+    pwSavedBanner.value = false
+  }, 4000)
 }
 </script>

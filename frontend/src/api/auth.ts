@@ -1,3 +1,5 @@
+// VULN-01: Login/refresh/logout/change-password rely on cookie session (weak flags set server-side).
+// VULN-05: Public vs session CSRF tokens sent here; weak verification is backend CSRF middleware.
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import { logger } from '@/utils/logger'
@@ -183,4 +185,37 @@ export async function logoutRequest(
   }
   logger.debug('api:auth', 'logout success envelope (dev)', json)
   return { ok: true, data: env.data }
+}
+
+/** VULN-01: Session cookies via `credentials: 'include'`. VULN-05: `X-CSRF-Token` on POST. */
+export type ChangePasswordBody = {
+  current_password: string
+  new_password: string
+}
+
+export async function changePasswordRequest(
+  body: ChangePasswordBody,
+  sessionCsrf: string,
+): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  const url = apiUrl('/api/auth/change-password')
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+    body: JSON.stringify({
+      current_password: body.current_password,
+      new_password: body.new_password,
+    }),
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `POST ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:auth', 'change-password error envelope (dev)', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  return { ok: true }
 }

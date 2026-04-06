@@ -1,3 +1,5 @@
+// VULN-02: GET/PATCH `/api/users/:id` by numeric id from the UI — no client-side actor-vs-target check (backend IDOR).
+// VULN-05: PATCH sends `X-CSRF-Token`; weak verification is backend CSRF middleware.
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import { logger } from '@/utils/logger'

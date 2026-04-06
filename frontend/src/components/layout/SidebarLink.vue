@@ -31,7 +31,7 @@ const props = withDefaults(
     /** Highlight when `route.path` equals this or starts with `prefix + '/'`. */
     activePrefix?: string
   }>(),
-  { exact: false },
+  { exact: false, activePrefix: undefined },
 )
 
 const route = useRoute()

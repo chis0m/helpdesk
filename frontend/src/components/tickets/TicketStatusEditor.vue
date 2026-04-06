@@ -20,7 +20,10 @@
           Saved on ticket
         </p>
         <div class="mt-1">
-          <TicketStatusBadge :status="status" size="sm" />
+          <TicketStatusBadge
+            :status="status"
+            size="sm"
+          />
         </div>
         <p
           v-if="dirty"

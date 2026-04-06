@@ -1,3 +1,5 @@
+// VULN-02: Snapshot stores numeric `user_id` for routes/state (pairs with IDOR on GET/PATCH /users/:id).
+// VULN-05: Session CSRF token held for mutating API calls; server-side check is flawed (see backend VULN-05).
 import type { LoginResponseData } from '@/api/auth'
 
 const CSRF_KEY = 'secweb-helpdesk-session-csrf'

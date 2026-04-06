@@ -12,12 +12,12 @@
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
+        <RouterLink
+          :to="paths.dashboard.ticketNew"
           class="inline-flex items-center justify-center rounded-full bg-[var(--brand-green)] px-5 py-2.5 text-sm font-semibold text-[var(--text-on-green)] shadow-sm transition hover:brightness-95"
         >
           New ticket
-        </button>
+        </RouterLink>
         <RouterLink
           :to="paths.dashboard.tickets"
           class="inline-flex items-center justify-center rounded-full bg-[var(--surface-mint)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-mint-hover)]"
