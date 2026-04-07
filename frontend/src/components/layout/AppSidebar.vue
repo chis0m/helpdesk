@@ -30,6 +30,12 @@
         label="Profile"
         active-prefix="/dashboard/profile"
       />
+      <SidebarLink
+        :to="paths.dashboard.sessions"
+        :icon="IconGear"
+        label="Sessions"
+        exact
+      />
       <div class="mt-2 border-t border-[var(--border-subtle)] pt-2">
         <p class="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
           Admin

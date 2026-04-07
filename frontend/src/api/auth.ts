@@ -219,3 +219,250 @@ export async function changePasswordRequest(
   }
   return { ok: true }
 }
+
+/** VULN-05: Public CSRF + POST; weak verification is backend middleware. */
+export async function forgotPasswordRequest(
+  email: string,
+  publicCsrf: string,
+): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  const url = apiUrl('/api/auth/forgot-password')
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: publicCsrf,
+    },
+    body: JSON.stringify({ email: email.trim() }),
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `POST ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:auth', 'forgot-password error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  return { ok: true }
+}
+
+/** VULN-05: Public CSRF + POST. */
+export async function resetPasswordRequest(
+  token: string,
+  newPassword: string,
+  publicCsrf: string,
+): Promise<
+  | { ok: true; data: { redirect_to: string } }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl('/api/auth/reset-password')
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: publicCsrf,
+    },
+    body: JSON.stringify({
+      token: token.trim(),
+      new_password: newPassword,
+    }),
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `POST ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:auth', 'reset-password error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<{ redirect_to: string }>
+  if (!env.data?.redirect_to)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  return { ok: true, data: env.data }
+}
+
+/** VULN-01: `refresh_token` cookie; VULN-05: session CSRF on POST. */
+export interface RefreshResponseData {
+  user_id: number
+  user_uuid: string
+  access_expires_at_utc: string
+  csrf_token: string
+  csrf_expires_at_utc: string
+}
+
+export async function refreshRequest(
+  sessionCsrf: string,
+): Promise<
+  | { ok: true; data: RefreshResponseData }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl('/api/auth/refresh')
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `POST ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:auth', 'refresh error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<RefreshResponseData>
+  if (!env.data?.csrf_token || typeof env.data.user_id !== 'number') {
+    logger.debug('api:auth', 'refresh invalid shape', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}
+
+/** VULN-01: Session cookie required. */
+export async function fetchSessionCsrfToken(): Promise<
+  | { ok: true; data: PublicCsrfData }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl('/api/auth/csrf-token')
+  const res = await fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `GET ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:auth', 'session CSRF error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<PublicCsrfData>
+  const token = env.data?.csrf_token
+  if (!token || !env.data)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  return { ok: true, data: env.data }
+}
+
+/** VULN-01: Session cookie; response includes numeric `user_id` (VULN-02 baseline). */
+export interface AuthMeData {
+  user_id: number
+  user_uuid: string
+  email: string
+  first_name: string
+  last_name: string
+  middle_name: string | null
+  role: string
+  is_active: boolean
+  must_change_password: boolean
+}
+
+export async function fetchMe(): Promise<
+  | { ok: true; data: AuthMeData }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl('/api/auth/me')
+  const res = await fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `GET ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:auth', 'me error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<AuthMeData>
+  if (!env.data || typeof env.data.user_id !== 'number') {
+    logger.debug('api:auth', 'me invalid shape', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}
+
+/** VULN-01: Requires authenticated session cookie. */
+export interface AuthSessionRow {
+  session_id: string
+  created_at: string
+  user_agent: string | null
+  ip: string | null
+  is_current: boolean
+}
+
+export async function fetchAuthSessions(): Promise<
+  | { ok: true; items: AuthSessionRow[] }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl('/api/auth/sessions')
+  const res = await fetch(url, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `GET ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:auth', 'sessions list error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<{ items: AuthSessionRow[] }>
+  const items = env.data?.items
+  if (!Array.isArray(items)) {
+    logger.debug('api:auth', 'sessions invalid shape', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, items }
+}
+
+/** VULN-05: Session CSRF on POST. */
+export async function revokeMyOtherSessionsRequest(
+  sessionCsrf: string,
+): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
+  const url = apiUrl('/api/auth/sessions/revoke-my-other-sessions')
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `POST ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:auth', 'revoke other sessions error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  return { ok: true }
+}
+
+/** VULN-05: Session CSRF on DELETE. */
+export async function revokeAuthSession(
+  sessionId: string,
+  sessionCsrf: string,
+): Promise<
+  | { ok: true; data: { revoked_session_id: string; logged_out: boolean } }
+  | { ok: false; status: number; message: string }
+> {
+  const id = sessionId.trim()
+  const url = apiUrl(`/api/auth/sessions/${encodeURIComponent(id)}`)
+  const res = await fetch(url, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+  })
+  const json = await readJson(res)
+  logger.debug('api:auth', `DELETE ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:auth', 'revoke session error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<{ revoked_session_id: string; logged_out: boolean }>
+  if (!env.data || typeof env.data.logged_out !== 'boolean') {
+    logger.debug('api:auth', 'revoke session invalid shape', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}

@@ -26,7 +26,7 @@ type User struct {
 	MiddleName         *string    `gorm:"size:100"`
 	Role               UserRole   `gorm:"size:20;not null;default:'user'"`
 	IsActive           bool       `gorm:"not null;default:true"`
-	MustChangePassword bool       `gorm:"not null;default:true"`
+	MustChangePassword bool       `gorm:"not null;default:false"`
 	PasswordChangedAt  *time.Time `gorm:"type:datetime(3)"`
 	CreatedAt          time.Time
 	UpdatedAt          time.Time

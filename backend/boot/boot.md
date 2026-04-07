@@ -12,16 +12,16 @@ This package wires the HTTP server **from process start to listening on a port**
 
 ### CA seed behaviour
 
-- **One customer** (`riley.mustchange@…`) uses a **hardcoded** password (`CaMustChange1!` in `seed/seeds/ca/user.go`); **`must_change_password`** is set. On first creation, the server logs that password at **info** (intentional for CA).
-- **Jordan**, both **staff** accounts: **random** password on first creation only, logged at **warn** with a message that this is **intentional for test data** (copy from logs; not printed again if the row already exists).
+- All CA fixture users share **`password`** (`caTestPassword` in `seed/seeds/ca/helpers.go`) for easy local testing.
+- **Riley** (`riley.mustchange@…`) still has **`must_change_password`** set (forced change flow); others behave as already-set passwords (`PasswordChangedAt` set where applicable).
 - Customer emails: `firstname.lastname@<company domain>`. Staff: `firstname.lastname@secweb.ie`.
 
 | Email | Role | Password |
 | --- | --- | --- |
-| `riley.mustchange@acmelogistics.ie` | user | Hardcoded `CaMustChange1!` (see `ca/user.go`) |
-| `jordan.lee@northwind.ie` | user | Random (see startup log when created) |
-| `casey.admin@secweb.ie` | admin | Random (see startup log when created) |
-| `sam.support@secweb.ie` | staff | Random (see startup log when created) |
+| `riley.mustchange@acmelogistics.ie` | user | `password` (must change on first login) |
+| `jordan.lee@northwind.ie` | user | `password` |
+| `casey.admin@secweb.ie` | admin | `password` |
+| `sam.support@secweb.ie` | staff | `password` |
 
 **Tickets** (matched by title; skipped if already present):
 

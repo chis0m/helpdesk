@@ -356,3 +356,146 @@ export async function deleteTicket(
   }
   return { ok: true, data: env.data }
 }
+
+/** VULN-03: Optional fields may carry HTML; weak sanitization server-side. VULN-04: ticket id in path (IDOR). */
+export type PatchTicketBody = Partial<{
+  title: string
+  description: string
+  category: string
+}>
+
+export async function patchTicket(
+  ticketId: number,
+  body: PatchTicketBody,
+  sessionCsrf: string,
+): Promise<{ ok: true; data: ApiTicketRow } | { ok: false; status: number; message: string }> {
+  const payload: Record<string, string> = {}
+  if (body.title !== undefined)
+    payload.title = body.title.trim()
+  if (body.description !== undefined)
+    payload.description = body.description.trim()
+  if (body.category !== undefined)
+    payload.category = body.category.trim()
+
+  const url = apiUrl(`/api/tickets/${ticketId}`)
+  const res = await fetch(url, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+    body: JSON.stringify(payload),
+  })
+  const json = await readJson(res)
+  logger.debug('api:tickets', `PATCH ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:tickets', 'patch ticket error envelope (dev)', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<ApiTicketRow>
+  if (!env.data || typeof env.data.ticket_id !== 'number') {
+    logger.debug('api:tickets', 'patch ticket invalid shape (dev)', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}
+
+/** VULN-04: Status change by ticket id in path (IDOR). */
+export async function patchTicketStatus(
+  ticketId: number,
+  status: ApiTicketStatus,
+  sessionCsrf: string,
+): Promise<{ ok: true; data: ApiTicketRow } | { ok: false; status: number; message: string }> {
+  const url = apiUrl(`/api/tickets/${ticketId}/status`)
+  const res = await fetch(url, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+    body: JSON.stringify({ status }),
+  })
+  const json = await readJson(res)
+  logger.debug('api:tickets', `PATCH ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:tickets', 'patch ticket status error envelope (dev)', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<ApiTicketRow>
+  if (!env.data || typeof env.data.ticket_id !== 'number') {
+    logger.debug('api:tickets', 'patch ticket status invalid shape (dev)', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}
+
+/** VULN-03: Comment body persisted with weak sanitization. VULN-04: ticket id in path (IDOR). */
+export async function patchTicketComment(
+  ticketId: number,
+  commentId: number,
+  body: string,
+  sessionCsrf: string,
+): Promise<
+  | { ok: true; data: CreatedTicketCommentData }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl(`/api/tickets/${ticketId}/comments/${commentId}`)
+  const res = await fetch(url, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+    body: JSON.stringify({ body: body.trim() }),
+  })
+  const json = await readJson(res)
+  logger.debug('api:tickets', `PATCH ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:tickets', 'patch comment error envelope (dev)', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<CreatedTicketCommentData>
+  if (!env.data || typeof env.data.comment_id !== 'number') {
+    logger.debug('api:tickets', 'patch comment invalid shape (dev)', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}
+
+/** VULN-04: Comment delete by ticket id in path (IDOR). */
+export async function deleteTicketComment(
+  ticketId: number,
+  commentId: number,
+  sessionCsrf: string,
+): Promise<
+  | { ok: true; data: { comment_id: number; ticket_id: number } }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl(`/api/tickets/${ticketId}/comments/${commentId}`)
+  const res = await fetch(url, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+  })
+  const json = await readJson(res)
+  logger.debug('api:tickets', `DELETE ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:tickets', 'delete comment error envelope (dev)', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<{ comment_id: number; ticket_id: number }>
+  if (!env.data || typeof env.data.comment_id !== 'number') {
+    logger.debug('api:tickets', 'delete comment invalid shape (dev)', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}

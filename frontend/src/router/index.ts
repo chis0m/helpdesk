@@ -36,6 +36,42 @@ const router = createRouter({
       ],
     },
     {
+      path: '/accept-invite',
+      component: () => import('@/layouts/AuthLayout.vue'),
+      children: [
+        {
+          path: '',
+          name: 'accept-invite',
+          meta: { title: 'Accept invite' },
+          component: () => import('@/views/auth/AcceptInviteView.vue'),
+        },
+      ],
+    },
+    {
+      path: '/forgot-password',
+      component: () => import('@/layouts/AuthLayout.vue'),
+      children: [
+        {
+          path: '',
+          name: 'forgot-password',
+          meta: { title: 'Forgot password' },
+          component: () => import('@/views/auth/ForgotPasswordView.vue'),
+        },
+      ],
+    },
+    {
+      path: '/reset-password',
+      component: () => import('@/layouts/AuthLayout.vue'),
+      children: [
+        {
+          path: '',
+          name: 'reset-password',
+          meta: { title: 'Reset password' },
+          component: () => import('@/views/auth/ResetPasswordView.vue'),
+        },
+      ],
+    },
+    {
       path: '/dashboard',
       component: AppLayout,
       children: [
@@ -71,6 +107,12 @@ const router = createRouter({
           name: 'dashboard-profile',
           meta: { title: 'Your profile' },
           component: () => import('@/views/account/ProfileView.vue'),
+        },
+        {
+          path: 'sessions',
+          name: 'dashboard-sessions',
+          meta: { title: 'Sessions' },
+          component: () => import('@/views/account/SessionsView.vue'),
         },
         {
           path: 'admin/users',

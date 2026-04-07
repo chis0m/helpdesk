@@ -56,12 +56,12 @@
             for="login-password"
             class="text-sm font-medium text-[var(--text-primary)]"
           >Password</label>
-          <button
-            type="button"
+          <RouterLink
+            :to="paths.forgotPassword"
             class="text-xs font-semibold text-[var(--brand-green-dark)] transition hover:underline"
           >
             Forgot password?
-          </button>
+          </RouterLink>
         </div>
         <div class="relative">
           <input
@@ -117,6 +117,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchPublicCsrfToken, loginRequest } from '@/api/auth'
+import { paths } from '@/constants/routes'
 import { setAuthSessionFromLogin } from '@/stores/auth-session'
 
 const router = useRouter()

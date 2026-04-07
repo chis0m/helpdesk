@@ -8,6 +8,9 @@ export const paths = {
   landing: '/',
   login: '/login',
   signup: '/signup',
+  acceptInvite: '/accept-invite',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
   dashboard: {
     home: '/dashboard',
     tickets: '/dashboard/tickets',
@@ -22,5 +25,6 @@ export const paths = {
     /** Internal staff directory (includes administrator flag per row). */
     adminStaff: '/dashboard/admin/staff',
     adminStaffNew: '/dashboard/admin/staff/new',
+    sessions: '/dashboard/sessions',
   },
 } as const

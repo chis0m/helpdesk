@@ -12,7 +12,7 @@
           Ticket workflow
         </h2>
         <p class="mt-1 max-w-xl text-xs leading-snug text-[var(--text-secondary)] sm:text-sm">
-          Select a status, then Save (Cancel undoes). With a live backend, Save would sync for the whole team.
+          Select a status, then Save (Cancel undoes). API-backed tickets update the server on Save.
         </p>
       </div>
       <div class="shrink-0 sm:text-right">
@@ -56,19 +56,27 @@
       </button>
     </div>
 
+    <div
+      v-if="errorMessage"
+      class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900"
+      role="alert"
+    >
+      {{ errorMessage }}
+    </div>
+
     <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
       <button
         type="button"
         class="rounded-full bg-[var(--brand-green)] px-4 py-2 text-sm font-semibold text-[var(--text-on-green)] shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-45"
-        :disabled="!dirty"
+        :disabled="!dirty || saving"
         @click="save"
       >
-        Save status
+        {{ saving ? 'Saving…' : 'Save status' }}
       </button>
       <button
         type="button"
         class="rounded-full border border-[var(--border-strong)] bg-white px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:cursor-not-allowed disabled:opacity-45"
-        :disabled="!dirty"
+        :disabled="!dirty || saving"
         @click="cancel"
       >
         Cancel
@@ -83,9 +91,17 @@ import type { TicketStatus } from '@/types/ticket'
 import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { TICKET_STATUS_DEFINITIONS } from '@/utils/ticket-ui'
 
-const props = defineProps<{
-  status: TicketStatus
-}>()
+const props = withDefaults(
+  defineProps<{
+    status: TicketStatus
+    saving?: boolean
+    errorMessage?: string
+  }>(),
+  {
+    saving: false,
+    errorMessage: '',
+  },
+)
 
 const emit = defineEmits<{
   'update:status': [value: TicketStatus]

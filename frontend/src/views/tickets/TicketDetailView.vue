@@ -60,6 +60,8 @@
 
     <TicketStatusEditor
       :status="ticket.status"
+      :saving="statusSaving"
+      :error-message="statusError"
       @update:status="onStatusUpdate"
     />
 
@@ -254,6 +256,7 @@ import {
   fetchTicket,
   fetchTicketComments,
   mapTicketCommentListItemToTicketComment,
+  patchTicketStatus,
   type ApiTicketRow,
 } from '@/api/tickets'
 import TicketStatusEditor from '@/components/tickets/TicketStatusEditor.vue'
@@ -326,6 +329,9 @@ const assignUserIdParsed = computed(() => {
   return Number.isFinite(n) && n > 0 ? n : null
 })
 
+const statusSaving = ref(false)
+const statusError = ref('')
+
 async function refreshApiComments(ticketId: number) {
   commentsLoadError.value = ''
   const res = await fetchTicketComments(ticketId)
@@ -349,6 +355,7 @@ watch(
     loadError.value = ''
     assignUserIdInput.value = ''
     assignDeleteError.value = ''
+    statusError.value = ''
     const id = typeof raw === 'string' ? raw : ''
     if (!id)
       return
@@ -370,10 +377,32 @@ watch(
   { immediate: true },
 )
 
-function onStatusUpdate(status: TicketStatus) {
+async function onStatusUpdate(status: TicketStatus) {
   const id = ticket.value?.id
-  if (id)
+  if (!id)
+    return
+  if (getMockTicketById(id)) {
     setTicketStatusOverride(id, status)
+    return
+  }
+  // VULN-04: Status PATCH uses ticket id from the URL — backend IDOR completes unauthorized changes.
+  statusError.value = ''
+  const ticketNum = Number.parseInt(id, 10)
+  if (!Number.isFinite(ticketNum) || ticketNum <= 0)
+    return
+  const csrf = getSessionCsrfToken()
+  if (!csrf) {
+    statusError.value = 'Your session expired. Sign in again.'
+    return
+  }
+  statusSaving.value = true
+  const res = await patchTicketStatus(ticketNum, status, csrf)
+  statusSaving.value = false
+  if (!res.ok) {
+    statusError.value = res.message
+    return
+  }
+  fromApi.value = res.data
 }
 
 function currentTicketNumericId(): number | null {

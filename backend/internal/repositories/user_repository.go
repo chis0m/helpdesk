@@ -73,7 +73,8 @@ func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, e
 	if input.IsActive != nil {
 		isActive = *input.IsActive
 	}
-	mustChangePassword := true
+	// Align with DB default FALSE; callers set true for super-admin seed, CA Riley, admin-created staff, etc.
+	mustChangePassword := false
 	if input.MustChangePassword != nil {
 		mustChangePassword = *input.MustChangePassword
 	}

@@ -1,4 +1,6 @@
-import { apiUrl, readJson } from './client'
+// VULN-02: `PATCH /api/admin/users/:user_id/role` uses numeric id in the path (API contract; see backend).
+// VULN-05: Admin mutating routes send `X-CSRF-Token`; weak verification is backend CSRF middleware.
+import { apiUrl, CSRF_HEADER, readJson } from './client'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import type { PortalUser, StaffMember } from '@/types/directory-user'
 import { logger } from '@/utils/logger'
@@ -136,4 +138,153 @@ export function adminUserToStaffMember(row: AdminUserListItem): StaffMember {
     createdAt: row.created_at,
     isAdmin: row.role === 'admin' || row.role === 'super_admin',
   }
+}
+
+export type CreateStaffBody = {
+  email: string
+  password: string
+  first_name: string
+  last_name: string
+  middle_name?: string
+  is_active?: boolean
+}
+
+export interface CreateStaffResponseData {
+  user_id: number
+  user_uuid: string
+  email: string
+  role: string
+  is_active: boolean
+}
+
+export async function createStaffUser(
+  body: CreateStaffBody,
+  sessionCsrf: string,
+): Promise<
+  | { ok: true; data: CreateStaffResponseData }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl('/api/admin/staff')
+  const payload: Record<string, unknown> = {
+    email: body.email.trim(),
+    password: body.password,
+    first_name: body.first_name.trim(),
+    last_name: body.last_name.trim(),
+  }
+  const mid = body.middle_name?.trim()
+  if (mid)
+    payload.middle_name = mid
+  if (typeof body.is_active === 'boolean')
+    payload.is_active = body.is_active
+
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+    body: JSON.stringify(payload),
+  })
+  const json = await readJson(res)
+  logger.debug('api:admin', `POST ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:admin', 'create staff error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<CreateStaffResponseData>
+  if (!env.data || typeof env.data.user_id !== 'number') {
+    logger.debug('api:admin', 'create staff invalid shape', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}
+
+export type CreateStaffInviteBody = {
+  email: string
+  first_name: string
+  last_name: string
+  middle_name?: string
+}
+
+export interface CreateStaffInviteResponseData {
+  invite_id: number
+  email: string
+  expires_at_utc: string
+  target_role: string
+}
+
+export async function createStaffInvite(
+  body: CreateStaffInviteBody,
+  sessionCsrf: string,
+): Promise<
+  | { ok: true; data: CreateStaffInviteResponseData }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl('/api/admin/invites/staff')
+  const payload: Record<string, string> = {
+    email: body.email.trim(),
+    first_name: body.first_name.trim(),
+    last_name: body.last_name.trim(),
+  }
+  const mid = body.middle_name?.trim()
+  if (mid)
+    payload.middle_name = mid
+
+  const res = await fetch(url, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+    body: JSON.stringify(payload),
+  })
+  const json = await readJson(res)
+  logger.debug('api:admin', `POST ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:admin', 'create staff invite error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<CreateStaffInviteResponseData>
+  if (!env.data || typeof env.data.invite_id !== 'number') {
+    logger.debug('api:admin', 'create staff invite invalid shape', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}
+
+export async function patchAdminUserRole(
+  userId: number,
+  role: AdminDirectoryRole,
+  sessionCsrf: string,
+): Promise<
+  | { ok: true; data: { user_id: number; user_uuid: string; role: AdminDirectoryRole } }
+  | { ok: false; status: number; message: string }
+> {
+  const url = apiUrl(`/api/admin/users/${userId}/role`)
+  const res = await fetch(url, {
+    method: 'PATCH',
+    credentials: 'include',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      [CSRF_HEADER]: sessionCsrf,
+    },
+    body: JSON.stringify({ role }),
+  })
+  const json = await readJson(res)
+  logger.debug('api:admin', `PATCH ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:admin', 'patch user role error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<{ user_id: number; user_uuid: string; role: AdminDirectoryRole }>
+  if (!env.data || typeof env.data.user_id !== 'number') {
+    logger.debug('api:admin', 'patch user role invalid shape', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
 }
