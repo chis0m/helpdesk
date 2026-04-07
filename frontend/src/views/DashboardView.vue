@@ -1,5 +1,13 @@
 <template>
   <div class="space-y-7">
+    <div
+      v-if="loadError"
+      class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+      role="alert"
+    >
+      {{ loadError }}
+    </div>
+
     <!-- Hero metric + actions -->
     <section class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
       <div>
@@ -7,7 +15,7 @@
           Your open requests
         </p>
         <p class="mt-1 flex items-baseline gap-2 text-3xl font-semibold tracking-tight text-[var(--text-primary)] lg:text-4xl">
-          {{ openTicketCount }}
+          {{ loading ? '…' : openTicketCount }}
           <span class="text-base font-normal text-[var(--text-muted)] lg:text-lg">with SecWeb support</span>
         </p>
       </div>
@@ -44,7 +52,16 @@
         <p class="mt-1 text-sm text-[var(--text-secondary)]">
           When support needs more detail on your SecWeb tickets
         </p>
-        <ul class="mt-5 space-y-3">
+        <p
+          v-if="!loading && ticketPreview.length === 0"
+          class="mt-5 text-sm text-[var(--text-muted)]"
+        >
+          No tickets yet — open one to get started.
+        </p>
+        <ul
+          v-else
+          class="mt-5 space-y-3"
+        >
           <li
             v-for="t in ticketPreview"
             :key="t.id"
@@ -58,7 +75,7 @@
                 {{ t.title }}
               </p>
               <p class="text-xs text-[var(--text-muted)]">
-                {{ t.category }} · #{{ t.id }}
+                {{ formatTicketCategoryLabel(t.category) }} · #{{ t.id }}
               </p>
             </RouterLink>
             <TicketStatusBadge :status="t.status" />
@@ -85,13 +102,13 @@
           </p>
         </div>
         <div class="mt-8 flex justify-end">
-          <button
-            type="button"
+          <RouterLink
+            :to="paths.dashboard.ticketNew"
             class="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-green)] text-2xl font-light text-white shadow-md transition hover:brightness-95"
             aria-label="Create ticket"
           >
             +
-          </button>
+          </RouterLink>
         </div>
       </article>
     </section>
@@ -109,7 +126,7 @@
           {{ s.label }}
         </p>
         <p class="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
-          {{ s.value }}
+          {{ loading ? '…' : s.value }}
         </p>
       </div>
     </section>
@@ -127,7 +144,16 @@
           See all
         </RouterLink>
       </div>
-      <div class="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white">
+      <div
+        v-if="!loading && recentGroups.length === 0"
+        class="rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-8 text-center text-sm text-[var(--text-secondary)]"
+      >
+        No recent ticket updates yet.
+      </div>
+      <div
+        v-else
+        class="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white"
+      >
         <div
           v-for="(group, idx) in recentGroups"
           :key="group.date"
@@ -143,42 +169,46 @@
             <li
               v-for="row in group.items"
               :key="row.id"
-              class="flex cursor-pointer items-center gap-4 border-t border-[var(--border-subtle)] px-4 py-4 transition hover:bg-[var(--surface-hover)]"
             >
-              <div
-                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-secondary)]"
+              <RouterLink
+                :to="paths.dashboard.ticketDetail(String(row.ticketId))"
+                class="flex cursor-pointer items-center gap-4 border-t border-[var(--border-subtle)] px-4 py-4 transition hover:bg-[var(--surface-hover)]"
               >
-                <IconTicket class="h-5 w-5" />
-              </div>
-              <div class="min-w-0 flex-1">
-                <p class="font-medium text-[var(--text-primary)]">
-                  {{ row.title }}
-                </p>
-                <p class="text-sm text-[var(--text-muted)]">
-                  {{ row.subtitle }}
-                </p>
-              </div>
-              <div class="hidden shrink-0 text-right sm:block">
-                <p class="text-sm font-semibold text-[var(--brand-green-dark)]">
-                  {{ row.badge }}
-                </p>
-                <p class="text-xs text-[var(--text-muted)]">
-                  {{ row.hint }}
-                </p>
-              </div>
-              <svg
-                class="h-5 w-5 shrink-0 text-[var(--text-muted)]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+                <div
+                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-secondary)]"
+                >
+                  <IconTicket class="h-5 w-5" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="font-medium text-[var(--text-primary)]">
+                    {{ row.title }}
+                  </p>
+                  <p class="text-sm text-[var(--text-muted)]">
+                    {{ row.subtitle }}
+                  </p>
+                </div>
+                <div class="hidden shrink-0 text-right sm:block">
+                  <p class="text-sm font-semibold text-[var(--brand-green-dark)]">
+                    {{ row.badge }}
+                  </p>
+                  <p class="text-xs text-[var(--text-muted)]">
+                    {{ row.hint }}
+                  </p>
+                </div>
+                <svg
+                  class="h-5 w-5 shrink-0 text-[var(--text-muted)]"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </RouterLink>
             </li>
           </ul>
         </div>
@@ -192,54 +222,111 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import IconTicket from '@/components/icons/IconTicket.vue'
 import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
-import { allMockTicketsWithOverrides, countOpenMockTickets } from '@/data/mocks/tickets.mock'
+import { fetchTicketList, type ApiTicketRow } from '@/api/tickets'
+import type { TicketStatus } from '@/types/ticket'
+import { formatDateTime } from '@/utils/date-format'
+import { formatTicketCategoryLabel, TICKET_STATUS_DEFINITIONS } from '@/utils/ticket-ui'
 
-const openTicketCount = computed(() => countOpenMockTickets())
+const loading = ref(true)
+const loadError = ref('')
+const items = ref<ApiTicketRow[]>([])
+const total = ref(0)
 
-const ticketPreview = computed(() => allMockTicketsWithOverrides().slice(0, 3))
+onMounted(async () => {
+  loading.value = true
+  loadError.value = ''
+  const res = await fetchTicketList({ page: 1, limit: 100 })
+  loading.value = false
+  if (!res.ok) {
+    loadError.value = res.message
+    return
+  }
+  items.value = res.items
+  total.value = res.pagination.total
+})
 
-const summaries = [
-  { label: 'Resolved this week', value: '28' },
-  { label: 'Avg. first response', value: '2h 10m' },
-  { label: 'SLA at risk', value: '3' },
-]
+const openTicketCount = computed(() =>
+  items.value.filter(t => t.status === 'open' || t.status === 'in_progress').length,
+)
 
-const recentGroups = [
-  {
-    date: 'Today',
-    items: [
-      {
-        id: 'a1',
-        title: 'Reset MFA for contractor account',
-        subtitle: 'Updated · Security',
-        badge: 'In progress',
-        hint: 'Ticket #1050',
-      },
-      {
-        id: 'a2',
-        title: 'New hire laptop bundle',
-        subtitle: 'Created · Hardware',
-        badge: 'Open',
-        hint: 'Ticket #1049',
-      },
-    ],
-  },
-  {
-    date: 'Yesterday',
-    items: [
-      {
-        id: 'b1',
-        title: 'Expense tool CSV export blank',
-        subtitle: 'Comment added · Billing',
-        badge: 'Resolved',
-        hint: 'Ticket #1041',
-      },
-    ],
-  },
-]
+const ticketPreview = computed(() => {
+  const sorted = [...items.value].sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+  )
+  return sorted.slice(0, 3).map(t => ({
+    id: String(t.ticket_id),
+    title: t.title,
+    category: t.category,
+    status: t.status as TicketStatus,
+  }))
+})
 
+const summaries = computed(() => {
+  const rows = items.value
+  const resolved = rows.filter(t => t.status === 'resolved' || t.status === 'closed').length
+  const inProg = rows.filter(t => t.status === 'in_progress').length
+  return [
+    { label: 'Total (loaded)', value: String(total.value) },
+    { label: 'In progress', value: String(inProg) },
+    { label: 'Resolved / closed', value: String(resolved) },
+  ]
+})
+
+function statusTitle(s: TicketStatus): string {
+  return TICKET_STATUS_DEFINITIONS.find(d => d.value === s)?.title ?? s
+}
+
+function sameCalendarDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate()
+  )
+}
+
+function dayGroupLabel(iso: string): string {
+  const d = new Date(iso)
+  const now = new Date()
+  const yest = new Date(now)
+  yest.setDate(yest.getDate() - 1)
+  if (sameCalendarDay(d, now))
+    return 'Today'
+  if (sameCalendarDay(d, yest))
+    return 'Yesterday'
+  try {
+    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(d)
+  }
+  catch {
+    return formatDateTime(iso)
+  }
+}
+
+const recentGroups = computed(() => {
+  const sorted = [...items.value].sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+  )
+  const top = sorted.slice(0, 12)
+  const map = new Map<string, ApiTicketRow[]>()
+  for (const t of top) {
+    const label = dayGroupLabel(t.updated_at)
+    if (!map.has(label))
+      map.set(label, [])
+    map.get(label)!.push(t)
+  }
+  return Array.from(map.entries()).map(([date, rows]) => ({
+    date,
+    items: rows.map(t => ({
+      id: `t-${t.ticket_id}`,
+      ticketId: t.ticket_id,
+      title: t.title,
+      subtitle: `${formatTicketCategoryLabel(t.category)} · Updated ${formatDateTime(t.updated_at)}`,
+      badge: statusTitle(t.status as TicketStatus),
+      hint: `Ticket #${t.ticket_id}`,
+    })),
+  }))
+})
 </script>

@@ -1,7 +1,6 @@
 package repositories
 
 import (
-	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -30,12 +29,12 @@ func (r *TicketRepository) Create(input requests.CreateTicketInput) (*models.Tic
 	if err := r.db.Create(ticket).Error; err != nil {
 		return nil, err
 	}
-	return ticket, nil
+	return r.GetByID(ticket.ID)
 }
 
 func (r *TicketRepository) GetByID(ticketID uint64) (*models.Ticket, error) {
 	var ticket models.Ticket
-	if err := r.db.First(&ticket, "id = ?", ticketID).Error; err != nil {
+	if err := r.db.Preload("Reporter").Preload("Assignee").First(&ticket, "id = ?", ticketID).Error; err != nil {
 		return nil, err
 	}
 	return &ticket, nil
@@ -67,7 +66,7 @@ func (r *TicketRepository) List(filter requests.ListTicketsFilter) ([]models.Tic
 
 	offset := (filter.Page - 1) * filter.Limit
 	var tickets []models.Ticket
-	if err := query.Order("created_at DESC").Offset(offset).Limit(filter.Limit).Find(&tickets).Error; err != nil {
+	if err := query.Preload("Reporter").Preload("Assignee").Order("created_at DESC").Offset(offset).Limit(filter.Limit).Find(&tickets).Error; err != nil {
 		return nil, 0, err
 	}
 	return tickets, total, nil
@@ -98,10 +97,7 @@ func (r *TicketRepository) UpdateByID(ticketID uint64, input requests.UpdateTick
 		return nil, err
 	}
 
-	if err := r.db.First(&ticket, "id = ?", ticketID).Error; err != nil {
-		return nil, errors.New("ticket updated but failed to reload")
-	}
-	return &ticket, nil
+	return r.GetByID(ticketID)
 }
 
 func (r *TicketRepository) UpdateStatus(ticketID uint64, status models.TicketStatus) (*models.Ticket, error) {
@@ -114,10 +110,7 @@ func (r *TicketRepository) UpdateStatus(ticketID uint64, status models.TicketSta
 		return nil, err
 	}
 
-	if err := r.db.First(&ticket, "id = ?", ticketID).Error; err != nil {
-		return nil, errors.New("ticket status updated but failed to reload")
-	}
-	return &ticket, nil
+	return r.GetByID(ticketID)
 }
 
 func (r *TicketRepository) UpdateAssignment(ticketID uint64, assignedUserID *uint64) (*models.Ticket, error) {
@@ -130,10 +123,7 @@ func (r *TicketRepository) UpdateAssignment(ticketID uint64, assignedUserID *uin
 		return nil, err
 	}
 
-	if err := r.db.First(&ticket, "id = ?", ticketID).Error; err != nil {
-		return nil, errors.New("ticket assignment updated but failed to reload")
-	}
-	return &ticket, nil
+	return r.GetByID(ticketID)
 }
 
 func (r *TicketRepository) DeleteByID(ticketID uint64) error {

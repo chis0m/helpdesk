@@ -1,5 +1,6 @@
 /** `GET /api/health` — raw JSON (no envelope); use for connectivity checks. */
 import { apiUrl, readJson } from './client'
+import { fetchWithSessionRefresh } from './session-fetch'
 import { logger } from '@/utils/logger'
 
 export async function fetchHealth(): Promise<
@@ -7,7 +8,7 @@ export async function fetchHealth(): Promise<
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl('/api/health')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     headers: { Accept: 'application/json' },
   })

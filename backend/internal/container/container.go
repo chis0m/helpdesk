@@ -35,8 +35,7 @@ func New(db *gorm.DB, cfg config.Config, tokenMaker auth.MakerInterface) *Contai
 	passwordResetRepo := repositories.NewPasswordResetRepository(db)
 	publicAuthCSRFStore := auth.NewPublicAuthCSRFStore(cfg.CSRFTTL())
 	userService := services.NewUserService(userRepo)
-	inviteNotifier := mail.NewLogStaffInviteNotifier()
-	resetNotifier := mail.NewLogPasswordResetNotifier()
+	inviteNotifier, resetNotifier := mail.NewNotifiers(cfg)
 	inviteService := services.NewInviteService(cfg, inviteRepo, userRepo, inviteNotifier)
 	ticketService := services.NewTicketService(ticketRepo, ticketCommentRepo, userRepo)
 	authService := services.NewAuthService(cfg, tokenMaker, userRepo, sessionRepo, passwordResetRepo, resetNotifier)
@@ -44,7 +43,7 @@ func New(db *gorm.DB, cfg config.Config, tokenMaker auth.MakerInterface) *Contai
 	authController := controllers.NewAuthController(cfg, authService, publicAuthCSRFStore)
 	userController := controllers.NewUserController(userService)
 	inviteController := controllers.NewInviteController(inviteService, userService)
-	ticketController := controllers.NewTicketController(ticketService)
+	ticketController := controllers.NewTicketController(ticketService, userRepo)
 
 	return &Container{
 		DB:                  db,

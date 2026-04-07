@@ -3,6 +3,7 @@
 // VULN-05: Mutating ticket calls send `X-CSRF-Token`; weak verification is backend CSRF middleware.
 // VULN-07: `GET /api/tickets/search?q=` forwards `q` into unsafe SQL on the server (see backend `TicketController.Search`).
 import { apiUrl, CSRF_HEADER, readJson } from './client'
+import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import type { TicketComment } from '@/types/ticket'
 import { logger } from '@/utils/logger'
@@ -12,7 +13,14 @@ export type ApiTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
 export interface ApiTicketRow {
   ticket_id: number
   reporter_user_id: number
+  /** First + last name (or email) from the API when available. */
+  reporter_display_name?: string
+  reporter_email?: string
   assigned_user_id: number | null
+  /** First + last name (or email) when assigned; omitted/null when unassigned. */
+  assigned_display_name?: string | null
+  /** Support assignee’s email when assigned; null when unassigned. */
+  assigned_email?: string | null
   title: string
   description: string
   category: string
@@ -43,7 +51,7 @@ export async function createTicket(
   sessionCsrf: string,
 ): Promise<{ ok: true; data: ApiTicketRow } | { ok: false; status: number; message: string }> {
   const url = apiUrl('/api/tickets')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -81,7 +89,7 @@ export async function fetchTicket(
   ticketId: number,
 ): Promise<{ ok: true; data: ApiTicketRow } | { ok: false; status: number; message: string }> {
   const url = apiUrl(`/api/tickets/${ticketId}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -134,7 +142,7 @@ export async function fetchTicketComments(
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl(`/api/tickets/${ticketId}/comments`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -173,7 +181,7 @@ export async function createTicketComment(
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl(`/api/tickets/${ticketId}/comments`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -228,7 +236,7 @@ export async function fetchTicketList(opts?: {
     params.set('category', cat)
   const qs = params.toString()
   const url = apiUrl(`/api/tickets${qs ? `?${qs}` : ''}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -262,7 +270,7 @@ export async function fetchTicketSearch(q: string): Promise<
     return { ok: false, status: 400, message: 'Search query is required' }
   const params = new URLSearchParams({ q: trimmed })
   const url = apiUrl(`/api/tickets/search?${params}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -298,7 +306,7 @@ export async function assignTicket(
     'unassign' in body && body.unassign
       ? { unassign: true as const }
       : { assigned_user_id: (body as { assigned_user_id: number }).assigned_user_id }
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
     headers: {
@@ -333,7 +341,7 @@ export async function deleteTicket(
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl(`/api/tickets/${ticketId}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'DELETE',
     credentials: 'include',
     headers: {
@@ -378,7 +386,7 @@ export async function patchTicket(
     payload.category = body.category.trim()
 
   const url = apiUrl(`/api/tickets/${ticketId}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
     headers: {
@@ -409,7 +417,7 @@ export async function patchTicketStatus(
   sessionCsrf: string,
 ): Promise<{ ok: true; data: ApiTicketRow } | { ok: false; status: number; message: string }> {
   const url = apiUrl(`/api/tickets/${ticketId}/status`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
     headers: {
@@ -444,7 +452,7 @@ export async function patchTicketComment(
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl(`/api/tickets/${ticketId}/comments/${commentId}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
     headers: {
@@ -478,7 +486,7 @@ export async function deleteTicketComment(
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl(`/api/tickets/${ticketId}/comments/${commentId}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'DELETE',
     credentials: 'include',
     headers: {

@@ -84,7 +84,7 @@
               to="/dashboard"
               class="landing-cta-secondary inline-flex items-center justify-center rounded-full border border-[var(--border-strong)] bg-white/90 px-6 py-3 text-sm font-semibold text-[var(--text-primary)] shadow-sm transition hover:bg-[var(--surface-hover)]"
             >
-              View support home (demo)
+              Support home
             </RouterLink>
           </div>
         </div>
@@ -112,39 +112,22 @@
               <div class="flex items-end justify-between">
                 <div>
                   <p class="text-xs font-medium text-[var(--text-muted)]">
-                    Your open requests
+                    API health
                   </p>
-                  <p class="mt-0.5 text-3xl font-semibold tracking-tight tabular-nums">
-                    12
+                  <p class="mt-0.5 text-2xl font-semibold tracking-tight tabular-nums text-[var(--text-primary)]">
+                    <span v-if="healthLoading">…</span>
+                    <span v-else-if="healthError">{{ healthError }}</span>
+                    <span v-else>{{ healthStatus }}</span>
                   </p>
                 </div>
                 <span
-                  class="rounded-full bg-[var(--brand-green)] px-3 py-1 text-xs font-semibold text-[var(--text-on-green)]"
-                >Live</span>
+                  class="rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="healthOk ? 'bg-[var(--brand-green)] text-[var(--text-on-green)]' : 'bg-amber-100 text-amber-900'"
+                >{{ healthOk ? 'Live' : 'Check' }}</span>
               </div>
-              <div class="space-y-2">
-                <div
-                  v-for="row in previewRows"
-                  :key="row.title"
-                  class="flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-main)] px-3 py-2.5"
-                >
-                  <span
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-xs font-medium text-[var(--text-muted)]"
-                  >#</span>
-                  <div class="min-w-0 flex-1">
-                    <p class="truncate text-sm font-medium text-[var(--text-primary)]">
-                      {{ row.title }}
-                    </p>
-                    <p class="text-xs text-[var(--text-muted)]">
-                      {{ row.meta }}
-                    </p>
-                  </div>
-                  <span
-                    class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                    :class="row.badgeClass"
-                  >{{ row.badge }}</span>
-                </div>
-              </div>
+              <p class="text-sm leading-relaxed text-[var(--text-secondary)]">
+                {{ healthMessage || 'Sign in after creating an account to see your real tickets and replies from support.' }}
+              </p>
             </div>
           </div>
         </div>
@@ -235,26 +218,50 @@
 </template>
 
 <script setup lang="ts">
-const previewRows = [
-  {
-    title: 'VPN drops on Wi‑Fi handoff',
-    meta: 'Technical · updated 2h ago',
-    badge: 'Open',
-    badgeClass: 'bg-neutral-200 text-neutral-800',
-  },
-  {
-    title: 'Invoice PDF not attaching',
-    meta: 'Billing',
-    badge: 'Progress',
-    badgeClass: 'bg-amber-100 text-amber-900',
-  },
-]
+import { computed, onMounted, ref } from 'vue'
+import { fetchHealth } from '@/api/health'
 
-const stats = [
-  { value: '2h 10m', label: 'Typical first response', hint: 'Sample metric — not live data' },
-  { value: '99.2%', label: 'Requests closed on time', hint: 'Illustrative SLA-style figure' },
-  { value: '28', label: 'Issues resolved this week', hint: 'Static preview only' },
-]
+const healthLoading = ref(true)
+const healthOk = ref(false)
+const healthStatus = ref('')
+const healthMessage = ref('')
+const healthError = ref('')
+
+onMounted(async () => {
+  const res = await fetchHealth()
+  healthLoading.value = false
+  if (res.ok) {
+    healthOk.value = true
+    healthStatus.value = res.status
+    healthMessage.value = res.message
+  }
+  else {
+    healthError.value = res.message
+  }
+})
+
+/** Live data from `GET /api/health` (public). */
+const stats = computed(() => {
+  if (healthLoading.value) {
+    return [
+      { value: '…', label: 'Service status', hint: 'Checking API…' },
+      { value: '…', label: 'Message', hint: '' },
+      { value: '…', label: 'Reachable', hint: '' },
+    ]
+  }
+  if (!healthOk.value) {
+    return [
+      { value: '—', label: 'Service status', hint: healthError.value || 'Unavailable' },
+      { value: '—', label: 'Message', hint: 'Fix API URL or start the server.' },
+      { value: 'No', label: 'Reachable', hint: 'See browser network tab for details.' },
+    ]
+  }
+  return [
+    { value: healthStatus.value, label: 'Service status', hint: 'From GET /api/health' },
+    { value: healthMessage.value, label: 'Message', hint: 'Backend response' },
+    { value: 'Yes', label: 'Reachable', hint: 'Helpdesk API is responding' },
+  ]
+})
 
 const featured = {
   title: 'One place for your support requests',
@@ -278,7 +285,7 @@ const bottomCards = [
   },
   {
     title: 'Built for SecWeb CA',
-    body: 'UI preview for Secure Web Development — wire to the real API when you connect the backend.',
+    body: 'Coursework baseline for Secure Web Development — authentication and tickets use the running API.',
   },
 ]
 

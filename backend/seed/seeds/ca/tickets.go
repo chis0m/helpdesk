@@ -1,132 +1,119 @@
 package ca
 
 import (
+	"fmt"
+	"strings"
+	"time"
+
 	"gorm.io/gorm"
 
-	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/models"
 )
 
-// Ticket titles (idempotent).
+// CA seed ticket titles (idempotent firstOrCreate by title). Must Change user has no tickets.
 const (
-	TicketNoCommentsTitle    = "[CA Seed] Unassigned — no comments"
-	TicketThreeCommentsTitle = "[CA Seed] Assigned — 3-comment thread"
-	TicketUserOnlyTitle      = "[CA Seed] Unassigned — user comment only"
+	// John Doe (settled password) — three tickets
+	TicketJohnOpenTitle       = "Sidebar keeps collapsing when I switch between projects"
+	TicketJohnInProgressTitle = "CSV export times out after about 30 seconds"
+	TicketJohnResolvedTitle   = "Cannot log in after password reset — now fixed on my side"
+	// Jane Doe — two tickets
+	TicketJaneOpenTitle  = "Question: when are monthly billing reminder emails sent?"
+	TicketJaneClosedTitle = "Invoice PDF shows wrong VAT rate for last month's bill"
 )
 
-// EnsureTickets seeds three CA tickets when missing (by title).
-func EnsureTickets(db *gorm.DB, uMust, uOK, staffSupport *models.User) error {
-	if err := firstOrCreateTicketNoComments(db, uMust.ID, TicketNoCommentsTitle); err != nil {
+// EnsureTickets creates CA demo tickets: 3 for John, 2 for Jane. Assignees balanced between Sam (3) and Cassey (2).
+func EnsureTickets(
+	db *gorm.DB,
+	uMust *models.User,
+	uJohn *models.User,
+	uJane *models.User,
+	staffSam *models.User,
+	staffCassey *models.User,
+) error {
+	_ = uMust // no tickets for first-login / must-change user
+
+	if uJohn == nil || uJane == nil || staffSam == nil || staffCassey == nil {
+		return fmt.Errorf("EnsureTickets: missing user(s)")
+	}
+
+	samID := staffSam.ID
+	casseyID := staffCassey.ID
+
+	// John — open (Sam)
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uJohn.ID, TicketJohnOpenTitle,
+		"Using the web app on Safari 17. The left sidebar collapses every time I click a different project in the dropdown. Expected it to stay open until I toggle it.",
+		"general", models.TicketStatusOpen, &samID,
+	); err != nil {
 		return err
 	}
-	if err := firstOrCreateTicketThreeComments(db, uOK.ID, staffSupport.ID, TicketThreeCommentsTitle, uOK.ID, staffSupport.ID); err != nil {
+	// John — in progress (Cassey)
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uJohn.ID, TicketJohnInProgressTitle,
+		"Exporting a medium-sized report (~5k rows) to CSV. The request runs then fails after roughly half a minute. Browser: Chrome on macOS.",
+		"general", models.TicketStatusInProgress, &casseyID,
+	); err != nil {
 		return err
 	}
-	if err := firstOrCreateTicketUserCommentOnly(db, uMust.ID, TicketUserOnlyTitle, uMust.ID); err != nil {
+	// John — resolved (Sam)
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uJohn.ID, TicketJohnResolvedTitle,
+		"After using the password reset link I was stuck in a loop on the login page. This started after the weekend maintenance window.",
+		"general", models.TicketStatusResolved, &samID,
+	); err != nil {
 		return err
 	}
+
+	// Jane — open (Cassey)
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uJane.ID, TicketJaneOpenTitle,
+		"We need to coordinate with finance. Are billing reminders sent on the 1st, or on the invoice date? Thanks.",
+		"billing", models.TicketStatusOpen, &casseyID,
+	); err != nil {
+		return err
+	}
+	// Jane — closed (Sam)
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uJane.ID, TicketJaneClosedTitle,
+		"The PDF attached to last month's billing email shows the wrong VAT percentage for our region. Need a corrected document or confirmation on the rate.",
+		"billing", models.TicketStatusClosed, &samID,
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func firstOrCreateTicketNoComments(db *gorm.DB, reporterID uint64, title string) error {
-	var existing []models.Ticket
-	if err := db.Where("title = ?", title).Limit(1).Find(&existing).Error; err != nil {
-		return err
+func firstOrCreateTicketWithStatus(
+	db *gorm.DB,
+	reporterID uint64,
+	title, description string,
+	category string,
+	status models.TicketStatus,
+	assigneeID *uint64,
+) (*models.Ticket, error) {
+	normalizedTitle := strings.TrimSpace(title)
+	var found []models.Ticket
+	if err := db.Where("title = ?", normalizedTitle).Limit(1).Find(&found).Error; err != nil {
+		return nil, err
 	}
-	if len(existing) > 0 {
-		return nil
+	if len(found) > 0 {
+		return &found[0], nil
 	}
 
+	now := time.Now().UTC()
 	t := models.Ticket{
+		Title:          normalizedTitle,
+		Description:    strings.TrimSpace(description),
+		Status:         status,
+		Category:       category,
 		ReporterUserID: reporterID,
-		AssignedUserID: nil,
-		Title:          title,
-		Description:    "CA seed ticket: no comments, unassigned. Reporter is the user who must change password on first login.",
-		Category:       "general",
-		Status:         models.TicketStatusOpen,
+		AssignedUserID: assigneeID,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	if err := db.Create(&t).Error; err != nil {
-		return err
+		return nil, err
 	}
-	logger.L().Info().Str("title", title).Msg("CA fixture ticket created")
-	return nil
-}
-
-func firstOrCreateTicketThreeComments(db *gorm.DB, reporterID, assigneeID uint64, title string, authorUserID, authorStaffID uint64) error {
-	var existing []models.Ticket
-	if err := db.Where("title = ?", title).Limit(1).Find(&existing).Error; err != nil {
-		return err
-	}
-	if len(existing) > 0 {
-		return nil
-	}
-
-	assignee := assigneeID
-	t := models.Ticket{
-		ReporterUserID: reporterID,
-		AssignedUserID: &assignee,
-		Title:          title,
-		Description:    "CA seed ticket: three comments (reporter + staff + reporter), assigned to support staff.",
-		Category:       "technical",
-		Status:         models.TicketStatusInProgress,
-	}
-	if err := db.Create(&t).Error; err != nil {
-		return err
-	}
-
-	comments := []struct {
-		authorID uint64
-		body     string
-	}{
-		{authorUserID, "Initial report: intermittent sync failure after the last update."},
-		{authorStaffID, "Thanks — I can reproduce. Assigned to me; investigating logs."},
-		{authorUserID, "Follow-up: I attached export-logs.zip to the case."},
-	}
-	for _, c := range comments {
-		co := models.TicketComment{
-			TicketID:     t.ID,
-			AuthorUserID: c.authorID,
-			Body:         c.body,
-		}
-		if err := db.Create(&co).Error; err != nil {
-			return err
-		}
-	}
-
-	logger.L().Info().Str("title", title).Msg("CA fixture ticket + comments created")
-	return nil
-}
-
-func firstOrCreateTicketUserCommentOnly(db *gorm.DB, reporterID uint64, title string, commentAuthorID uint64) error {
-	var existing []models.Ticket
-	if err := db.Where("title = ?", title).Limit(1).Find(&existing).Error; err != nil {
-		return err
-	}
-	if len(existing) > 0 {
-		return nil
-	}
-
-	t := models.Ticket{
-		ReporterUserID: reporterID,
-		AssignedUserID: nil,
-		Title:          title,
-		Description:    "CA seed ticket: single comment from the reporter only, unassigned.",
-		Category:       "billing",
-		Status:         models.TicketStatusOpen,
-	}
-	if err := db.Create(&t).Error; err != nil {
-		return err
-	}
-
-	co := models.TicketComment{
-		TicketID:     t.ID,
-		AuthorUserID: commentAuthorID,
-		Body:         "Question on invoice line items — can someone confirm tax is correct?",
-	}
-	if err := db.Create(&co).Error; err != nil {
-		return err
-	}
-
-	logger.L().Info().Str("title", title).Msg("CA fixture ticket + user comment created")
-	return nil
+	return &t, nil
 }

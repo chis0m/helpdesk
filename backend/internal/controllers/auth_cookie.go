@@ -23,25 +23,27 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 		refreshMaxAge = 0
 	}
 
-	// VULN-01: Weak session cookie flags — HttpOnly/Secure false, SameSite=None.
+	// VULN-01: Weak session cookie flags — HttpOnly/Secure false (SameSite=Strict for same-site dev; cookies still readable if HttpOnly false).
 	secureCookie := false
 	httpOnlyCookie := false
 	cookiePath := "/"
 	cookieDomain := ""
+	sameSite := http.SameSiteStrictMode
 
-	c.SetSameSite(http.SameSiteNoneMode)
+	c.SetSameSite(sameSite)
 	c.SetCookie(auth.AccessCookieName, tokens.AccessToken, accessMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 	c.SetCookie(auth.RefreshCookieName, tokens.RefreshToken, refreshMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 }
 
 func clearAuthCookies(c *gin.Context) {
-	// VULN-01: Weak session cookie flags — clear uses same HttpOnly/Secure false and SameSite=None.
+	// VULN-01: Match setAuthCookies — same Path/Domain/SameSite so the browser clears the session cookies.
 	secureCookie := false
 	httpOnlyCookie := false
 	cookiePath := "/"
 	cookieDomain := ""
+	sameSite := http.SameSiteStrictMode
 
-	c.SetSameSite(http.SameSiteNoneMode)
+	c.SetSameSite(sameSite)
 	c.SetCookie(auth.AccessCookieName, "", -1, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 	c.SetCookie(auth.RefreshCookieName, "", -1, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 }

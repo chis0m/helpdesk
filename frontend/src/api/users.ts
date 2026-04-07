@@ -1,6 +1,7 @@
 // VULN-02: GET/PATCH `/api/users/:id` by numeric id from the UI — no client-side actor-vs-target check (backend IDOR).
 // VULN-05: PATCH sends `X-CSRF-Token`; weak verification is backend CSRF middleware.
 import { apiUrl, CSRF_HEADER, readJson } from './client'
+import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import { logger } from '@/utils/logger'
 
@@ -37,7 +38,7 @@ export async function fetchUser(
   userId: number,
 ): Promise<{ ok: true; data: UserProfileData } | { ok: false; status: number; message: string }> {
   const url = apiUrl(`/api/users/${userId}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -63,7 +64,7 @@ export async function patchUser(
   csrfToken: string,
 ): Promise<{ ok: true; data: UserProfileData } | { ok: false; status: number; message: string }> {
   const url = apiUrl(`/api/users/${userId}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
     headers: {

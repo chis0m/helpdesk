@@ -115,8 +115,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { acceptInviteRequest, fetchPublicCsrfToken } from '@/api/auth'
-import { fetchInviteVerify, type InviteVerifyValid } from '@/api/invites'
+import { fetchPublicCsrfToken } from '@/api/auth'
+import { acceptInviteRequest, fetchInviteVerify, type InviteVerifyValid } from '@/api/invites'
 import { paths } from '@/constants/routes'
 
 const route = useRoute()

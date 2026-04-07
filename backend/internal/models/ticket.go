@@ -26,4 +26,7 @@ type Ticket struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	DeletedAt      gorm.DeletedAt `gorm:"index"`
+
+	Reporter *User `gorm:"foreignKey:ReporterUserID;references:ID"`
+	Assignee *User `gorm:"foreignKey:AssignedUserID;references:ID"`
 }

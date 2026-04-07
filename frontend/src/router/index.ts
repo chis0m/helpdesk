@@ -2,7 +2,9 @@
 // VULN-02: `profile/:userId` — any numeric id can be opened in the SPA (backend IDOR completes the issue).
 // VULN-04: `tickets/:id` — ticket detail/comments keyed only by id in the URL (backend IDOR completes the issue).
 import { createRouter, createWebHistory } from 'vue-router'
+import type { NavigationGuard } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
+import { paths } from '@/constants/routes'
 import { getAuthUserSnapshot } from '@/stores/auth-session'
 
 const router = createRouter({
@@ -68,6 +70,18 @@ const router = createRouter({
           name: 'reset-password',
           meta: { title: 'Reset password' },
           component: () => import('@/views/auth/ResetPasswordView.vue'),
+        },
+      ],
+    },
+    {
+      path: '/change-password',
+      component: () => import('@/layouts/AuthLayout.vue'),
+      children: [
+        {
+          path: '',
+          name: 'change-password-required',
+          meta: { title: 'Change password' },
+          component: () => import('@/views/auth/ChangePasswordRequiredView.vue'),
         },
       ],
     },
@@ -142,5 +156,36 @@ const router = createRouter({
     },
   ],
 })
+
+/** TASK.md §8.3 — block app until `must_change_password` is cleared (client-side baseline). */
+const mustChangeGuard: NavigationGuard = (to, _from, next) => {
+  const u = getAuthUserSnapshot()
+
+  if (to.name === 'change-password-required') {
+    if (!u) {
+      next({
+        path: paths.login,
+        query: { redirect: paths.changePasswordRequired },
+        replace: true,
+      })
+      return
+    }
+    if (!u.must_change_password) {
+      next({ path: paths.dashboard.home, replace: true })
+      return
+    }
+    next()
+    return
+  }
+
+  if (u?.must_change_password) {
+    next({ name: 'change-password-required', replace: true })
+    return
+  }
+
+  next()
+}
+
+router.beforeEach(mustChangeGuard)
 
 export default router

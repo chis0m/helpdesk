@@ -145,41 +145,74 @@
             for="pw-current"
             class="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
           >Current password</label>
-          <input
-            id="pw-current"
-            v-model="pwCurrent"
-            type="password"
-            autocomplete="current-password"
-            class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3 text-sm"
-          >
+          <div class="relative">
+            <input
+              id="pw-current"
+              v-model="pwCurrent"
+              :type="showPwCurrent ? 'text' : 'password'"
+              autocomplete="current-password"
+              class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white py-3 pl-4 pr-14 text-sm text-[var(--text-primary)] outline-none focus:border-transparent focus:ring-2 focus:ring-[var(--brand-green)]"
+            >
+            <button
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+              :aria-pressed="showPwCurrent"
+              :aria-label="showPwCurrent ? 'Hide current password' : 'Show current password'"
+              @click="showPwCurrent = !showPwCurrent"
+            >
+              {{ showPwCurrent ? 'Hide' : 'Show' }}
+            </button>
+          </div>
         </div>
         <div>
           <label
             for="pw-new"
             class="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
           >New password</label>
-          <input
-            id="pw-new"
-            v-model="pwNew"
-            type="password"
-            autocomplete="new-password"
-            minlength="8"
-            class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3 text-sm"
-          >
+          <div class="relative">
+            <input
+              id="pw-new"
+              v-model="pwNew"
+              :type="showPwNew ? 'text' : 'password'"
+              autocomplete="new-password"
+              minlength="8"
+              class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white py-3 pl-4 pr-14 text-sm text-[var(--text-primary)] outline-none focus:border-transparent focus:ring-2 focus:ring-[var(--brand-green)]"
+            >
+            <button
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+              :aria-pressed="showPwNew"
+              :aria-label="showPwNew ? 'Hide new password' : 'Show new password'"
+              @click="showPwNew = !showPwNew"
+            >
+              {{ showPwNew ? 'Hide' : 'Show' }}
+            </button>
+          </div>
         </div>
         <div>
           <label
             for="pw-new2"
             class="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
           >Confirm new password</label>
-          <input
-            id="pw-new2"
-            v-model="pwNew2"
-            type="password"
-            autocomplete="new-password"
-            minlength="8"
-            class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3 text-sm"
-          >
+          <div class="relative">
+            <input
+              id="pw-new2"
+              v-model="pwNew2"
+              :type="showPwNew2 ? 'text' : 'password'"
+              autocomplete="new-password"
+              minlength="8"
+              class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white py-3 pl-4 pr-14 text-sm text-[var(--text-primary)] outline-none focus:border-transparent focus:ring-2 focus:ring-[var(--brand-green)]"
+            >
+            <button
+              type="button"
+              class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2.5 py-1 text-xs font-semibold text-[var(--text-secondary)] transition hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+              :aria-pressed="showPwNew2"
+              :aria-label="showPwNew2 ? 'Hide confirm password' : 'Show confirm password'"
+              @click="showPwNew2 = !showPwNew2"
+            >
+              {{ showPwNew2 ? 'Hide' : 'Show' }}
+            </button>
+          </div>
         </div>
         <button
           type="submit"
@@ -214,6 +247,10 @@ const loadError = ref('')
 const saveError = ref('')
 const saving = ref(false)
 const savedBanner = ref(false)
+
+const showPwCurrent = ref(false)
+const showPwNew = ref(false)
+const showPwNew2 = ref(false)
 
 const pwCurrent = ref('')
 const pwNew = ref('')

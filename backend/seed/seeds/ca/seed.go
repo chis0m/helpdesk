@@ -1,30 +1,26 @@
 package ca
 
 import (
-	"helpdesk/backend/internal/logger"
+	"fmt"
 
 	"gorm.io/gorm"
 )
 
-// SeedAll runs CA assessment fixtures: customers, staff, tickets. Idempotent.
+// SeedAll applies the CA assessment seed: staff + three customers + five tickets (John 3, Jane 2; Must Change has none).
 func SeedAll(db *gorm.DB) error {
-	log := logger.L()
-	log.Info().Msg("checking CA fixture seed")
-
-	uMust, uOK, err := EnsureCustomerUsers(db)
+	staffSam, staffCassey, err := EnsureStaffUsers(db)
 	if err != nil {
-		return err
+		return fmt.Errorf("ca seed: staff users: %w", err)
 	}
-
-	_, staffSupport, err := EnsureStaffUsers(db)
+	uMust, uJohn, uJane, err := EnsureCustomerUsers(db)
 	if err != nil {
-		return err
+		return fmt.Errorf("ca seed: customer users: %w", err)
 	}
-
-	if err := EnsureTickets(db, uMust, uOK, staffSupport); err != nil {
-		return err
+	if err := EnsureTickets(db, uMust, uJohn, uJane, staffSam, staffCassey); err != nil {
+		return fmt.Errorf("ca seed: tickets: %w", err)
 	}
-
-	log.Info().Msg("CA fixture seed completed")
+	if err := EnsureTicketComments(db, uJohn, uJane, staffSam, staffCassey); err != nil {
+		return fmt.Errorf("ca seed: ticket comments: %w", err)
+	}
 	return nil
 }

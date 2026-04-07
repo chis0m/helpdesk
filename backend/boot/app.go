@@ -74,7 +74,7 @@ func (a *App) Run() error {
 func applyCORS(engine *gin.Engine, cfg config.Config) {
 	origin := cfg.FrontendURL
 	if origin == "" {
-		origin = "http://localhost:5173"
+		origin = "http://localhost:3000"
 	}
 	engine.Use(cors.New(cors.Config{
 		AllowOrigins: []string{

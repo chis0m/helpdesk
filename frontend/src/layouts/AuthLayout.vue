@@ -34,6 +34,14 @@
           >
             Create account
           </RouterLink>
+          <button
+            v-else-if="route.name === 'change-password-required'"
+            type="button"
+            class="text-sm font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+            @click="onSignOut"
+          >
+            Sign out
+          </button>
           <RouterLink
             v-else
             to="/login"
@@ -67,6 +75,20 @@
               Track your tickets and replies from the SecWeb team — the same flow as signing in to a product support portal.
             </p>
           </template>
+          <template v-else-if="route.name === 'change-password-required'">
+            <p
+              class="inline-flex rounded-full border border-[var(--border-subtle)] bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]"
+            >
+              Account security
+            </p>
+            <h2 class="mt-5 text-3xl font-semibold tracking-[-0.02em] text-[var(--text-primary)] lg:text-4xl lg:leading-tight">
+              Update your
+              <span class="text-[var(--brand-green-dark)]">password</span>.
+            </h2>
+            <p class="mt-4 text-base leading-relaxed text-[var(--text-secondary)]">
+              For your security, choose a new password before accessing tickets and profile.
+            </p>
+          </template>
           <template v-else>
             <p
               class="inline-flex rounded-full border border-[var(--border-subtle)] bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]"
@@ -97,9 +119,15 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { performLogout } from '@/utils/perform-logout'
 
 const route = useRoute()
+const router = useRouter()
+
+function onSignOut() {
+  void performLogout(router)
+}
 </script>
 
 <style scoped>

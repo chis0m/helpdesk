@@ -7,6 +7,8 @@
 export const paths = {
   landing: '/',
   login: '/login',
+  /** Required when `must_change_password` is true (TASK.md §8.3). */
+  changePasswordRequired: '/change-password',
   signup: '/signup',
   acceptInvite: '/accept-invite',
   forgotPassword: '/forgot-password',

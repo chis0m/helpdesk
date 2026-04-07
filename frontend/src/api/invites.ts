@@ -1,5 +1,6 @@
 // VULN-05: `POST /api/invites/accept` uses public CSRF (same weak middleware as signup/login).
 import { apiUrl, CSRF_HEADER, readJson } from './client'
+import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import { logger } from '@/utils/logger'
 
@@ -28,7 +29,7 @@ export async function fetchInviteVerify(token: string): Promise<
 > {
   const params = new URLSearchParams({ token: token.trim() })
   const url = apiUrl(`/api/invites/verify?${params}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     headers: { Accept: 'application/json' },
   })
@@ -64,7 +65,7 @@ export async function acceptInviteRequest(
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl('/api/invites/accept')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {

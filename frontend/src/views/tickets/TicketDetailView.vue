@@ -28,10 +28,13 @@
           {{ ticket.title }}
         </h1>
         <div class="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)] sm:text-sm">
-          <span>{{ ticket.category }}</span>
+          <span>{{ formatTicketCategoryLabel(ticket.category) }}</span>
           <span aria-hidden="true">·</span>
-          <span>Reported by {{ ticket.reporterName }}</span>
-          <span aria-hidden="true">·</span>
+          <span v-if="!isSupportViewer">Reported by {{ ticket.reporterName }}</span>
+          <span
+            v-if="!isSupportViewer"
+            aria-hidden="true"
+          >·</span>
           <span>Opened {{ formatDateTime(ticket.createdAt) }}</span>
         </div>
       </div>
@@ -47,9 +50,13 @@
         />
       </div>
       <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 border-t border-[var(--border-subtle)] pt-4 text-xs sm:text-sm">
-        <p>
+        <p v-if="isSupportViewer">
+          <span class="text-[var(--text-muted)]">Reported by</span>
+          <span class="ml-2 font-medium text-[var(--text-primary)]">{{ ticket.reporterEmail || '—' }}</span>
+        </p>
+        <p v-else>
           <span class="text-[var(--text-muted)]">Assignee</span>
-          <span class="ml-2 font-medium text-[var(--text-primary)]">{{ ticket.assigneeName ?? 'Unassigned' }}</span>
+          <span class="ml-2 font-medium text-[var(--text-primary)]">{{ ticket.assigneeEmail ?? 'Unassigned' }}</span>
         </p>
         <p>
           <span class="text-[var(--text-muted)]">Last updated</span>
@@ -261,10 +268,9 @@ import {
 } from '@/api/tickets'
 import TicketStatusEditor from '@/components/tickets/TicketStatusEditor.vue'
 import { paths } from '@/constants/routes'
-import { getMockTicketById } from '@/data/mocks/tickets.mock'
 import { getAuthUserSnapshot, getSessionCsrfToken } from '@/stores/auth-session'
-import { setTicketStatusOverride } from '@/stores/ticket-status-overrides'
 import { formatDateTime } from '@/utils/date-format'
+import { assigneeDisplayLabel, formatTicketCategoryLabel, reporterDisplayLabel } from '@/utils/ticket-ui'
 import type { Ticket, TicketComment, TicketStatus } from '@/types/ticket'
 
 const route = useRoute()
@@ -276,7 +282,12 @@ const loadError = ref('')
 
 function apiRowToTicket(row: ApiTicketRow): Ticket {
   const session = getAuthUserSnapshot()
-  const you = session !== null && row.reporter_user_id === session.user_id
+  const currentId = session?.user_id ?? null
+  const reporterEmail = row.reporter_email?.trim() || null
+  const assigneeEmail
+    = row.assigned_email != null && String(row.assigned_email).trim() !== ''
+      ? String(row.assigned_email).trim()
+      : null
   return {
     id: String(row.ticket_id),
     title: row.title,
@@ -285,26 +296,29 @@ function apiRowToTicket(row: ApiTicketRow): Ticket {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    assigneeName:
-      row.assigned_user_id != null ? `User #${row.assigned_user_id}` : null,
-    reporterName: you ? 'You' : `User #${row.reporter_user_id}`,
+    assigneeName: assigneeDisplayLabel(row),
+    reporterName: reporterDisplayLabel(row, currentId),
+    reporterEmail,
+    assigneeEmail,
     comments: [],
   }
 }
+
+/** Staff / admin / super_admin — show reporter email; portal users see assignee email. */
+const isSupportViewer = computed(() => {
+  const r = getAuthUserSnapshot()?.role
+  return r === 'staff' || r === 'admin' || r === 'super_admin'
+})
 
 const ticket = computed((): Ticket | undefined => {
   const id = typeof route.params.id === 'string' ? route.params.id : ''
   if (!id)
     return undefined
-  const mock = getMockTicketById(id)
-  if (mock)
-    return mock
   if (fromApi.value && String(fromApi.value.ticket_id) === id)
     return apiRowToTicket(fromApi.value)
   return undefined
 })
 
-const localComments = ref<TicketComment[]>([])
 const apiComments = ref<TicketComment[]>([])
 const commentsLoadError = ref('')
 const commentSubmitError = ref('')
@@ -316,13 +330,7 @@ const assignDeleteError = ref('')
 const assigning = ref(false)
 const deleting = ref(false)
 
-const isApiTicket = computed(() => {
-  const raw = route.params.id
-  const id = typeof raw === 'string' ? raw : ''
-  if (!id || getMockTicketById(id))
-    return false
-  return fromApi.value !== null
-})
+const isApiTicket = computed(() => fromApi.value !== null)
 
 const assignUserIdParsed = computed(() => {
   const n = Number.parseInt(assignUserIdInput.value.trim(), 10)
@@ -346,7 +354,6 @@ async function refreshApiComments(ticketId: number) {
 watch(
   () => route.params.id,
   async (raw) => {
-    localComments.value = []
     apiComments.value = []
     commentsLoadError.value = ''
     commentSubmitError.value = ''
@@ -358,8 +365,6 @@ watch(
     statusError.value = ''
     const id = typeof raw === 'string' ? raw : ''
     if (!id)
-      return
-    if (getMockTicketById(id))
       return
     const n = Number.parseInt(id, 10)
     if (!Number.isFinite(n) || n <= 0)
@@ -381,10 +386,6 @@ async function onStatusUpdate(status: TicketStatus) {
   const id = ticket.value?.id
   if (!id)
     return
-  if (getMockTicketById(id)) {
-    setTicketStatusOverride(id, status)
-    return
-  }
   // VULN-04: Status PATCH uses ticket id from the URL — backend IDOR completes unauthorized changes.
   statusError.value = ''
   const ticketNum = Number.parseInt(id, 10)
@@ -478,28 +479,7 @@ async function onDeleteTicket() {
   await router.push(paths.dashboard.tickets)
 }
 
-const allComments = computed(() => {
-  if (!ticket.value) return []
-  const id = typeof route.params.id === 'string' ? route.params.id : ''
-  if (getMockTicketById(id))
-    return [...ticket.value.comments, ...localComments.value]
-  return apiComments.value
-})
-
-let localId = 0
-function addLocalMockComment() {
-  const text = draft.value.trim()
-  if (!text || !ticket.value) return
-  localId += 1
-  localComments.value.push({
-    id: `local-${localId}`,
-    authorName: 'Jordan Lee',
-    body: text,
-    createdAt: new Date().toISOString(),
-    isStaff: false,
-  })
-  draft.value = ''
-}
+const allComments = computed(() => apiComments.value)
 
 async function onPostComment() {
   commentSubmitError.value = ''
@@ -507,10 +487,6 @@ async function onPostComment() {
   if (!text || !ticket.value)
     return
   const id = typeof route.params.id === 'string' ? route.params.id : ''
-  if (getMockTicketById(id)) {
-    addLocalMockComment()
-    return
-  }
   const ticketNum = Number.parseInt(id, 10)
   if (!Number.isFinite(ticketNum) || ticketNum <= 0)
     return

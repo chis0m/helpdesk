@@ -117,6 +117,7 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchPublicCsrfToken, loginRequest } from '@/api/auth'
+import { scheduleAccessRefresh } from '@/api/session-refresh'
 import { paths } from '@/constants/routes'
 import { setAuthSessionFromLogin } from '@/stores/auth-session'
 
@@ -152,6 +153,12 @@ async function onSubmit() {
     }
 
     setAuthSessionFromLogin(result.data)
+    scheduleAccessRefresh()
+
+    if (result.data.must_change_password) {
+      await router.replace(paths.changePasswordRequired)
+      return
+    }
 
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : ''
     const target = redirect && redirect.startsWith('/') ? redirect : '/dashboard'

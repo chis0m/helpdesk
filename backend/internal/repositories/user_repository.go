@@ -45,6 +45,22 @@ func (r *UserRepository) GetByID(userID uint64) (*models.User, error) {
 	return &user, nil
 }
 
+// GetMapByIDs returns users keyed by id (missing rows are omitted).
+func (r *UserRepository) GetMapByIDs(ids []uint64) (map[uint64]models.User, error) {
+	if len(ids) == 0 {
+		return map[uint64]models.User{}, nil
+	}
+	var users []models.User
+	if err := r.db.Where("id IN ?", ids).Find(&users).Error; err != nil {
+		return nil, err
+	}
+	out := make(map[uint64]models.User, len(users))
+	for i := range users {
+		out[users[i].ID] = users[i]
+	}
+	return out, nil
+}
+
 func (r *UserRepository) List(page, limit int, role *models.UserRole) ([]models.User, int64, error) {
 	query := r.db.Model(&models.User{})
 	if role != nil && *role != "" {
@@ -73,7 +89,7 @@ func (r *UserRepository) Create(input requests.CreateUserInput) (*models.User, e
 	if input.IsActive != nil {
 		isActive = *input.IsActive
 	}
-	// Align with DB default FALSE; callers set true for super-admin seed, CA Riley, admin-created staff, etc.
+	// Align with DB default FALSE; callers set true for super-admin seed, CA Must Change user, admin-created staff, etc.
 	mustChangePassword := false
 	if input.MustChangePassword != nil {
 		mustChangePassword = *input.MustChangePassword

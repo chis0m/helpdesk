@@ -4,8 +4,8 @@ import (
 	"helpdesk/backend/internal/logger"
 )
 
-// For the CA we only log the invite URL to the console so it can be copied from logs.
-// In production this would be replaced with SMTP or a transactional email provider.
+// Used when MAIL_MAILER=log (default): URLs are written to the app log (zerolog).
+// Set MAIL_MAILER=smtp and MAIL_* variables to send via SMTP (e.g. Mailtrap).
 
 type StaffInviteNotifier interface {
 	SendStaffInvite(toEmail, inviteURL string) error
@@ -25,7 +25,7 @@ func (n *LogStaffInviteNotifier) SendStaffInvite(toEmail, inviteURL string) erro
 	return nil
 }
 
-// Password reset uses the same CA pattern as staff invites: log the URL, no SMTP.
+// Password reset: same as staff invite — log when MAIL_MAILER=log.
 
 type PasswordResetNotifier interface {
 	SendPasswordReset(toEmail, resetURL string) error

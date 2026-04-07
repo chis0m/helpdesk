@@ -1,6 +1,8 @@
 // VULN-01: Login/refresh/logout/change-password rely on cookie session (weak flags set server-side).
 // VULN-05: Public vs session CSRF tokens sent here; weak verification is backend CSRF middleware.
+import { postAuthRefresh, type RefreshResponseData } from './auth-refresh-internal'
 import { apiUrl, CSRF_HEADER, readJson } from './client'
+import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import { logger } from '@/utils/logger'
 
@@ -47,7 +49,7 @@ function errorMessage(body: unknown): string {
 
 export async function fetchPublicCsrfToken(): Promise<{ ok: true; token: string } | { ok: false; message: string }> {
   const url = apiUrl('/api/auth/public-csrf-token')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -73,7 +75,7 @@ export async function loginRequest(
   publicCsrf: string,
 ): Promise<{ ok: true; data: LoginResponseData } | { ok: false; status: number; message: string }> {
   const url = apiUrl('/api/auth/login')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -121,7 +123,7 @@ export async function signupRequest(
   if (mid)
     payload.middle_name = mid
 
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -161,7 +163,7 @@ export async function logoutRequest(
   sessionCsrf: string,
 ): Promise<{ ok: true; data: LogoutResponseData } | { ok: false; status: number; message: string }> {
   const url = apiUrl('/api/auth/logout')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -198,7 +200,7 @@ export async function changePasswordRequest(
   sessionCsrf: string,
 ): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
   const url = apiUrl('/api/auth/change-password')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -226,7 +228,7 @@ export async function forgotPasswordRequest(
   publicCsrf: string,
 ): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
   const url = apiUrl('/api/auth/forgot-password')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -255,7 +257,7 @@ export async function resetPasswordRequest(
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl('/api/auth/reset-password')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -280,14 +282,8 @@ export async function resetPasswordRequest(
   return { ok: true, data: env.data }
 }
 
-/** VULN-01: `refresh_token` cookie; VULN-05: session CSRF on POST. */
-export interface RefreshResponseData {
-  user_id: number
-  user_uuid: string
-  access_expires_at_utc: string
-  csrf_token: string
-  csrf_expires_at_utc: string
-}
+/** VULN-01: `refresh_token` cookie; VULN-05: session CSRF on POST. Uses raw `fetch` via `postAuthRefresh`. */
+export type { RefreshResponseData }
 
 export async function refreshRequest(
   sessionCsrf: string,
@@ -295,27 +291,7 @@ export async function refreshRequest(
   | { ok: true; data: RefreshResponseData }
   | { ok: false; status: number; message: string }
 > {
-  const url = apiUrl('/api/auth/refresh')
-  const res = await fetch(url, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-      [CSRF_HEADER]: sessionCsrf,
-    },
-  })
-  const json = await readJson(res)
-  logger.debug('api:auth', `POST ${url} → ${res.status}`)
-  if (!res.ok) {
-    logger.debug('api:auth', 'refresh error', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
-  }
-  const env = json as ApiSuccessEnvelope<RefreshResponseData>
-  if (!env.data?.csrf_token || typeof env.data.user_id !== 'number') {
-    logger.debug('api:auth', 'refresh invalid shape', json)
-    return { ok: false, status: res.status, message: 'Invalid response' }
-  }
-  return { ok: true, data: env.data }
+  return postAuthRefresh(sessionCsrf)
 }
 
 /** VULN-01: Session cookie required. */
@@ -324,7 +300,7 @@ export async function fetchSessionCsrfToken(): Promise<
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl('/api/auth/csrf-token')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -360,7 +336,7 @@ export async function fetchMe(): Promise<
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl('/api/auth/me')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -393,7 +369,7 @@ export async function fetchAuthSessions(): Promise<
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl('/api/auth/sessions')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -418,7 +394,7 @@ export async function revokeMyOtherSessionsRequest(
   sessionCsrf: string,
 ): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
   const url = apiUrl('/api/auth/sessions/revoke-my-other-sessions')
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -445,7 +421,7 @@ export async function revokeAuthSession(
 > {
   const id = sessionId.trim()
   const url = apiUrl(`/api/auth/sessions/${encodeURIComponent(id)}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'DELETE',
     credentials: 'include',
     headers: {

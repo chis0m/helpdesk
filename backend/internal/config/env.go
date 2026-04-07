@@ -33,13 +33,21 @@ type Config struct {
 	PasswordResetDuration string
 	GoEnv                 string
 	LogLevel              string
+	// Mail — Laravel-style: MAIL_MAILER=log|smtp (log = URLs in zerolog; smtp = e.g. Mailtrap).
+	MailDriver      string
+	MailHost        string
+	MailPort        string
+	MailUsername    string
+	MailPassword    string
+	MailFromAddress string
+	MailFromName    string
 }
 
 func Load() Config {
 	_ = godotenv.Load()
 
 	return Config{
-		AppName:               getEnv("APP_NAME", "secure-web-helpdesk"),
+		AppName:               getEnv("APP_NAME", "SecWeb HelpDesk"),
 		Port:                  getEnv("PORT", "8080"),
 		FrontendURL:           getEnv("FRONTEND_URL", "http://localhost:3000"),
 		GoEnv:                 getEnv("GO_ENV", "development"),
@@ -61,6 +69,13 @@ func Load() Config {
 		InviteDuration:        getEnv("INVITE_TTL", "72h"),
 		PasswordResetDuration: getEnv("PASSWORD_RESET_TTL", "1h"),
 		LogLevel:              getEnv("LOG_LEVEL", "info"),
+		MailDriver:            getEnv("MAIL_MAILER", "log"),
+		MailHost:              getEnv("MAIL_HOST", ""),
+		MailPort:              getEnv("MAIL_PORT", "587"),
+		MailUsername:          getEnv("MAIL_USERNAME", ""),
+		MailPassword:          getEnv("MAIL_PASSWORD", ""),
+		MailFromAddress:       getEnv("MAIL_FROM_ADDRESS", ""),
+		MailFromName:          getEnv("MAIL_FROM_NAME", ""),
 	}
 }
 
@@ -122,13 +137,18 @@ func (c Config) PasswordResetTTL() time.Duration {
 func (c Config) TokenIssuer() string {
 	name := strings.TrimSpace(c.AppName)
 	if name == "" {
-		return "secure-web-helpdesk"
+		return "SecWeb HelpDesk"
 	}
 	return name
 }
 
 func (c Config) TokenAudience() string {
 	return fmt.Sprintf("%s-web", c.TokenIssuer())
+}
+
+// UseSMTPMail is true when MAIL_MAILER=smtp (case-insensitive).
+func (c Config) UseSMTPMail() bool {
+	return strings.EqualFold(strings.TrimSpace(c.MailDriver), "smtp")
 }
 
 func parseDuration(raw string, fallback time.Duration) time.Duration {

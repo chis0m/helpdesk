@@ -20,5 +20,9 @@ export type Ticket = {
   updatedAt: string
   assigneeName: string | null
   reporterName: string
+  /** Portal user email (for staff detail). */
+  reporterEmail: string | null
+  /** Assigned support email (for portal user detail). */
+  assigneeEmail: string | null
   comments: TicketComment[]
 }

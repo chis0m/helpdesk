@@ -78,7 +78,7 @@
                 {{ t.title }}
               </p>
               <p class="text-sm text-[var(--text-muted)]">
-                {{ t.category }} · {{ reporterLabel(t) }}
+                {{ formatTicketCategoryLabel(t.category) }} · {{ reporterLabel(t) }}
               </p>
             </div>
             <TicketStatusBadge :status="t.status" />
@@ -115,6 +115,7 @@ import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
 import { fetchTicketList, fetchTicketSearch, type ApiTicketRow } from '@/api/tickets'
 import { getAuthUserSnapshot } from '@/stores/auth-session'
+import { formatTicketCategoryLabel, reporterDisplayLabel } from '@/utils/ticket-ui'
 
 const query = ref('')
 const rows = ref<ApiTicketRow[]>([])
@@ -131,9 +132,7 @@ const emptyMessage = computed(() => {
 
 function reporterLabel(t: ApiTicketRow): string {
   const s = getAuthUserSnapshot()
-  if (s !== null && t.reporter_user_id === s.user_id)
-    return 'You'
-  return `User #${t.reporter_user_id}`
+  return reporterDisplayLabel(t, s?.user_id ?? null)
 }
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null

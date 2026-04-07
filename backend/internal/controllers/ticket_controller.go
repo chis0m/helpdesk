@@ -12,6 +12,7 @@ import (
 	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/middleware"
 	"helpdesk/backend/internal/models"
+	"helpdesk/backend/internal/repositories"
 	"helpdesk/backend/internal/requests"
 	"helpdesk/backend/internal/response"
 	"helpdesk/backend/internal/services"
@@ -19,10 +20,11 @@ import (
 
 type TicketController struct {
 	ticketService *services.TicketService
+	userRepo      *repositories.UserRepository
 }
 
-func NewTicketController(ticketService *services.TicketService) *TicketController {
-	return &TicketController{ticketService: ticketService}
+func NewTicketController(ticketService *services.TicketService, userRepo *repositories.UserRepository) *TicketController {
+	return &TicketController{ticketService: ticketService, userRepo: userRepo}
 }
 
 // VULN-03: Weak input validation / stored XSS risk — Create binds ticket JSON with no HTML/script sanitization.
@@ -61,7 +63,13 @@ func (t *TicketController) Create(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusCreated, formatTicket(ticket), "ticket created")
+	users, err := t.loadTicketUsers([]models.Ticket{*ticket})
+	if err != nil {
+		log.Error().Err(err).Msg("create ticket failed: load user names")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+	response.Success(c, http.StatusCreated, formatTicket(ticket, users), "ticket created")
 }
 
 func (t *TicketController) List(c *gin.Context) {
@@ -115,10 +123,17 @@ func (t *TicketController) List(c *gin.Context) {
 		limit = 100
 	}
 
+	users, err := t.loadTicketUsers(tickets)
+	if err != nil {
+		log.Error().Err(err).Msg("list tickets failed: load user names")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
 	result := make([]gin.H, 0, len(tickets))
 	for _, ticket := range tickets {
-		t := ticket
-		result = append(result, formatTicket(&t))
+		tk := ticket
+		result = append(result, formatTicket(&tk, users))
 	}
 
 	response.Success(c, http.StatusOK, gin.H{
@@ -148,10 +163,17 @@ func (t *TicketController) Search(c *gin.Context) {
 		return
 	}
 
+	users, err := t.loadTicketUsers(tickets)
+	if err != nil {
+		log.Error().Err(err).Msg("ticket search failed: load user names")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
 	result := make([]gin.H, 0, len(tickets))
 	for _, ticket := range tickets {
 		tk := ticket
-		result = append(result, formatTicket(&tk))
+		result = append(result, formatTicket(&tk, users))
 	}
 
 	response.Success(c, http.StatusOK, gin.H{
@@ -183,7 +205,13 @@ func (t *TicketController) GetByID(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusOK, formatTicket(ticket), "ticket fetched")
+	users, err := t.loadTicketUsers([]models.Ticket{*ticket})
+	if err != nil {
+		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("get ticket failed: load user names")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+	response.Success(c, http.StatusOK, formatTicket(ticket, users), "ticket fetched")
 }
 
 func (t *TicketController) UpdateByID(c *gin.Context) {
@@ -216,7 +244,13 @@ func (t *TicketController) UpdateByID(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusOK, formatTicket(ticket), "ticket updated")
+	users, err := t.loadTicketUsers([]models.Ticket{*ticket})
+	if err != nil {
+		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("update ticket failed: load user names")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+	response.Success(c, http.StatusOK, formatTicket(ticket, users), "ticket updated")
 }
 
 func (t *TicketController) UpdateStatus(c *gin.Context) {
@@ -254,7 +288,13 @@ func (t *TicketController) UpdateStatus(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusOK, formatTicket(ticket), "ticket status updated")
+	users, err := t.loadTicketUsers([]models.Ticket{*ticket})
+	if err != nil {
+		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("update ticket status failed: load user names")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+	response.Success(c, http.StatusOK, formatTicket(ticket, users), "ticket status updated")
 }
 
 func (t *TicketController) Assign(c *gin.Context) {
@@ -287,7 +327,13 @@ func (t *TicketController) Assign(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusOK, formatTicket(ticket), "ticket assignment updated")
+	users, err := t.loadTicketUsers([]models.Ticket{*ticket})
+	if err != nil {
+		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("assign ticket failed: load user names")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+	response.Success(c, http.StatusOK, formatTicket(ticket, users), "ticket assignment updated")
 }
 
 func (t *TicketController) DeleteByID(c *gin.Context) {
@@ -526,21 +572,81 @@ func getAuthenticatedUser(c *gin.Context) (string, models.UserRole, bool) {
 	return userUUID, models.UserRole(roleStr), true
 }
 
-func formatTicket(ticket *models.Ticket) gin.H {
+func collectUserIDsFromTickets(tickets []models.Ticket) []uint64 {
+	seen := make(map[uint64]struct{})
+	out := make([]uint64, 0)
+	for _, tk := range tickets {
+		if _, ok := seen[tk.ReporterUserID]; !ok {
+			seen[tk.ReporterUserID] = struct{}{}
+			out = append(out, tk.ReporterUserID)
+		}
+		if tk.AssignedUserID != nil {
+			id := *tk.AssignedUserID
+			if _, ok := seen[id]; !ok {
+				seen[id] = struct{}{}
+				out = append(out, id)
+			}
+		}
+	}
+	return out
+}
+
+func ticketDisplayName(u models.User) string {
+	fn := strings.TrimSpace(u.FirstName)
+	ln := strings.TrimSpace(u.LastName)
+	if fn != "" || ln != "" {
+		return strings.TrimSpace(fn + " " + ln)
+	}
+	return strings.TrimSpace(u.Email)
+}
+
+func (tc *TicketController) loadTicketUsers(tickets []models.Ticket) (map[uint64]models.User, error) {
+	ids := collectUserIDsFromTickets(tickets)
+	return tc.userRepo.GetMapByIDs(ids)
+}
+
+func formatTicket(ticket *models.Ticket, users map[uint64]models.User) gin.H {
 	var assignedUserID any
+	var assignedDisplay any
 	if ticket.AssignedUserID != nil {
 		assignedUserID = *ticket.AssignedUserID
+		if u, ok := users[*ticket.AssignedUserID]; ok {
+			assignedDisplay = ticketDisplayName(u)
+		}
+	} else {
+		assignedUserID = nil
+		assignedDisplay = nil
+	}
+
+	reporterDisplay := ""
+	reporterEmail := ""
+	if u, ok := users[ticket.ReporterUserID]; ok {
+		reporterDisplay = ticketDisplayName(u)
+		reporterEmail = strings.TrimSpace(u.Email)
+	}
+
+	var assignedEmail any
+	if ticket.AssignedUserID != nil {
+		if u, ok := users[*ticket.AssignedUserID]; ok {
+			assignedEmail = strings.TrimSpace(u.Email)
+		}
+	} else {
+		assignedEmail = nil
 	}
 
 	return gin.H{
-		"ticket_id":        ticket.ID,
-		"reporter_user_id": ticket.ReporterUserID,
-		"assigned_user_id": assignedUserID,
-		"title":            ticket.Title,
-		"description":      ticket.Description,
-		"category":         ticket.Category,
-		"status":           ticket.Status,
-		"created_at":       ticket.CreatedAt,
-		"updated_at":       ticket.UpdatedAt,
+		"ticket_id":             ticket.ID,
+		"reporter_user_id":      ticket.ReporterUserID,
+		"reporter_display_name": reporterDisplay,
+		"reporter_email":        reporterEmail,
+		"assigned_user_id":      assignedUserID,
+		"assigned_display_name": assignedDisplay,
+		"assigned_email":        assignedEmail,
+		"title":                 ticket.Title,
+		"description":           ticket.Description,
+		"category":              ticket.Category,
+		"status":                ticket.Status,
+		"created_at":            ticket.CreatedAt,
+		"updated_at":            ticket.UpdatedAt,
 	}
 }

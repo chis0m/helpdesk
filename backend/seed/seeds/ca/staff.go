@@ -12,14 +12,14 @@ import (
 
 const staffDomain = "secweb.ie"
 
-// EmailStaffAdmin and EmailStaffSupport use firstname.lastname@secweb.ie.
+// EmailStaffSam and EmailStaffCassey use firstname.lastname@secweb.ie (both staff).
 var (
-	EmailStaffAdmin   = emailAt("Casey", "Admin", staffDomain)
-	EmailStaffSupport = emailAt("Sam", "Support", staffDomain)
+	EmailStaffSam    = emailAt("Sam", "Support", staffDomain)
+	EmailStaffCassey = emailAt("Cassey", "Support", staffDomain)
 )
 
-// EnsureStaffUsers seeds one admin and one staff member; both use caTestPassword (same as CA customers).
-func EnsureStaffUsers(db *gorm.DB) (admin *models.User, support *models.User, err error) {
+// EnsureStaffUsers seeds two staff members (Sam + Cassey); both use caTestPassword (same as CA customers).
+func EnsureStaffUsers(db *gorm.DB) (sam *models.User, cassey *models.User, err error) {
 	now := time.Now().UTC()
 	ptrNow := &now
 
@@ -30,29 +30,9 @@ func EnsureStaffUsers(db *gorm.DB) (admin *models.User, support *models.User, er
 
 	log := logger.L()
 
-	uAdmin, createdAdmin, err := firstOrCreateUser(
+	uSam, createdSam, err := firstOrCreateUser(
 		db,
-		EmailStaffAdmin,
-		"Casey",
-		"Admin",
-		models.RoleAdmin,
-		false,
-		ptrNow,
-		hash,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	if createdAdmin {
-		log.Info().
-			Str("email", uAdmin.Email).
-			Bool("must_change_password", uAdmin.MustChangePassword).
-			Msg("CA seed: test user created")
-	}
-
-	uSupport, createdSupport, err := firstOrCreateUser(
-		db,
-		EmailStaffSupport,
+		EmailStaffSam,
 		"Sam",
 		"Support",
 		models.RoleStaff,
@@ -63,12 +43,32 @@ func EnsureStaffUsers(db *gorm.DB) (admin *models.User, support *models.User, er
 	if err != nil {
 		return nil, nil, err
 	}
-	if createdSupport {
+	if createdSam {
 		log.Info().
-			Str("email", uSupport.Email).
-			Bool("must_change_password", uSupport.MustChangePassword).
+			Str("email", uSam.Email).
+			Bool("must_change_password", uSam.MustChangePassword).
 			Msg("CA seed: test user created")
 	}
 
-	return uAdmin, uSupport, nil
+	uCassey, createdCassey, err := firstOrCreateUser(
+		db,
+		EmailStaffCassey,
+		"Cassey",
+		"Support",
+		models.RoleStaff,
+		false,
+		ptrNow,
+		hash,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	if createdCassey {
+		log.Info().
+			Str("email", uCassey.Email).
+			Bool("must_change_password", uCassey.MustChangePassword).
+			Msg("CA seed: test user created")
+	}
+
+	return uSam, uCassey, nil
 }

@@ -1,6 +1,7 @@
 // VULN-02: `PATCH /api/admin/users/:user_id/role` uses numeric id in the path (API contract; see backend).
 // VULN-05: Admin mutating routes send `X-CSRF-Token`; weak verification is backend CSRF middleware.
 import { apiUrl, CSRF_HEADER, readJson } from './client'
+import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import type { PortalUser, StaffMember } from '@/types/directory-user'
 import { logger } from '@/utils/logger'
@@ -64,7 +65,7 @@ export async function fetchAdminUsers(params?: {
 > {
   const q = buildQuery(params ?? {})
   const url = apiUrl(`/api/admin/users${q}`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
     headers: { Accept: 'application/json' },
@@ -177,7 +178,7 @@ export async function createStaffUser(
   if (typeof body.is_active === 'boolean')
     payload.is_active = body.is_active
 
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -232,7 +233,7 @@ export async function createStaffInvite(
   if (mid)
     payload.middle_name = mid
 
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -265,7 +266,7 @@ export async function patchAdminUserRole(
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl(`/api/admin/users/${userId}/role`)
-  const res = await fetch(url, {
+  const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
     headers: {

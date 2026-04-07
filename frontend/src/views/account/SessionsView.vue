@@ -98,6 +98,7 @@ import {
   revokeMyOtherSessionsRequest,
   type AuthSessionRow,
 } from '@/api/auth'
+import { clearSessionRefreshSchedule } from '@/api/session-refresh'
 import { paths } from '@/constants/routes'
 import { clearAuthSession, getSessionCsrfToken } from '@/stores/auth-session'
 import { formatDateTime } from '@/utils/date-format'
@@ -148,6 +149,7 @@ async function onRevokeOne(sessionId: string) {
     return
   }
   if (res.data.logged_out) {
+    clearSessionRefreshSchedule()
     clearAuthSession()
     await router.replace(paths.login)
     return

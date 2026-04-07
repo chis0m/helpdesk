@@ -1,42 +1,61 @@
-# Frontend Setup
+# SecWeb Helpdesk — frontend
 
-## Tools used (and why)
+Vue 3 + TypeScript SPA served by **Vite**. It talks to the Go API over HTTP with **cookie-based sessions** and **CSRF** on mutating requests.
 
-- **Vue 3**: Used to build the frontend UI in reusable components. It is simple, fast, and good for building screens like login, dashboard, and ticket pages.
-- **TypeScript**: Used for type safety. It catches many mistakes early and makes the code easier to maintain as the project grows.
-- **Vite**: Used as the dev server and build tool. It starts quickly and gives a fast development experience.
-- **Tailwind CSS**: Used for styling. It helps build clean UI faster with utility classes and keeps styling consistent.
-- **ESLint (Vue + TypeScript rules)**: Used to enforce code quality and consistency, and to catch common errors before submission.
-- **vite-plugin-checker**: Used to run TypeScript/Vue checks during development and show issues early in terminal/overlay.
-
-## Commands used to initialize this app
+## Run locally
 
 ```bash
-# 1) Scaffold Vue + TypeScript app
-npm create vite@6.2.0 . -- --template vue-ts
-
-# 2) Install dependencies
 npm install
-
-# 3) Install Tailwind packages
-npm install -D tailwindcss @tailwindcss/vite
-
-# 4) Install linting + checker tools
-npm install -D eslint@8.57.0 @typescript-eslint/parser@6.21.0 @typescript-eslint/eslint-plugin@6.21.0 eslint-plugin-vue@9.32.0 vue-eslint-parser@9.4.3 @types/node vite-plugin-checker@0.11.0
+npm run dev
 ```
 
-## Commands to run
+Default API base: `http://localhost:8080` unless `VITE_API_BASE_URL` is set (see `src/api/base-url.ts`).
 
 ```bash
-# Start dev server
-npm run dev
-
-# Run linting
+npm run build   # typecheck + production bundle
 npm run lint
-
-# Auto-fix lint issues
-npm run lint:fix
-
-# Build production bundle
-npm run build
 ```
+
+## High-level architecture
+
+```
+main.ts
+  ├─ vue-router (router/index.ts)
+  ├─ session refresh init + failure → login (session-refresh)
+  └─ App.vue → <RouterView />
+
+Views (pages)  ──►  API modules (fetch + envelopes)  ──►  Backend
+      │                        │
+      └─ stores (auth snapshot)
+      └─ components (layout, tickets, admin)
+```
+
+- **Router** — Public routes (`/`, `/login`, …) and dashboard (`/dashboard/...`) using `AppLayout` or `AuthLayout`.
+- **API** — `src/api/` builds URLs, sends cookies (`credentials: 'include'`), CSRF headers, and uses `fetchWithSessionRefresh` for 401 recovery. See `src/api/api.md` and `src/api/refresh_token.md`.
+- **Stores** — `auth-session` mirrors what the SPA needs from login/refresh JSON.
+- **Must change password** — If login returns `must_change_password: true` (see `backend/TASK.md` §8.3), the router sends the user to `/change-password` until they submit `POST /api/auth/change-password` and `GET /api/auth/me` confirms the flag is cleared.
+- **Types** — `src/types/` for UI/domain types; `src/api/types.ts` for API envelopes.
+
+## Folder guide
+
+| Folder | Role |
+|--------|------|
+| `src/api/` | HTTP client, auth, tickets, admin, invites, health |
+| `src/components/` | Reusable Vue components (layout, tickets, admin, icons) |
+| `src/constants/` | `routes.ts` — path helpers aligned with the router |
+| `src/layouts/` | `AppLayout`, `AuthLayout` shells |
+| `src/router/` | Route table + lazy-loaded views |
+| `src/stores/` | Session + small client state |
+| `src/types/` | Shared TS types for UI |
+| `src/utils/` | Logout, logger, date/ticket formatting |
+| `src/views/` | Page-level views per route |
+
+## Documentation
+
+- `src/api/api.md` — API module overview
+- `src/api/refresh_token.md` — Cookies, CSRF, refresh timer, 401 path
+- `src/components/components.md`, `src/stores/store.md`, `src/types/types.md`, `src/utils/utils.md`, `src/views/views.md`
+
+## Backend contract
+
+Authoritative server behavior and JSON shapes: **`../backend/API.md`** (and `TASK.md` for integration notes).
