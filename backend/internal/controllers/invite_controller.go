@@ -3,7 +3,6 @@ package controllers
 import (
 	"errors"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -107,7 +106,6 @@ func (ic *InviteController) CreateStaffInvite(c *gin.Context) {
 		"email":          inv.Email,
 		"expires_at_utc": inv.ExpiresAt.UTC(),
 		"target_role":    inv.TargetRole,
-		"mail_mailer":    strings.ToLower(strings.TrimSpace(ic.cfg.MailDriver)),
 	}
 	if ic.cfg.UseSMTPMail() {
 		payload["delivery"] = "smtp"

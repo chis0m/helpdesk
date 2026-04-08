@@ -138,6 +138,7 @@ export function adminUserToStaffMember(row: AdminUserListItem): StaffMember {
     displayName: buildDisplayName(row) || row.email,
     createdAt: row.created_at,
     isAdmin: row.role === 'admin' || row.role === 'super_admin',
+    role: row.role,
   }
 }
 
@@ -221,6 +222,10 @@ export interface CreateStaffInviteResponseData {
   email: string
   expires_at_utc: string
   target_role: string
+  delivery?: string
+  notice?: string
+  /** Copy for the invitee when the API returns a URL (e.g. dev / log delivery). */
+  invite_url?: string
 }
 
 export async function createStaffInvite(
@@ -239,8 +244,7 @@ export async function createStaffInvite(
   const mid = body.middle_name?.trim()
   if (mid)
     payload.middle_name = mid
-  if (body.role)
-    payload.role = body.role
+  payload.role = body.role ?? 'staff'
 
   const res = await fetchWithSessionRefresh(url, {
     method: 'POST',

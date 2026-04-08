@@ -3,6 +3,7 @@
  * Uses raw `fetch` so `session-fetch` never wraps this (avoids 401→refresh loops).
  */
 import { apiUrl, CSRF_HEADER, readJson } from './client'
+import { loggedFetch } from './http-dev-log'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import { logger } from '@/utils/logger'
 
@@ -32,7 +33,7 @@ export async function postAuthRefresh(
   | { ok: false; status: number; message: string }
 > {
   const url = apiUrl('/api/auth/refresh')
-  const res = await fetch(url, {
+  const res = await loggedFetch('api:auth', url, {
     method: 'POST',
     credentials: 'include',
     headers: {
@@ -41,11 +42,8 @@ export async function postAuthRefresh(
     },
   })
   const json = await readJson(res)
-  logger.debug('api:auth', `POST ${url} → ${res.status}`)
-  if (!res.ok) {
-    logger.debug('api:auth', 'refresh error', json)
+  if (!res.ok)
     return { ok: false, status: res.status, message: errorMessage(json) }
-  }
   const env = json as ApiSuccessEnvelope<RefreshResponseData>
   if (!env.data?.csrf_token || typeof env.data.user_id !== 'number') {
     logger.debug('api:auth', 'refresh invalid shape', json)

@@ -12,6 +12,11 @@ function verbose(): boolean {
   return import.meta.env.VITE_DEBUG === 'true'
 }
 
+/** Same predicate as `logger.debug` — use to skip expensive logging work in production. */
+export function isDebugVerbose(): boolean {
+  return verbose()
+}
+
 function line(context: string, message: string): string {
   return `[${context}] ${message}`
 }

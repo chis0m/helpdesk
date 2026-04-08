@@ -7,11 +7,15 @@ export type PortalUser = {
   organization?: string
 }
 
-/** Internal staff; `isAdmin` is the administrator flag (elevated role). */
+/** Internal directory roles (aligned with `GET /api/admin/users`). */
+export type StaffDirectoryRole = 'user' | 'staff' | 'admin' | 'super_admin'
+
+/** Internal staff; `isAdmin` is true for admin + super_admin; `role` is the API role. */
 export type StaffMember = {
   id: string
   email: string
   displayName: string
   createdAt: string
   isAdmin: boolean
+  role: StaffDirectoryRole
 }

@@ -8,9 +8,8 @@
         Staff
       </h1>
       <p class="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">
-        Everyone on the internal team.
-        <strong class="font-medium text-[var(--text-primary)]">Administrator</strong>
-        shows who has elevated admin access.
+        Everyone on the internal team. Use the Role column to change access;
+        super administrators can assign any role; administrators can move staff to or from customer accounts.
       </p>
     </header>
 
@@ -34,22 +33,29 @@
     <AdminStaffTable
       v-else
       :staff="staff"
+      :actor-role="actorRole"
+      :actor-user-id="actorUserId"
+      @updated="loadStaff"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { adminUserToStaffMember, fetchAdminStaffDirectory } from '@/api/admin'
 import AdminSubnav from '@/components/admin/AdminSubnav.vue'
 import AdminStaffTable from '@/components/admin/AdminStaffTable.vue'
+import { getAuthUserSnapshot } from '@/stores/auth-session'
 import type { StaffMember } from '@/types/directory-user'
 
 const staff = ref<StaffMember[]>([])
 const loading = ref(true)
 const loadError = ref('')
 
-onMounted(async () => {
+const actorRole = computed(() => getAuthUserSnapshot()?.role ?? null)
+const actorUserId = computed(() => getAuthUserSnapshot()?.user_id ?? null)
+
+async function loadStaff() {
   loading.value = true
   loadError.value = ''
   const result = await fetchAdminStaffDirectory()
@@ -59,5 +65,9 @@ onMounted(async () => {
     return
   }
   staff.value = result.items.map(adminUserToStaffMember)
+}
+
+onMounted(() => {
+  void loadStaff()
 })
 </script>

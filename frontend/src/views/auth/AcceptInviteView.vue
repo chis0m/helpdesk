@@ -10,7 +10,7 @@
       <span class="text-[var(--brand-green-dark)]">invite</span>
     </h1>
     <p class="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-      Set a password to activate your SecWeb Helpdesk account. The link must match the one from your invite (server logs in CA).
+      Set a password to activate your SecWeb Helpdesk account. Use the full link from your invitation email.
     </p>
 
     <div
@@ -139,7 +139,7 @@ const errorMessage = ref('')
 onMounted(async () => {
   if (!token.value) {
     loadingVerify.value = false
-    verifyError.value = 'Missing invite token. Open the full link from your invite email or server logs.'
+    verifyError.value = 'Missing invite token. Open the full link from your invitation email.'
     return
   }
   const res = await fetchInviteVerify(token.value)

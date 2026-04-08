@@ -173,20 +173,12 @@ export async function logoutRequest(
     },
   })
   const json = await readJson(res)
-  logger.debug('api:auth', `POST ${url} → ${res.status}`, {
-    'X-CSRF-Token (session)': sessionCsrf,
-  })
-  if (!res.ok) {
-    logger.debug('api:auth', 'logout error envelope (dev)', json)
+  if (!res.ok)
     return { ok: false, status: res.status, message: errorMessage(json) }
-  }
 
   const env = json as ApiSuccessEnvelope<LogoutResponseData>
-  if (!env.data) {
-    logger.debug('api:auth', 'logout missing data envelope (dev)', json)
+  if (!env.data)
     return { ok: false, status: res.status, message: 'Invalid response' }
-  }
-  logger.debug('api:auth', 'logout success envelope (dev)', json)
   return { ok: true, data: env.data }
 }
 
