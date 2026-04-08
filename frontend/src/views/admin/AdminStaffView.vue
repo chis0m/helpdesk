@@ -20,6 +20,14 @@
         @submit.prevent="onSubmit"
       >
         <div
+          v-if="errorMessage"
+          class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          role="alert"
+        >
+          {{ errorMessage }}
+        </div>
+
+        <div
           v-if="banner"
           class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900"
           role="status"
@@ -85,7 +93,8 @@
               class="text-sm font-medium text-[var(--text-primary)]"
             >Administrator</label>
             <p class="mt-0.5 text-xs text-[var(--text-muted)]">
-              Full access to admin areas and sensitive operations.
+              Sends <code class="rounded bg-black/5 px-1 py-0.5 text-[11px]">role: admin</code> in the create request.
+              Only a <strong>super admin</strong> may create an administrator; a normal admin receives an error if this is checked.
             </p>
           </div>
         </div>
@@ -107,9 +116,10 @@
 
         <button
           type="submit"
-          class="w-full rounded-full bg-[var(--brand-green)] py-3.5 text-sm font-semibold text-[var(--text-on-green)] shadow-sm transition hover:brightness-95"
+          :disabled="submitting"
+          class="w-full rounded-full bg-[var(--brand-green)] py-3.5 text-sm font-semibold text-[var(--text-on-green)] shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Create staff
+          {{ submitting ? 'Creating…' : 'Create staff' }}
         </button>
       </form>
     </div>
@@ -119,6 +129,8 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import AdminSubnav from '@/components/admin/AdminSubnav.vue'
+import { createStaffUser } from '@/api/admin'
+import { getSessionCsrfToken } from '@/stores/auth-session'
 
 const form = reactive({
   email: '',
@@ -129,12 +141,51 @@ const form = reactive({
 })
 
 const banner = ref('')
+const errorMessage = ref('')
+const submitting = ref(false)
 
-function onSubmit() {
-  const role = form.isAdmin ? 'Administrator' : 'Staff'
-  banner.value = `Invitation prepared for ${form.email} (${role}).`
-  window.setTimeout(() => {
-    banner.value = ''
-  }, 4000)
+async function onSubmit() {
+  errorMessage.value = ''
+  banner.value = ''
+
+  const csrf = getSessionCsrfToken()
+  if (!csrf) {
+    errorMessage.value = 'Your session is missing a security token. Sign out and sign in again, then retry.'
+    return
+  }
+
+  submitting.value = true
+  try {
+    const res = await createStaffUser(
+      {
+        email: form.email.trim(),
+        password: form.password,
+        first_name: form.firstName.trim(),
+        last_name: form.lastName.trim(),
+        role: form.isAdmin ? 'admin' : 'staff',
+      },
+      csrf,
+    )
+    if (!res.ok) {
+      errorMessage.value = res.message
+      return
+    }
+    const note =
+      res.data.role === 'admin'
+        ? ' Account role is administrator.'
+        : ''
+    banner.value = `Account created for ${res.data.email} (id ${res.data.user_id}, role ${res.data.role}).${note}`
+    form.email = ''
+    form.firstName = ''
+    form.lastName = ''
+    form.password = ''
+    form.isAdmin = false
+    window.setTimeout(() => {
+      banner.value = ''
+    }, 8000)
+  }
+  finally {
+    submitting.value = false
+  }
 }
 </script>

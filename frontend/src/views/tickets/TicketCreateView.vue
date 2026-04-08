@@ -1,26 +1,21 @@
 <template>
   <!-- VULN-03: Form submits ticket text to API with length-only style validation server-side; XSS if rendered as HTML elsewhere. -->
   <div class="mx-auto max-w-2xl space-y-6">
-    <div>
-      <RouterLink
-        :to="paths.dashboard.tickets"
-        class="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-green-dark)] hover:underline sm:text-sm"
-      >
-        ← Back to tickets
-      </RouterLink>
-    </div>
+    <RouterLink
+      :to="paths.dashboard.tickets"
+      class="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white px-3 py-1.5 text-xs font-bold text-[var(--brand-green-dark)] shadow-sm transition hover:bg-[var(--surface-hover)] sm:text-sm"
+    >
+      <span aria-hidden="true">←</span> Back to tickets
+    </RouterLink>
 
-    <header>
-      <h1 class="text-xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-2xl">
-        New ticket
-      </h1>
-      <p class="mt-1 text-sm text-[var(--text-secondary)]">
-        Describe your issue so SecWeb support can help.
-      </p>
-    </header>
+    <PageHeader
+      kicker="Create"
+      title="New ticket"
+      description="Give support a clear title and enough detail to reproduce or diagnose the issue."
+    />
 
     <form
-      class="space-y-5 rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-sm"
+      class="space-y-5 rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[var(--shadow-card)] ring-1 ring-black/[0.03]"
       @submit.prevent="onSubmit"
     >
       <div
@@ -34,7 +29,7 @@
       <div>
         <label
           for="tk-title"
-          class="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
+          class="mb-1.5 block text-sm font-bold text-[var(--text-primary)]"
         >Title</label>
         <input
           id="tk-title"
@@ -51,7 +46,7 @@
       <div>
         <label
           for="tk-category"
-          class="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
+          class="mb-1.5 block text-sm font-bold text-[var(--text-primary)]"
         >Category</label>
         <input
           id="tk-category"
@@ -68,7 +63,7 @@
       <div>
         <label
           for="tk-desc"
-          class="mb-1.5 block text-sm font-medium text-[var(--text-primary)]"
+          class="mb-1.5 block text-sm font-bold text-[var(--text-primary)]"
         >Description</label>
         <textarea
           id="tk-desc"
@@ -108,6 +103,7 @@
 // VULN-03: createTicket() sends raw title/description/category — server persists with weak sanitization.
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import PageHeader from '@/components/ui/PageHeader.vue'
 import { createTicket } from '@/api/tickets'
 import { paths } from '@/constants/routes'
 import { getSessionCsrfToken } from '@/stores/auth-session'

@@ -5,6 +5,8 @@ type CreateStaffInviteRequest struct {
 	FirstName  string  `json:"first_name" binding:"required,min=2,max=100"`
 	LastName   string  `json:"last_name" binding:"required,min=2,max=100"`
 	MiddleName *string `json:"middle_name" binding:"omitempty,max=100"`
+	// Role is the account role when the invite is accepted: staff (default) or admin. Only super_admin may specify admin.
+	Role string `json:"role" binding:"omitempty,oneof=staff admin"`
 }
 
 type AcceptInviteRequest struct {

@@ -12,7 +12,10 @@ import (
 	"helpdesk/backend/internal/requests"
 )
 
-var ErrUserRoleChangeForbidden = errors.New("forbidden role change")
+var (
+	ErrUserRoleChangeForbidden         = errors.New("forbidden role change")
+	ErrCreateStaffAdminRequiresSuperAdmin = errors.New("only super_admin may create staff with role admin")
+)
 
 type UserService struct {
 	userRepo *repositories.UserRepository
@@ -78,7 +81,15 @@ func (s *UserService) GetByUUIDString(userUUID string) (*models.User, error) {
 	return s.userRepo.GetByUUID(parsed)
 }
 
-func (s *UserService) CreateStaffFromRequest(req requests.CreateStaffRequest) (*models.User, error) {
+func (s *UserService) CreateStaffFromRequest(actorRole models.UserRole, req requests.CreateStaffRequest) (*models.User, error) {
+	targetRole := models.RoleStaff
+	if r := strings.TrimSpace(req.Role); r != "" {
+		targetRole = models.UserRole(r)
+	}
+	if targetRole == models.RoleAdmin && actorRole != models.RoleSuperAdmin {
+		return nil, ErrCreateStaffAdminRequiresSuperAdmin
+	}
+
 	passwordHash, err := auth.HashPassword(strings.TrimSpace(req.Password))
 	if err != nil {
 		return nil, err
@@ -95,7 +106,7 @@ func (s *UserService) CreateStaffFromRequest(req requests.CreateStaffRequest) (*
 		FirstName:          strings.TrimSpace(req.FirstName),
 		LastName:           strings.TrimSpace(req.LastName),
 		MiddleName:         req.MiddleName,
-		Role:               models.RoleStaff,
+		Role:               targetRole,
 		IsActive:           &isActive,
 		MustChangePassword: &mustChangePassword,
 		PasswordChangedAt:  nil,

@@ -26,6 +26,8 @@ var (
 	ErrInviteEmailTaken    = errors.New("email already registered")
 	ErrInviteForbidden     = errors.New("forbidden invite action")
 	ErrInvitePendingExists = errors.New("pending invite already exists for this email")
+	// ErrInviteAdminRequiresSuperAdmin when target role is admin but the actor is not super_admin.
+	ErrInviteAdminRequiresSuperAdmin = errors.New("only super_admin may invite with role admin")
 )
 
 type InviteService struct {
@@ -62,31 +64,41 @@ func generateInviteRawToken() (string, error) {
 	return hex.EncodeToString(buf), nil
 }
 
-func (s *InviteService) CreateStaffInvite(actorID uint64, actorRole models.UserRole, req requests.CreateStaffInviteRequest) (*models.Invite, error) {
+// CreateStaffInvite persists the invite and notifies the recipient. The returned inviteURL is the accept link
+// (same as emailed when using SMTP); callers may surface it when MAIL_MAILER=log.
+func (s *InviteService) CreateStaffInvite(actorID uint64, actorRole models.UserRole, req requests.CreateStaffInviteRequest) (*models.Invite, string, error) {
 	if actorRole != models.RoleAdmin && actorRole != models.RoleSuperAdmin {
-		return nil, ErrInviteForbidden
+		return nil, "", ErrInviteForbidden
+	}
+
+	targetRole := models.RoleStaff
+	if r := strings.TrimSpace(req.Role); r != "" {
+		targetRole = models.UserRole(r)
+	}
+	if targetRole == models.RoleAdmin && actorRole != models.RoleSuperAdmin {
+		return nil, "", ErrInviteAdminRequiresSuperAdmin
 	}
 
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 	now := time.Now().UTC()
 
 	if _, err := s.userRepo.GetByEmail(email); err == nil {
-		return nil, ErrInviteEmailTaken
+		return nil, "", ErrInviteEmailTaken
 	} else if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, err
+		return nil, "", err
 	}
 
 	pending, err := s.inviteRepo.HasPendingInviteForEmail(email, now)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if pending {
-		return nil, ErrInvitePendingExists
+		return nil, "", ErrInvitePendingExists
 	}
 
 	rawToken, err := generateInviteRawToken()
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	tokenHash := hashInviteToken(rawToken)
 
@@ -105,21 +117,21 @@ func (s *InviteService) CreateStaffInvite(actorID uint64, actorRole models.UserR
 		LastName:        strings.TrimSpace(req.LastName),
 		MiddleName:      middleName,
 		InvitedByUserID: actorID,
-		TargetRole:      models.RoleStaff,
+		TargetRole:      targetRole,
 		ExpiresAt:       now.Add(s.cfg.InviteTTL()),
 	}
 
 	if err := s.inviteRepo.Create(inv); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	base := strings.TrimSuffix(strings.TrimSpace(s.cfg.FrontendURL), "/")
 	inviteURL := base + "/accept-invite?token=" + url.QueryEscape(rawToken)
 	if err := s.notifier.SendStaffInvite(email, inviteURL); err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
-	return inv, nil
+	return inv, inviteURL, nil
 }
 
 type InviteVerifyResult struct {

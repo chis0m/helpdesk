@@ -20,13 +20,13 @@ Exported **errors** (e.g. `ErrInvalidCredentials`, `ErrInvalidRefreshToken`) let
 
 ## `UserService` (`user_service.go`)
 
-User CRUD-style operations: get by id/UUID, list (admin), create from requests, staff creation, **role updates** with role-gating (who may promote whom). Some endpoints intentionally reflect **baseline IDOR** behavior documented in `ca2/Vulnerability.md` — secure branch should tighten checks here + in controllers.
+User CRUD-style operations: get by id/UUID, list (admin), create from requests, **`CreateStaffFromRequest`** (`POST /api/admin/staff`) with optional **`role`**: `staff` (default) or `admin` — only **super_admin** may set **`admin`** (`ErrCreateStaffAdminRequiresSuperAdmin`), **role updates** with role-gating (who may promote whom). Some endpoints intentionally reflect **baseline IDOR** behavior documented in `ca2/Vulnerability.md` — secure branch should tighten checks here + in controllers.
 
 ## `InviteService` (`invite_service.go`)
 
 Staff invitation flow:
 
-- **CreateStaffInvite** — admin/super_admin only; ensures email not registered and no conflicting pending invite; generates raw token, stores **hash**, sends notifier with accept URL.
+- **CreateStaffInvite** — admin/super_admin only; optional **`role`**: `staff` (default) or `admin`. Only **super_admin** may set `admin`. Ensures email not registered and no conflicting pending invite; generates raw token, stores **hash**, sends notifier with accept URL.
 - **Verify** — validate token hash, expiry, used flag.
 - **Accept** — create staff user, mark invite used (transactional expectations in repo layer).
 

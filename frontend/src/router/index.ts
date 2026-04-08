@@ -98,13 +98,13 @@ const router = createRouter({
         {
           path: 'tickets/:id',
           name: 'ticket-detail',
-          meta: { title: 'Ticket detail' },
+          meta: { title: 'Ticket' },
           component: () => import('@/views/tickets/TicketDetailView.vue'),
         },
         {
           path: 'tickets',
           name: 'dashboard-tickets',
-          meta: { title: 'Tickets & search' },
+          meta: { title: 'Tickets' },
           component: () => import('@/views/tickets/TicketsListView.vue'),
         },
         {
@@ -149,7 +149,7 @@ const router = createRouter({
         {
           path: '',
           name: 'dashboard',
-          meta: { title: 'Support home' },
+          meta: { title: 'Dashboard' },
           component: () => import('@/views/DashboardView.vue'),
         },
       ],

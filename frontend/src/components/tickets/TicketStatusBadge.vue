@@ -1,6 +1,6 @@
 <template>
   <span
-    class="shrink-0 rounded-full font-medium capitalize"
+    class="shrink-0 rounded-full font-semibold capitalize shadow-sm ring-1 ring-black/[0.04]"
     :class="[sizeClass, ticketStatusBadgeClass(status)]"
   >{{ formatTicketStatusLabel(status) }}</span>
 </template>

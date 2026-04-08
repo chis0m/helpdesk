@@ -51,4 +51,6 @@ type CreateStaffRequest struct {
 	LastName   string  `json:"last_name" binding:"required,min=2,max=100"`
 	MiddleName *string `json:"middle_name" binding:"omitempty,max=100"`
 	IsActive   *bool   `json:"is_active" binding:"omitempty"`
+	// Role is staff (default) or admin. Only super_admin may set admin.
+	Role string `json:"role" binding:"omitempty,oneof=staff admin"`
 }

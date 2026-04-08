@@ -6,6 +6,7 @@ import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
 import type { TicketComment } from '@/types/ticket'
+import { friendlyHttpError } from '@/utils/auth-error-message'
 import { logger } from '@/utils/logger'
 
 export type ApiTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
@@ -46,6 +47,10 @@ function errorMessage(body: unknown): string {
   return 'Request failed'
 }
 
+function apiErrorMessage(res: Response, json: unknown): string {
+  return friendlyHttpError(res.status, errorMessage(json))
+}
+
 export async function createTicket(
   body: CreateTicketBody,
   sessionCsrf: string,
@@ -73,7 +78,7 @@ export async function createTicket(
   })
   if (!res.ok) {
     logger.debug('api:tickets', 'create ticket error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
 
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
@@ -98,7 +103,7 @@ export async function fetchTicket(
   logger.debug('api:tickets', `GET ${url} → ${res.status}`)
   if (!res.ok) {
     logger.debug('api:tickets', 'get ticket error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
   if (!env.data || typeof env.data.ticket_id !== 'number') {
@@ -151,16 +156,23 @@ export async function fetchTicketComments(
   logger.debug('api:tickets', `GET ${url} → ${res.status}`)
   if (!res.ok) {
     logger.debug('api:tickets', 'list comments error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
-  const env = json as ApiSuccessEnvelope<{ items: TicketCommentListItem[] }>
-  const items = env.data?.items
-  if (!Array.isArray(items)) {
+  const env = json as ApiSuccessEnvelope<{
+    items?: TicketCommentListItem[] | null
+  }>
+  const raw = env.data?.items
+  // Backend may send `items: null` when the Go slice was nil (JSON null is not an array).
+  if (raw === undefined || raw === null) {
+    logger.debug('api:tickets', 'list comments success (dev)', { count: 0 })
+    return { ok: true, items: [] }
+  }
+  if (!Array.isArray(raw)) {
     logger.debug('api:tickets', 'list comments invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
-  logger.debug('api:tickets', 'list comments success (dev)', { count: items.length })
-  return { ok: true, items }
+  logger.debug('api:tickets', 'list comments success (dev)', { count: raw.length })
+  return { ok: true, items: raw }
 }
 
 export interface CreatedTicketCommentData {
@@ -197,7 +209,7 @@ export async function createTicketComment(
   })
   if (!res.ok) {
     logger.debug('api:tickets', 'create comment error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<CreatedTicketCommentData>
   if (!env.data || typeof env.data.comment_id !== 'number') {
@@ -245,7 +257,7 @@ export async function fetchTicketList(opts?: {
   logger.debug('api:tickets', `GET ${url} → ${res.status}`)
   if (!res.ok) {
     logger.debug('api:tickets', 'list tickets error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<{
     items: ApiTicketRow[]
@@ -279,7 +291,7 @@ export async function fetchTicketSearch(q: string): Promise<
   logger.debug('api:tickets', `GET ${url} → ${res.status}`, { q: trimmed })
   if (!res.ok) {
     logger.debug('api:tickets', 'search tickets error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<{ items: ApiTicketRow[]; query: string }>
   const items = env.data?.items
@@ -322,7 +334,7 @@ export async function assignTicket(
   })
   if (!res.ok) {
     logger.debug('api:tickets', 'assign ticket error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
   if (!env.data || typeof env.data.ticket_id !== 'number') {
@@ -355,7 +367,7 @@ export async function deleteTicket(
   })
   if (!res.ok) {
     logger.debug('api:tickets', 'delete ticket error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<{ ticket_id: number }>
   if (!env.data || typeof env.data.ticket_id !== 'number') {
@@ -400,7 +412,7 @@ export async function patchTicket(
   logger.debug('api:tickets', `PATCH ${url} → ${res.status}`)
   if (!res.ok) {
     logger.debug('api:tickets', 'patch ticket error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
   if (!env.data || typeof env.data.ticket_id !== 'number') {
@@ -431,7 +443,7 @@ export async function patchTicketStatus(
   logger.debug('api:tickets', `PATCH ${url} → ${res.status}`)
   if (!res.ok) {
     logger.debug('api:tickets', 'patch ticket status error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
   if (!env.data || typeof env.data.ticket_id !== 'number') {
@@ -466,7 +478,7 @@ export async function patchTicketComment(
   logger.debug('api:tickets', `PATCH ${url} → ${res.status}`)
   if (!res.ok) {
     logger.debug('api:tickets', 'patch comment error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<CreatedTicketCommentData>
   if (!env.data || typeof env.data.comment_id !== 'number') {
@@ -498,7 +510,7 @@ export async function deleteTicketComment(
   logger.debug('api:tickets', `DELETE ${url} → ${res.status}`)
   if (!res.ok) {
     logger.debug('api:tickets', 'delete comment error envelope (dev)', json)
-    return { ok: false, status: res.status, message: errorMessage(json) }
+    return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<{ comment_id: number; ticket_id: number }>
   if (!env.data || typeof env.data.comment_id !== 'number') {

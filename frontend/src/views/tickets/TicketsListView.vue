@@ -1,60 +1,72 @@
 <template>
   <!-- VULN-07: Search calls `GET /api/tickets/search?q=` — `q` is passed to unsafe SQL on the server (see backend TicketController.Search). -->
-  <div class="space-y-4">
-    <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h2 class="text-base font-semibold text-[var(--text-primary)] sm:text-lg">
-          Tickets & search
-        </h2>
-        <p class="mt-0.5 text-xs text-[var(--text-secondary)] sm:text-sm">
-          List your tickets or search keywords (server-side search for coursework demos).
-        </p>
-      </div>
-      <RouterLink
-        :to="paths.dashboard.ticketNew"
-        class="inline-flex shrink-0 items-center justify-center rounded-full bg-[var(--brand-green)] px-4 py-2 text-sm font-semibold text-[var(--text-on-green)] shadow-sm transition hover:brightness-95"
-      >
-        New ticket
-      </RouterLink>
-    </header>
-
-    <div class="relative">
-      <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-        <svg
-          class="h-4 w-4"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          stroke-width="1.5"
+  <div class="space-y-6">
+    <PageHeader
+      kicker="Tickets"
+      title="Find & manage requests"
+      description="Search by keyword or browse everything you can access. Newest activity appears first in the list."
+    >
+      <template #actions>
+        <RouterLink
+          :to="paths.dashboard.ticketNew"
+          class="inline-flex items-center justify-center rounded-xl bg-[var(--brand-green)] px-5 py-2.5 text-sm font-bold text-[var(--text-on-green)] shadow-[var(--shadow-card)] transition hover:brightness-[1.02] active:scale-[0.98]"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
-          />
-        </svg>
-      </span>
-      <input
-        v-model="query"
-        type="search"
-        placeholder="Search keywords (empty = list your tickets)…"
-        class="w-full rounded-full border border-[var(--border-subtle)] bg-white py-2.5 pl-11 pr-4 text-sm text-[var(--text-primary)] shadow-sm outline-none ring-[var(--brand-green)] placeholder:text-[var(--text-muted)] focus:border-transparent focus:ring-2"
-      >
+          + New ticket
+        </RouterLink>
+      </template>
+    </PageHeader>
+
+    <div>
+      <label
+        for="ticket-search"
+        class="mb-2 block text-xs font-bold uppercase tracking-[0.12em] text-[var(--text-muted)]"
+      >Search</label>
+      <div class="relative">
+        <span class="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+          <svg
+            class="h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
+            />
+          </svg>
+        </span>
+        <input
+          id="ticket-search"
+          v-model="query"
+          type="search"
+          placeholder="Keywords… (leave empty to list all your tickets)"
+          class="w-full rounded-xl border border-[var(--border-subtle)] bg-white py-3 pl-11 pr-4 text-sm font-medium text-[var(--text-primary)] shadow-sm outline-none ring-[var(--brand-green)] transition placeholder:font-normal placeholder:text-[var(--text-muted)] focus:border-transparent focus:shadow-[var(--shadow-card)] focus:ring-2"
+        >
+      </div>
     </div>
 
     <div
       v-if="loadError"
-      class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950"
+      class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950 shadow-sm"
       role="alert"
     >
       {{ loadError }}
     </div>
 
-    <div class="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white">
-      <p class="border-b border-[var(--border-subtle)] px-3 py-2 text-xs font-medium text-[var(--text-muted)]">
-        <span v-if="loading">Loading…</span>
-        <span v-else>{{ rows.length }} result{{ rows.length === 1 ? '' : 's' }}{{ searchEcho ? ` for “${searchEcho}”` : '' }}</span>
-      </p>
+    <div class="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white shadow-[var(--shadow-card)]">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] bg-gradient-to-r from-[var(--surface-muted)]/90 to-white px-4 py-3.5">
+        <span class="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">Results</span>
+        <span
+          v-if="loading"
+          class="rounded-full bg-white px-2.5 py-0.5 text-xs font-semibold text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]"
+        >Loading…</span>
+        <span
+          v-else
+          class="rounded-full bg-[var(--brand-green)]/15 px-2.5 py-0.5 text-xs font-bold text-[var(--brand-green-dark)] ring-1 ring-[var(--brand-green)]/30"
+        >{{ rows.length }} ticket{{ rows.length === 1 ? '' : 's' }}{{ searchEcho ? ` · “${searchEcho}”` : '' }}</span>
+      </div>
       <ul>
         <li
           v-for="(t, idx) in rows"
@@ -66,41 +78,46 @@
           />
           <RouterLink
             :to="paths.dashboard.ticketDetail(String(t.ticket_id))"
-            class="flex items-center gap-3 px-3 py-3 transition hover:bg-[var(--surface-hover)]"
+            class="group flex items-start gap-3 px-4 py-4 transition duration-200 hover:bg-gradient-to-r hover:from-[var(--surface-mint)]/25 hover:to-transparent sm:items-center sm:gap-4"
           >
-            <div
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)] text-xs font-medium text-[var(--text-secondary)] sm:h-10 sm:w-10 sm:text-sm"
-            >
-              #{{ t.ticket_id }}
+            <div class="hidden pt-0.5 sm:block">
+              <TicketIdChip :id="t.ticket_id" />
             </div>
             <div class="min-w-0 flex-1">
-              <p class="font-medium text-[var(--text-primary)]">
+              <p class="text-base font-semibold leading-snug text-[var(--text-primary)] group-hover:text-[var(--brand-green-dark)]">
                 {{ t.title }}
               </p>
-              <p class="text-sm text-[var(--text-muted)]">
-                {{ formatTicketCategoryLabel(t.category) }} · {{ reporterLabel(t) }}
-              </p>
+              <div class="mt-2 flex flex-wrap items-center gap-2">
+                <CategoryBadge :category="t.category" />
+                <span class="text-xs font-medium text-[var(--text-muted)]">·</span>
+                <span class="text-xs font-semibold text-[var(--text-secondary)]">{{ reporterLabel(t) }}</span>
+              </div>
             </div>
-            <TicketStatusBadge :status="t.status" />
-            <svg
-              class="h-5 w-5 shrink-0 text-[var(--text-muted)]"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              stroke-width="2"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M9 5l7 7-7 7"
+            <div class="flex shrink-0 items-center gap-2">
+              <TicketStatusBadge
+                :status="t.status"
+                size="md"
               />
-            </svg>
+              <svg
+                class="h-5 w-5 text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--brand-green-dark)]"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </div>
           </RouterLink>
         </li>
       </ul>
       <p
         v-if="!loading && rows.length === 0"
-        class="px-3 py-7 text-center text-sm text-[var(--text-secondary)]"
+        class="px-4 py-12 text-center text-sm font-medium text-[var(--text-secondary)]"
       >
         {{ emptyMessage }}
       </p>
@@ -111,11 +128,14 @@
 <script setup lang="ts">
 // VULN-07: Uses `fetchTicketSearch` / `fetchTicketList` — search path exercises unsafe SQL on the server.
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import CategoryBadge from '@/components/ui/CategoryBadge.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import TicketIdChip from '@/components/ui/TicketIdChip.vue'
 import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
 import { fetchTicketList, fetchTicketSearch, type ApiTicketRow } from '@/api/tickets'
 import { getAuthUserSnapshot } from '@/stores/auth-session'
-import { formatTicketCategoryLabel, reporterDisplayLabel } from '@/utils/ticket-ui'
+import { reporterDisplayLabel } from '@/utils/ticket-ui'
 
 const query = ref('')
 const rows = ref<ApiTicketRow[]>([])
@@ -126,8 +146,8 @@ const searchEcho = ref('')
 const emptyMessage = computed(() => {
   const q = query.value.trim()
   if (q === '')
-    return 'No tickets yet.'
-  return `No tickets match “${q}”.`
+    return 'No tickets yet — create one to reach support.'
+  return `No tickets match “${q}”. Try different keywords.`
 })
 
 function reporterLabel(t: ApiTicketRow): string {

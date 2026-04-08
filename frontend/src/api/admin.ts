@@ -148,6 +148,8 @@ export type CreateStaffBody = {
   last_name: string
   middle_name?: string
   is_active?: boolean
+  /** Omit or `staff`. `admin` only when the caller is super_admin (API enforces). */
+  role?: 'staff' | 'admin'
 }
 
 export interface CreateStaffResponseData {
@@ -177,6 +179,8 @@ export async function createStaffUser(
     payload.middle_name = mid
   if (typeof body.is_active === 'boolean')
     payload.is_active = body.is_active
+  /** API: optional `staff` | `admin` (default staff). Only super_admin may use `admin`. */
+  payload.role = body.role ?? 'staff'
 
   const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
@@ -199,6 +203,7 @@ export async function createStaffUser(
     logger.debug('api:admin', 'create staff invalid shape', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
+  logger.debug('api:admin', 'create staff success envelope (dev)', env.data)
   return { ok: true, data: env.data }
 }
 
@@ -207,6 +212,8 @@ export type CreateStaffInviteBody = {
   first_name: string
   last_name: string
   middle_name?: string
+  /** Omit or `staff`. `admin` only when the caller is super_admin (API enforces). */
+  role?: 'staff' | 'admin'
 }
 
 export interface CreateStaffInviteResponseData {
@@ -232,6 +239,8 @@ export async function createStaffInvite(
   const mid = body.middle_name?.trim()
   if (mid)
     payload.middle_name = mid
+  if (body.role)
+    payload.role = body.role
 
   const res = await fetchWithSessionRefresh(url, {
     method: 'POST',

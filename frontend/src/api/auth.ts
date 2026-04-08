@@ -4,6 +4,7 @@ import { postAuthRefresh, type RefreshResponseData } from './auth-refresh-intern
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
+import { setSessionCsrfPair } from '@/stores/auth-session'
 import { logger } from '@/utils/logger'
 
 export interface PublicCsrfData {
@@ -313,8 +314,10 @@ export async function fetchSessionCsrfToken(): Promise<
   }
   const env = json as ApiSuccessEnvelope<PublicCsrfData>
   const token = env.data?.csrf_token
-  if (!token || !env.data)
+  const exp = env.data?.csrf_expires_at_utc
+  if (!token || !env.data || typeof exp !== 'string')
     return { ok: false, status: res.status, message: 'Invalid response' }
+  setSessionCsrfPair(token, exp)
   return { ok: true, data: env.data }
 }
 

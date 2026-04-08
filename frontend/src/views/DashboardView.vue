@@ -1,40 +1,64 @@
 <template>
-  <div class="space-y-7">
+  <div class="space-y-8">
+    <PageHeader
+      kicker="Overview"
+      title="Your support queue"
+      description="See what’s open, scan recent updates, and open a new request when something breaks."
+    />
+
     <div
       v-if="loadError"
-      class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+      class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-950 shadow-sm"
       role="alert"
     >
       {{ loadError }}
     </div>
 
     <!-- Hero metric + actions -->
-    <section class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-      <div>
-        <p class="text-sm font-medium text-[var(--text-secondary)]">
-          Your open requests
+    <section class="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:justify-between">
+      <div
+        class="relative flex min-w-0 flex-1 flex-col justify-center overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[var(--shadow-card)]"
+      >
+        <div
+          class="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-[var(--brand-green)]/[0.12] blur-3xl"
+          aria-hidden="true"
+        />
+        <div
+          class="pointer-events-none absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-[var(--surface-mint)] blur-2xl"
+          aria-hidden="true"
+        />
+        <div class="relative">
+        <p class="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+          Open &amp; in progress
         </p>
-        <p class="mt-1 flex items-baseline gap-2 text-3xl font-semibold tracking-tight text-[var(--text-primary)] lg:text-4xl">
-          {{ loading ? '…' : openTicketCount }}
-          <span class="text-base font-normal text-[var(--text-muted)] lg:text-lg">with SecWeb support</span>
+        <p class="mt-2 flex flex-wrap items-baseline gap-2">
+          <span class="text-4xl font-bold tabular-nums tracking-tight text-[var(--text-primary)] lg:text-5xl">
+            {{ loading ? '…' : openTicketCount }}
+          </span>
+          <span class="text-sm font-medium text-[var(--text-secondary)]">tickets needing attention</span>
         </p>
+        <p class="mt-3 text-sm text-[var(--text-muted)]">
+          Count includes <strong class="font-semibold text-[var(--text-secondary)]">Open</strong> and
+          <strong class="font-semibold text-[var(--text-secondary)]">In progress</strong>.
+        </p>
+        </div>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="flex shrink-0 flex-col justify-center gap-2 sm:flex-row sm:items-center lg:flex-col lg:items-stretch">
         <RouterLink
           :to="paths.dashboard.ticketNew"
-          class="inline-flex items-center justify-center rounded-full bg-[var(--brand-green)] px-5 py-2.5 text-sm font-semibold text-[var(--text-on-green)] shadow-sm transition hover:brightness-95"
+          class="inline-flex items-center justify-center rounded-xl bg-[var(--brand-green)] px-5 py-3 text-sm font-bold text-[var(--text-on-green)] shadow-[var(--shadow-card)] transition hover:brightness-[1.02] active:scale-[0.98]"
         >
-          New ticket
+          + New ticket
         </RouterLink>
         <RouterLink
           :to="paths.dashboard.tickets"
-          class="inline-flex items-center justify-center rounded-full bg-[var(--surface-mint)] px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-mint-hover)]"
+          class="inline-flex items-center justify-center rounded-xl bg-[var(--surface-mint)] px-5 py-3 text-sm font-semibold text-[var(--brand-green-dark)] shadow-sm ring-1 ring-[var(--brand-green)]/20 transition hover:bg-[var(--surface-mint-hover)] active:scale-[0.99]"
         >
-          My requests
+          All my tickets
         </RouterLink>
         <RouterLink
           :to="paths.dashboard.tickets"
-          class="inline-flex items-center justify-center rounded-full border border-[var(--border-strong)] bg-white px-5 py-2.5 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)]"
+          class="inline-flex items-center justify-center rounded-xl border-2 border-[var(--border-strong)] bg-white px-5 py-3 text-sm font-semibold text-[var(--text-primary)] shadow-sm transition hover:border-[var(--text-muted)]/40 hover:bg-white active:scale-[0.99]"
         >
           Search
         </RouterLink>
@@ -44,115 +68,135 @@
     <!-- Two-up cards -->
     <section class="grid gap-4 lg:grid-cols-2">
       <article
-        class="rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+        class="hd-lift rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[var(--shadow-card)]"
       >
-        <h2 class="text-base font-semibold text-[var(--text-primary)]">
-          Awaiting your reply
-        </h2>
-        <p class="mt-1 text-sm text-[var(--text-secondary)]">
-          When support needs more detail on your SecWeb tickets
-        </p>
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-semibold text-[var(--text-primary)]">
+              Latest tickets
+            </h2>
+            <p class="mt-1 text-sm text-[var(--text-secondary)]">
+              Most recently updated — jump back in quickly.
+            </p>
+          </div>
+        </div>
         <p
           v-if="!loading && ticketPreview.length === 0"
-          class="mt-5 text-sm text-[var(--text-muted)]"
+          class="mt-6 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-muted)]/50 px-4 py-6 text-center text-sm font-medium text-[var(--text-secondary)]"
         >
-          No tickets yet — open one to get started.
+          No tickets yet — create one to get started.
         </p>
         <ul
           v-else
-          class="mt-5 space-y-3"
+          class="mt-5 space-y-2"
         >
           <li
             v-for="t in ticketPreview"
             :key="t.id"
-            class="flex items-center justify-between rounded-xl bg-[var(--surface-muted)] px-4 py-3"
           >
             <RouterLink
               :to="paths.dashboard.ticketDetail(t.id)"
-              class="min-w-0 flex-1 text-left"
+              class="group flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-main)] px-4 py-3 shadow-sm transition hover:border-[var(--brand-green)]/45 hover:bg-white hover:shadow-[var(--shadow-card)]"
             >
-              <p class="truncate font-medium text-[var(--text-primary)]">
-                {{ t.title }}
-              </p>
-              <p class="text-xs text-[var(--text-muted)]">
-                {{ formatTicketCategoryLabel(t.category) }} · #{{ t.id }}
-              </p>
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-semibold text-[var(--text-primary)]">
+                  {{ t.title }}
+                </p>
+                <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <TicketIdChip :id="t.id" />
+                  <CategoryBadge :category="t.category" />
+                </div>
+              </div>
+              <TicketStatusBadge
+                :status="t.status"
+                size="md"
+              />
             </RouterLink>
-            <TicketStatusBadge :status="t.status" />
           </li>
         </ul>
         <RouterLink
           :to="paths.dashboard.tickets"
-          class="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-[var(--brand-green-dark)] hover:underline"
+          class="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[var(--brand-green-dark)] hover:underline"
         >
-          See all
+          View all tickets
           <span aria-hidden="true">→</span>
         </RouterLink>
       </article>
 
       <article
-        class="flex flex-col justify-between rounded-2xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-muted)] p-6"
+        class="flex flex-col justify-between rounded-2xl border-2 border-dashed border-[var(--border-strong)] bg-gradient-to-br from-[var(--surface-mint)]/40 to-white p-6"
       >
         <div>
-          <h2 class="text-base font-semibold text-[var(--text-primary)]">
-            Need something else?
+          <span class="inline-flex rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[var(--brand-green-dark)] ring-1 ring-[var(--brand-green)]/25">
+            Quick action
+          </span>
+          <h2 class="mt-3 text-lg font-semibold text-[var(--text-primary)]">
+            Another issue?
           </h2>
           <p class="mt-2 max-w-sm text-sm leading-relaxed text-[var(--text-secondary)]">
-            Open another ticket for a different SecWeb product issue.
+            Start a fresh ticket so support can track it separately from your other requests.
           </p>
         </div>
-        <div class="mt-8 flex justify-end">
-          <RouterLink
-            :to="paths.dashboard.ticketNew"
-            class="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--brand-green)] text-2xl font-light text-white shadow-md transition hover:brightness-95"
-            aria-label="Create ticket"
-          >
-            +
+        <div class="mt-8">
+        <RouterLink
+          :to="paths.dashboard.ticketNew"
+          class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] py-3.5 text-sm font-bold text-[var(--text-on-green)] shadow-[var(--shadow-card)] transition hover:brightness-[1.02] active:scale-[0.99]"
+        >
+            <span class="text-lg leading-none">+</span>
+            Create ticket
           </RouterLink>
         </div>
       </article>
     </section>
 
     <!-- Summary strip -->
-    <section
-      class="grid gap-4 rounded-2xl bg-[var(--surface-muted)] p-5 sm:grid-cols-3"
-    >
-      <div
-        v-for="s in summaries"
-        :key="s.label"
-        class="text-center sm:text-left"
-      >
-        <p class="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
-          {{ s.label }}
-        </p>
-        <p class="mt-1 text-2xl font-semibold text-[var(--text-primary)]">
-          {{ loading ? '…' : s.value }}
-        </p>
+    <section>
+      <h2 class="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+        At a glance
+      </h2>
+      <div class="grid gap-3 sm:grid-cols-3">
+        <div
+          v-for="s in summaries"
+          :key="s.label"
+          class="hd-lift rounded-2xl border border-[var(--border-subtle)] bg-white px-5 py-4 text-center shadow-[var(--shadow-card)] sm:text-left"
+        >
+          <p class="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+            {{ s.label }}
+          </p>
+          <p class="mt-2 text-3xl font-bold tabular-nums text-[var(--text-primary)]">
+            {{ loading ? '…' : s.value }}
+          </p>
+        </div>
       </div>
     </section>
 
     <!-- Recent activity -->
     <section>
-      <div class="mb-4 flex items-center justify-between">
-        <h2 class="text-lg font-semibold text-[var(--text-primary)]">
-          Recent activity on your requests
-        </h2>
+      <div class="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-[var(--text-primary)]">
+            Recent activity
+          </h2>
+          <p class="mt-0.5 text-sm text-[var(--text-secondary)]">
+            Sorted by last update — status shown on the right.
+          </p>
+        </div>
         <RouterLink
           :to="paths.dashboard.tickets"
-          class="text-sm font-semibold text-[var(--brand-green-dark)] hover:underline"
+          class="rounded-full bg-[var(--surface-mint)] px-4 py-2 text-sm font-bold text-[var(--brand-green-dark)] transition hover:bg-[var(--surface-mint-hover)]"
         >
-          See all
+          All tickets
         </RouterLink>
       </div>
       <div
         v-if="!loading && recentGroups.length === 0"
-        class="rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-8 text-center text-sm text-[var(--text-secondary)]"
+        class="rounded-2xl border border-dashed border-[var(--border-strong)] bg-white px-4 py-10 text-center text-sm font-medium text-[var(--text-secondary)]"
       >
-        No recent ticket updates yet.
+        No recent updates yet — your tickets will appear here.
       </div>
       <div
         v-else
-        class="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white"
+        class="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white shadow-[var(--shadow-card)]"
       >
         <div
           v-for="(group, idx) in recentGroups"
@@ -162,9 +206,9 @@
             v-if="idx > 0"
             class="h-px bg-[var(--border-subtle)]"
           />
-          <p class="px-4 py-3 text-xs font-medium text-[var(--text-muted)]">
-            {{ group.date }}
-          </p>
+          <div class="flex items-center gap-2 bg-[var(--surface-muted)]/80 px-4 py-2.5">
+            <span class="text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">{{ group.date }}</span>
+          </div>
           <ul>
             <li
               v-for="row in group.items"
@@ -172,31 +216,32 @@
             >
               <RouterLink
                 :to="paths.dashboard.ticketDetail(String(row.ticketId))"
-                class="flex cursor-pointer items-center gap-4 border-t border-[var(--border-subtle)] px-4 py-4 transition hover:bg-[var(--surface-hover)]"
+                class="group flex cursor-pointer items-center gap-3 border-t border-[var(--border-subtle)] px-4 py-4 transition hover:bg-gradient-to-r hover:from-[var(--surface-mint)]/30 hover:to-transparent"
               >
                 <div
-                  class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--surface-muted)] text-[var(--text-secondary)]"
+                  class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-muted)] text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]"
                 >
-                  <IconTicket class="h-5 w-5" />
+                  <IconTicket class="h-6 w-6" />
                 </div>
                 <div class="min-w-0 flex-1">
-                  <p class="font-medium text-[var(--text-primary)]">
+                  <p class="font-semibold text-[var(--text-primary)]">
                     {{ row.title }}
                   </p>
-                  <p class="text-sm text-[var(--text-muted)]">
+                  <p class="mt-1 text-sm text-[var(--text-secondary)]">
                     {{ row.subtitle }}
                   </p>
-                </div>
-                <div class="hidden shrink-0 text-right sm:block">
-                  <p class="text-sm font-semibold text-[var(--brand-green-dark)]">
-                    {{ row.badge }}
-                  </p>
-                  <p class="text-xs text-[var(--text-muted)]">
+                  <p class="mt-1 text-xs font-medium text-[var(--text-muted)]">
                     {{ row.hint }}
                   </p>
                 </div>
+                <div class="flex shrink-0 flex-col items-end gap-1">
+                  <TicketStatusBadge
+                    :status="row.status"
+                    size="md"
+                  />
+                </div>
                 <svg
-                  class="h-5 w-5 shrink-0 text-[var(--text-muted)]"
+                  class="h-5 w-5 shrink-0 text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-[var(--brand-green-dark)]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -215,7 +260,7 @@
       </div>
     </section>
 
-    <p class="text-center text-xs text-[var(--text-muted)]">
+    <p class="text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
       SecWeb Helpdesk
     </p>
   </div>
@@ -224,12 +269,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import IconTicket from '@/components/icons/IconTicket.vue'
+import CategoryBadge from '@/components/ui/CategoryBadge.vue'
+import PageHeader from '@/components/ui/PageHeader.vue'
+import TicketIdChip from '@/components/ui/TicketIdChip.vue'
 import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
 import { fetchTicketList, type ApiTicketRow } from '@/api/tickets'
 import type { TicketStatus } from '@/types/ticket'
 import { formatDateTime } from '@/utils/date-format'
-import { formatTicketCategoryLabel, TICKET_STATUS_DEFINITIONS } from '@/utils/ticket-ui'
+import { formatTicketCategoryLabel } from '@/utils/ticket-ui'
 
 const loading = ref(true)
 const loadError = ref('')
@@ -270,15 +318,11 @@ const summaries = computed(() => {
   const resolved = rows.filter(t => t.status === 'resolved' || t.status === 'closed').length
   const inProg = rows.filter(t => t.status === 'in_progress').length
   return [
-    { label: 'Total (loaded)', value: String(total.value) },
+    { label: 'Total tickets', value: String(total.value) },
     { label: 'In progress', value: String(inProg) },
     { label: 'Resolved / closed', value: String(resolved) },
   ]
 })
-
-function statusTitle(s: TicketStatus): string {
-  return TICKET_STATUS_DEFINITIONS.find(d => d.value === s)?.title ?? s
-}
 
 function sameCalendarDay(a: Date, b: Date): boolean {
   return (
@@ -324,7 +368,7 @@ const recentGroups = computed(() => {
       ticketId: t.ticket_id,
       title: t.title,
       subtitle: `${formatTicketCategoryLabel(t.category)} · Updated ${formatDateTime(t.updated_at)}`,
-      badge: statusTitle(t.status as TicketStatus),
+      status: t.status as TicketStatus,
       hint: `Ticket #${t.ticket_id}`,
     })),
   }))

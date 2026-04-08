@@ -80,3 +80,19 @@ export function assigneeDisplayLabel(t: ApiTicketRow): string | null {
     return name
   return `User #${t.assigned_user_id}`
 }
+
+/** Tailwind classes for category pills (list + detail). */
+export function categoryBadgeClass(category: string): string {
+  const k = category.trim().toLowerCase()
+  if (k === 'general')
+    return 'bg-sky-50 text-sky-900 ring-sky-200/90'
+  if (k === 'technical')
+    return 'bg-violet-50 text-violet-900 ring-violet-200/90'
+  if (k === 'billing')
+    return 'bg-amber-50 text-amber-950 ring-amber-200/90'
+  if (k === 'account')
+    return 'bg-emerald-50 text-emerald-900 ring-emerald-200/90'
+  if (k === 'security')
+    return 'bg-rose-50 text-rose-900 ring-rose-200/90'
+  return 'bg-neutral-100 text-neutral-800 ring-neutral-200/90'
+}

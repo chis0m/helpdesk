@@ -437,6 +437,11 @@ func (t *TicketController) ListComments(c *gin.Context) {
 		return
 	}
 
+	// Nil slice JSON-marshals as null; clients expect data.items to always be an array.
+	if comments == nil {
+		comments = []models.TicketCommentWithAuthor{}
+	}
+
 	response.Success(c, http.StatusOK, gin.H{"items": comments}, "ticket comments fetched")
 }
 
@@ -600,38 +605,64 @@ func ticketDisplayName(u models.User) string {
 	return strings.TrimSpace(u.Email)
 }
 
+// formatTicketUserPublic returns a safe subset for API responses (no password hash).
+func formatTicketUserPublic(u *models.User) interface{} {
+	if u == nil {
+		return nil
+	}
+	return gin.H{
+		"user_id":      u.ID,
+		"user_uuid":    u.UUID.String(),
+		"email":        strings.TrimSpace(u.Email),
+		"first_name":   strings.TrimSpace(u.FirstName),
+		"last_name":    strings.TrimSpace(u.LastName),
+		"display_name": ticketDisplayName(*u),
+		"role":         u.Role,
+	}
+}
+
 func (tc *TicketController) loadTicketUsers(tickets []models.Ticket) (map[uint64]models.User, error) {
 	ids := collectUserIDsFromTickets(tickets)
 	return tc.userRepo.GetMapByIDs(ids)
 }
 
 func formatTicket(ticket *models.Ticket, users map[uint64]models.User) gin.H {
+	reporterPtr := ticket.Reporter
+	if reporterPtr == nil {
+		if u, ok := users[ticket.ReporterUserID]; ok {
+			reporterPtr = &u
+		}
+	}
+
+	var assigneePtr *models.User
+	if ticket.Assignee != nil {
+		assigneePtr = ticket.Assignee
+	} else if ticket.AssignedUserID != nil {
+		if u, ok := users[*ticket.AssignedUserID]; ok {
+			assigneePtr = &u
+		}
+	}
+
 	var assignedUserID any
 	var assignedDisplay any
+	var assignedEmail any
 	if ticket.AssignedUserID != nil {
 		assignedUserID = *ticket.AssignedUserID
-		if u, ok := users[*ticket.AssignedUserID]; ok {
-			assignedDisplay = ticketDisplayName(u)
+		if assigneePtr != nil {
+			assignedDisplay = ticketDisplayName(*assigneePtr)
+			assignedEmail = strings.TrimSpace(assigneePtr.Email)
 		}
 	} else {
 		assignedUserID = nil
 		assignedDisplay = nil
+		assignedEmail = nil
 	}
 
 	reporterDisplay := ""
 	reporterEmail := ""
-	if u, ok := users[ticket.ReporterUserID]; ok {
-		reporterDisplay = ticketDisplayName(u)
-		reporterEmail = strings.TrimSpace(u.Email)
-	}
-
-	var assignedEmail any
-	if ticket.AssignedUserID != nil {
-		if u, ok := users[*ticket.AssignedUserID]; ok {
-			assignedEmail = strings.TrimSpace(u.Email)
-		}
-	} else {
-		assignedEmail = nil
+	if reporterPtr != nil {
+		reporterDisplay = ticketDisplayName(*reporterPtr)
+		reporterEmail = strings.TrimSpace(reporterPtr.Email)
 	}
 
 	return gin.H{
@@ -642,6 +673,8 @@ func formatTicket(ticket *models.Ticket, users map[uint64]models.User) gin.H {
 		"assigned_user_id":      assignedUserID,
 		"assigned_display_name": assignedDisplay,
 		"assigned_email":        assignedEmail,
+		"reporter":              formatTicketUserPublic(reporterPtr),
+		"assignee":              formatTicketUserPublic(assigneePtr),
 		"title":                 ticket.Title,
 		"description":           ticket.Description,
 		"category":              ticket.Category,

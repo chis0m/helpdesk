@@ -3,10 +3,12 @@ package controllers
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"helpdesk/backend/internal/config"
 	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/middleware"
 	"helpdesk/backend/internal/models"
@@ -16,12 +18,14 @@ import (
 )
 
 type InviteController struct {
+	cfg           config.Config
 	inviteService *services.InviteService
 	userService   *services.UserService
 }
 
-func NewInviteController(inviteService *services.InviteService, userService *services.UserService) *InviteController {
+func NewInviteController(cfg config.Config, inviteService *services.InviteService, userService *services.UserService) *InviteController {
 	return &InviteController{
+		cfg:           cfg,
 		inviteService: inviteService,
 		userService:   userService,
 	}
@@ -76,12 +80,15 @@ func (ic *InviteController) CreateStaffInvite(c *gin.Context) {
 		return
 	}
 
-	inv, err := ic.inviteService.CreateStaffInvite(actor.ID, actorRole, req)
+	inv, inviteURL, err := ic.inviteService.CreateStaffInvite(actor.ID, actorRole, req)
 	if err != nil {
 		switch {
 		case errors.Is(err, services.ErrInviteForbidden):
 			log.Warn().Msg("create staff invite failed: forbidden")
 			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+		case errors.Is(err, services.ErrInviteAdminRequiresSuperAdmin):
+			log.Warn().Str("actor_role", string(actorRole)).Msg("create staff invite failed: only super_admin may invite admin")
+			response.FailureWithAbort(c, http.StatusForbidden, "only super_admin may invite users with role admin", "only super_admin may invite users with role admin")
 		case errors.Is(err, services.ErrInviteEmailTaken):
 			log.Warn().Str("email", req.Email).Msg("create staff invite failed: email already registered")
 			response.FailureWithAbort(c, http.StatusConflict, "email already registered", "email already registered")
@@ -95,12 +102,23 @@ func (ic *InviteController) CreateStaffInvite(c *gin.Context) {
 		return
 	}
 
-	response.Success(c, http.StatusCreated, gin.H{
+	payload := gin.H{
 		"invite_id":      inv.ID,
 		"email":          inv.Email,
 		"expires_at_utc": inv.ExpiresAt.UTC(),
 		"target_role":    inv.TargetRole,
-	}, "staff invite created; check server logs for invite URL")
+		"mail_mailer":    strings.ToLower(strings.TrimSpace(ic.cfg.MailDriver)),
+	}
+	if ic.cfg.UseSMTPMail() {
+		payload["delivery"] = "smtp"
+		payload["notice"] = "Invite email was handed to the configured SMTP server. Check the recipient inbox (or Mailtrap sandbox)."
+	} else {
+		payload["delivery"] = "log"
+		payload["invite_url"] = inviteURL
+		payload["notice"] = "MAIL_MAILER is not smtp — no real email was sent. Copy invite_url for the staff member, or set MAIL_MAILER=smtp and MAIL_* for SMTP delivery."
+	}
+
+	response.Success(c, http.StatusCreated, payload, "staff invite created")
 }
 
 func (ic *InviteController) VerifyInvite(c *gin.Context) {

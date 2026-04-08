@@ -1,18 +1,21 @@
 <template>
   <section
-    class="rounded-xl border border-[var(--border-subtle)] bg-white p-4 shadow-sm"
+    class="rounded-2xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-black/[0.03]"
     aria-labelledby="ticket-workflow-heading"
   >
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div>
+        <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+          Workflow
+        </p>
         <h2
           id="ticket-workflow-heading"
-          class="text-sm font-semibold text-[var(--text-primary)]"
+          class="mt-1 text-lg font-semibold text-[var(--text-primary)]"
         >
-          Ticket workflow
+          Ticket status
         </h2>
-        <p class="mt-1 max-w-xl text-xs leading-snug text-[var(--text-secondary)] sm:text-sm">
-          Select a status, then Save (Cancel undoes). API-backed tickets update the server on Save.
+        <p class="mt-1 max-w-xl text-sm leading-snug text-[var(--text-secondary)]">
+          Pick the next step, then <strong class="font-semibold text-[var(--text-primary)]">Save status</strong>. Cancel restores the last saved value.
         </p>
       </div>
       <div class="shrink-0 sm:text-right">

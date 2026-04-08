@@ -1,67 +1,128 @@
 <template>
   <div
     v-if="loadingTicket"
-    class="rounded-xl border border-[var(--border-subtle)] bg-white px-4 py-10 text-center text-sm text-[var(--text-secondary)]"
+    class="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-[var(--shadow-card)]"
+    aria-busy="true"
+    aria-label="Loading ticket"
   >
-    Loading ticket…
+    <div class="flex flex-wrap gap-2">
+      <div class="hd-skeleton h-6 w-16 rounded-md" />
+      <div class="hd-skeleton h-6 w-24 rounded-md" />
+      <div class="hd-skeleton h-6 w-20 rounded-md" />
+    </div>
+    <div class="hd-skeleton h-8 w-4/5 max-w-xl rounded-lg" />
+    <div class="hd-skeleton h-4 w-full max-w-lg rounded-md" />
+    <div class="hd-skeleton mt-4 h-32 w-full rounded-xl" />
+    <p class="text-center text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+      Loading ticket…
+    </p>
   </div>
 
   <div
     v-else-if="ticket"
-    class="space-y-4"
+    class="space-y-5"
   >
-    <div>
-      <RouterLink
-        :to="paths.dashboard.tickets"
-        class="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand-green-dark)] hover:underline sm:text-sm"
-      >
-        ← Back to tickets
-      </RouterLink>
-    </div>
+    <RouterLink
+      :to="paths.dashboard.tickets"
+      class="inline-flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-white/90 px-3 py-1.5 text-xs font-bold text-[var(--brand-green-dark)] shadow-[var(--shadow-sm)] backdrop-blur-sm transition hover:border-[var(--brand-green)]/30 hover:shadow-[var(--shadow-card)] sm:text-sm"
+    >
+      <span aria-hidden="true">←</span> Back to tickets
+    </RouterLink>
 
-    <article class="rounded-xl border border-[var(--border-subtle)] bg-white p-4 shadow-sm">
-      <div class="min-w-0">
-        <p class="text-xs font-medium uppercase tracking-wide text-[var(--text-muted)]">
-          Ticket #{{ ticket.id }}
-        </p>
-        <h1 class="mt-1 text-xl font-semibold tracking-tight text-[var(--text-primary)] sm:text-2xl">
+    <article class="overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white shadow-[var(--shadow-card)] ring-1 ring-black/[0.03]">
+      <div class="relative border-b border-[var(--border-subtle)] bg-gradient-to-br from-[var(--surface-mint)]/40 via-white to-[var(--surface-main)]/30 px-5 py-5 sm:px-6">
+        <div
+          class="pointer-events-none absolute right-0 top-0 h-32 w-32 rounded-full bg-[var(--brand-green)]/10 blur-2xl"
+          aria-hidden="true"
+        />
+        <div class="relative">
+        <div class="flex flex-wrap items-center gap-2">
+          <TicketIdChip :id="ticket.id" />
+          <CategoryBadge :category="ticket.category" />
+          <TicketStatusBadge
+            :status="ticket.status"
+            size="md"
+          />
+        </div>
+        <h1 class="mt-4 text-2xl font-bold leading-tight tracking-tight text-[var(--text-primary)] sm:text-3xl">
           {{ ticket.title }}
         </h1>
-        <div class="mt-2 flex flex-wrap gap-2 text-xs text-[var(--text-secondary)] sm:text-sm">
-          <span>{{ formatTicketCategoryLabel(ticket.category) }}</span>
-          <span aria-hidden="true">·</span>
-          <span v-if="!isSupportViewer">Reported by {{ ticket.reporterName }}</span>
-          <span
-            v-if="!isSupportViewer"
-            aria-hidden="true"
-          >·</span>
-          <span>Opened {{ formatDateTime(ticket.createdAt) }}</span>
         </div>
       </div>
 
+      <!-- Ticket facts: one scannable block (no separate cards) -->
+      <div class="border-b border-[var(--border-subtle)] bg-[var(--surface-main)]/50 px-5 py-4 sm:px-6">
+        <p class="mb-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+          Ticket details
+        </p>
+        <dl
+          class="grid gap-4 sm:grid-cols-2"
+          :class="isSupportViewer ? 'lg:grid-cols-3' : 'lg:grid-cols-4'"
+        >
+          <div
+            v-if="!isSupportViewer"
+            class="min-w-0"
+          >
+            <dt class="text-xs text-[var(--text-muted)]">
+              Reported by
+            </dt>
+            <dd class="mt-0.5 truncate text-sm font-semibold text-[var(--text-primary)]">
+              {{ ticket.reporterName }}
+            </dd>
+          </div>
+          <div
+            v-if="isSupportViewer"
+            class="min-w-0"
+          >
+            <dt class="text-xs text-[var(--text-muted)]">
+              Reporter email
+            </dt>
+            <dd class="mt-0.5 break-all font-mono text-[13px] font-medium text-[var(--text-primary)]">
+              {{ ticket.reporterEmail || '—' }}
+            </dd>
+          </div>
+          <div
+            v-if="!isSupportViewer"
+            class="min-w-0 sm:col-span-2 lg:col-span-1"
+          >
+            <dt class="text-xs text-[var(--text-muted)]">
+              Assignee
+            </dt>
+            <dd class="mt-0.5 break-all font-mono text-[13px] font-medium text-[var(--text-primary)]">
+              {{ ticket.assigneeEmail ?? 'Unassigned' }}
+            </dd>
+          </div>
+          <div class="min-w-0">
+            <dt class="text-xs text-[var(--text-muted)]">
+              Opened
+            </dt>
+            <dd class="mt-0.5 text-sm font-medium text-[var(--text-primary)]">
+              {{ formatDateTime(ticket.createdAt) }}
+            </dd>
+          </div>
+          <div class="min-w-0">
+            <dt class="text-xs text-[var(--text-muted)]">
+              Last updated
+            </dt>
+            <dd class="mt-0.5 text-sm font-medium text-[var(--text-primary)]">
+              {{ formatDateTime(ticket.updatedAt) }}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
       <!-- VULN-03: v-html on description — stored XSS with weak server validation; remediate: {{ }} or sanitize (e.g. DOMPurify). -->
-      <div class="mt-4 border-t border-[var(--border-subtle)] pt-4">
-        <h2 class="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+      <div class="px-5 pb-6 pt-5 sm:px-6">
+        <h2 class="text-base font-semibold text-[var(--text-primary)]">
           Description
         </h2>
+        <p class="mt-1 text-xs text-[var(--text-muted)]">
+          Full text as submitted with this ticket.
+        </p>
         <div
-          class="ticket-html-content mt-1.5 text-sm leading-snug text-[var(--text-secondary)]"
+          class="ticket-html-content mt-4 max-w-none rounded-xl border border-[var(--border-subtle)] bg-white px-5 py-4 text-[15px] leading-relaxed text-[var(--text-secondary)] shadow-[var(--shadow-sm)]"
           v-html="ticket.description"
         />
-      </div>
-      <div class="mt-4 flex flex-wrap gap-x-5 gap-y-1 border-t border-[var(--border-subtle)] pt-4 text-xs sm:text-sm">
-        <p v-if="isSupportViewer">
-          <span class="text-[var(--text-muted)]">Reported by</span>
-          <span class="ml-2 font-medium text-[var(--text-primary)]">{{ ticket.reporterEmail || '—' }}</span>
-        </p>
-        <p v-else>
-          <span class="text-[var(--text-muted)]">Assignee</span>
-          <span class="ml-2 font-medium text-[var(--text-primary)]">{{ ticket.assigneeEmail ?? 'Unassigned' }}</span>
-        </p>
-        <p>
-          <span class="text-[var(--text-muted)]">Last updated</span>
-          <span class="ml-2 font-medium text-[var(--text-primary)]">{{ formatDateTime(ticket.updatedAt) }}</span>
-        </p>
       </div>
     </article>
 
@@ -75,13 +136,14 @@
     <!-- VULN-04: Assign/unassign/delete use ticket id from the URL only — backend IDOR completes unauthorized access. -->
     <section
       v-if="isApiTicket"
-      class="rounded-xl border border-[var(--border-subtle)] bg-white p-4 shadow-sm"
+      class="rounded-2xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-black/[0.03]"
     >
-      <h2 class="text-sm font-semibold text-[var(--text-primary)]">
+      <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Staff</span>
+      <h2 class="mt-1 text-lg font-semibold text-[var(--text-primary)]">
         Assignment
       </h2>
-      <p class="mt-1 text-xs text-[var(--text-secondary)]">
-        Set the numeric user id of the assignee (staff directory lists ids), or unassign.
+      <p class="mt-1 text-sm text-[var(--text-secondary)]">
+        Set the staff user id for the assignee (see Admin → Staff for ids), or unassign.
       </p>
       <div
         v-if="assignDeleteError"
@@ -135,12 +197,23 @@
     </section>
 
     <section>
-      <h2 class="text-base font-semibold text-[var(--text-primary)]">
-        Comments
-      </h2>
-      <p class="mt-0.5 text-xs text-[var(--text-secondary)] sm:text-sm">
-        Conversation between you and SecWeb support.
-      </p>
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            Discussion
+          </p>
+          <h2 class="text-lg font-semibold text-[var(--text-primary)]">
+            Comments
+          </h2>
+          <p class="mt-0.5 text-sm text-[var(--text-secondary)]">
+            Newest comments appear at the bottom. Staff replies are labeled.
+          </p>
+        </div>
+        <span
+          v-if="allComments.length"
+          class="rounded-full bg-[var(--surface-muted)] px-3 py-1 text-xs font-bold text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]"
+        >{{ allComments.length }} comment{{ allComments.length === 1 ? '' : 's' }}</span>
+      </div>
 
       <div
         v-if="commentsLoadError"
@@ -150,66 +223,77 @@
         {{ commentsLoadError }}
       </div>
 
-      <ul class="mt-4 space-y-2">
+      <ul
+        class="mt-4 space-y-4"
+        aria-label="Ticket comments"
+      >
         <li
           v-for="c in allComments"
           :key="c.id"
-          class="rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-3 shadow-sm"
+          class="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-white shadow-[var(--shadow-sm)] ring-1 ring-black/[0.03]"
         >
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <span class="font-medium text-[var(--text-primary)]">{{ c.authorName }}</span>
+          <div
+            class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] bg-[var(--surface-main)]/50 px-4 py-3"
+          >
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-semibold text-[var(--text-primary)]">{{ c.authorName }}</span>
               <span
                 v-if="c.isStaff"
-                class="rounded-full bg-[var(--surface-mint)] px-2 py-0.5 text-xs font-semibold text-[var(--brand-green-dark)]"
+                class="rounded-full bg-[var(--surface-mint)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--brand-green-dark)] ring-1 ring-[var(--brand-green)]/25"
               >SecWeb support</span>
+              <span
+                v-else
+                class="rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-700 ring-1 ring-neutral-200/90"
+              >Customer</span>
             </div>
             <time
-              class="text-xs text-[var(--text-muted)]"
+              class="text-xs font-medium tabular-nums text-[var(--text-muted)]"
               :datetime="c.createdAt"
             >{{ formatDateTime(c.createdAt) }}</time>
           </div>
           <!-- VULN-03: v-html on comment body — stored XSS with weak server validation. -->
           <div
-            class="ticket-html-content mt-1.5 text-sm leading-snug text-[var(--text-secondary)]"
+            class="ticket-html-content px-4 py-3 text-sm leading-relaxed text-[var(--text-secondary)]"
             v-html="c.body"
           />
         </li>
       </ul>
 
       <form
-        class="mt-4 rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-muted)]/50 p-4"
+        class="mt-4 rounded-2xl border-2 border-dashed border-[var(--brand-green)]/35 bg-[var(--surface-mint)]/20 p-4 sm:p-5"
         @submit.prevent="onPostComment"
       >
         <div
           v-if="commentSubmitError"
-          class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900"
+          class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-900"
           role="alert"
         >
           {{ commentSubmitError }}
         </div>
         <label
           for="new-comment"
-          class="block text-sm font-medium text-[var(--text-primary)]"
-        >Add a comment</label>
+          class="block text-sm font-bold text-[var(--text-primary)]"
+        >Add a reply</label>
         <textarea
           id="new-comment"
           v-model="draft"
-          rows="2"
+          rows="3"
           maxlength="5000"
-          placeholder="Write a reply…"
-          class="mt-1.5 w-full rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm text-[var(--text-primary)] shadow-sm outline-none ring-[var(--brand-green)] placeholder:text-[var(--text-muted)] focus:border-transparent focus:ring-2"
+          placeholder="Type your message…"
+          class="mt-2 w-full rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-2.5 text-sm text-[var(--text-primary)] shadow-sm outline-none ring-[var(--brand-green)] placeholder:font-normal placeholder:text-[var(--text-muted)] focus:border-transparent focus:ring-2"
         />
-        <p class="mt-1 text-xs text-[var(--text-muted)]">
-          {{ draft.length }} / 5000
-        </p>
-        <button
-          type="submit"
-          class="mt-2 rounded-full bg-[var(--brand-green)] px-4 py-2 text-sm font-semibold text-[var(--text-on-green)] shadow-sm transition hover:brightness-95 disabled:opacity-50"
-          :disabled="!draft.trim() || postingComment"
-        >
-          {{ postingComment ? 'Posting…' : 'Post comment' }}
-        </button>
+        <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
+          <p class="text-xs font-medium text-[var(--text-muted)]">
+            {{ draft.length }} / 5000
+          </p>
+          <button
+            type="submit"
+            class="rounded-xl bg-[var(--brand-green)] px-5 py-2.5 text-sm font-bold text-[var(--text-on-green)] shadow-md transition hover:brightness-95 disabled:opacity-50"
+            :disabled="!draft.trim() || postingComment"
+          >
+            {{ postingComment ? 'Sending…' : 'Post reply' }}
+          </button>
+        </div>
       </form>
     </section>
   </div>
@@ -266,11 +350,14 @@ import {
   patchTicketStatus,
   type ApiTicketRow,
 } from '@/api/tickets'
+import CategoryBadge from '@/components/ui/CategoryBadge.vue'
+import TicketIdChip from '@/components/ui/TicketIdChip.vue'
 import TicketStatusEditor from '@/components/tickets/TicketStatusEditor.vue'
+import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
 import { getAuthUserSnapshot, getSessionCsrfToken } from '@/stores/auth-session'
 import { formatDateTime } from '@/utils/date-format'
-import { assigneeDisplayLabel, formatTicketCategoryLabel, reporterDisplayLabel } from '@/utils/ticket-ui'
+import { assigneeDisplayLabel, reporterDisplayLabel } from '@/utils/ticket-ui'
 import type { Ticket, TicketComment, TicketStatus } from '@/types/ticket'
 
 const route = useRoute()

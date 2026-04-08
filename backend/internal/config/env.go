@@ -33,7 +33,8 @@ type Config struct {
 	PasswordResetDuration string
 	GoEnv                 string
 	LogLevel              string
-	// Mail — Laravel-style: MAIL_MAILER=log|smtp (log = URLs in zerolog; smtp = e.g. Mailtrap).
+	// Mail — Laravel-style: MAIL_MAILER=log|smtp (log = URLs in zerolog; smtp = MAIL_HOST e.g. Mailtrap sandbox).
+	// Mailtrap: MAIL_HOST=sandbox.smtp.mailtrap.io MAIL_PORT=2525 MAIL_USERNAME/MAIL_PASSWORD from inbox SMTP settings.
 	MailDriver      string
 	MailHost        string
 	MailPort        string
@@ -56,11 +57,11 @@ func Load() Config {
 		DBUsername:            getEnv("DB_USERNAME", "admin"),
 		DBPassword:            getEnv("DB_PASSWORD", "password"),
 		DBPort:                getEnv("DB_PORT", "3306"),
-		SeedAdminEmail:        getEnv("SEED_ADMIN_EMAIL", "admin@secweb.ie"),
+		SeedAdminEmail:        getEnv("SEED_ADMIN_EMAIL", "super.admin@secweb.ie"),
 		SeedAdminPassword:     getEnv("SEED_ADMIN_PASSWORD", "password"),
-		SeedAdminFirstName:    getEnv("SEED_ADMIN_FIRST_NAME", "cyber"),
+		SeedAdminFirstName:    getEnv("SEED_ADMIN_FIRST_NAME", "super"),
 		SeedAdminMiddleName:   getEnv("SEED_ADMIN_MIDDLE_NAME", ""),
-		SeedAdminLastName:     getEnv("SEED_ADMIN_LAST_NAME", "security"),
+		SeedAdminLastName:     getEnv("SEED_ADMIN_LAST_NAME", "admin"),
 		SeedCA:                getEnvBool("SEED_CA", true),
 		PasetoSymmetricKey:    getEnv("PASETO_SYMMETRIC_KEY", "12345678901234567890123456789012"),
 		AccessTokenDuration:   getEnv("ACCESS_TOKEN_DURATION", "15m"),

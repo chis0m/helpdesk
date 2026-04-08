@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="flex w-[260px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--surface-sidebar)] px-3 py-4"
+    class="flex w-[260px] shrink-0 flex-col border-r border-[var(--border-subtle)] bg-[var(--surface-sidebar)] px-3 py-5 shadow-[2px_0_12px_rgba(15,23,42,0.03)]"
   >
     <RouterLink
       to="/"

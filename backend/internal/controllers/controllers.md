@@ -18,7 +18,7 @@ Handlers read **`middleware` context keys** for user UUID, role, session id.
 
 ## `UserController`
 
-Admin user list, **CreateStaff** (admin/super_admin), **GetByID** / **UpdateByID** by path id, **UpdateRoleByUserID**. End-user accounts are created via **`AuthController.Signup`** (`POST /api/auth/signup`), not this controller.
+Admin user list, **CreateStaff** (`POST /api/admin/staff`, admin/super_admin; optional `role` staff|admin, **admin** only for super_admin actor), **GetByID** / **UpdateByID** by path id, **UpdateRoleByUserID**. End-user accounts are created via **`AuthController.Signup`** (`POST /api/auth/signup`), not this controller.
 
 ## `InviteController`
 

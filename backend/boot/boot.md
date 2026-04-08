@@ -32,7 +32,7 @@ This package wires the HTTP server **from process start to listening on a port**
 - `Question: when are monthly billing reminder emails sent?` — reporter: Jane Doe; assigned to Cassey Support; status open.
 - `Invoice PDF shows wrong VAT rate for last month's bill` — reporter: Jane Doe; assigned to Sam Support; status closed.
 
-Default **super-admin** seed email domain is **`secweb.ie`** (`admin@secweb.ie` unless overridden by `SEED_ADMIN_EMAIL`).
+Default **super-admin** seed is **`super.admin@secweb.ie`** (firstname **super**, lastname **admin**) unless overridden by `SEED_ADMIN_*` env vars.
 6. **`auth.NewPasetoMaker(key)`** — builds the symmetric PASETO signer/verifier (**32-byte** key from config). Shared by middleware and `AuthService`.
 7. **`container.New(db, cfg, tokenMaker)`** — constructs repositories, services, controllers, and the public-auth CSRF store. See `internal/container/container.md`.
 8. **`gin.Default()`** — engine with logger + recovery middleware.

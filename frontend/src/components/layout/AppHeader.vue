@@ -1,9 +1,9 @@
 <template>
   <header
-    class="flex h-[56px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-white px-5 lg:px-8"
+    class="sticky top-0 z-20 flex h-[56px] shrink-0 items-center justify-between border-b border-[var(--border-subtle)] bg-white/90 px-5 shadow-[var(--shadow-header)] backdrop-blur-md supports-[backdrop-filter]:bg-white/75 lg:px-8"
   >
     <div class="min-w-0">
-      <h1 class="truncate text-lg font-semibold tracking-tight text-[var(--text-primary)] lg:text-xl">
+      <h1 class="truncate text-lg font-bold tracking-tight text-[var(--text-primary)] lg:text-xl">
         {{ title }}
       </h1>
     </div>

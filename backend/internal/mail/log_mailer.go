@@ -19,9 +19,12 @@ func NewLogStaffInviteNotifier() *LogStaffInviteNotifier {
 
 func (n *LogStaffInviteNotifier) SendStaffInvite(toEmail, inviteURL string) error {
 	logger.L().Info().
+		Str("mail_driver", "log").
+		Str("mail_outcome", "success").
+		Str("kind", "staff_invite").
 		Str("to", toEmail).
 		Str("invite_url", inviteURL).
-		Msg("CA: staff invite link (email not sent; copy URL from logs)")
+		Msg("mail: staff invite written to logs successfully (not sent via SMTP)")
 	return nil
 }
 
@@ -39,8 +42,11 @@ func NewLogPasswordResetNotifier() *LogPasswordResetNotifier {
 
 func (n *LogPasswordResetNotifier) SendPasswordReset(toEmail, resetURL string) error {
 	logger.L().Info().
+		Str("mail_driver", "log").
+		Str("mail_outcome", "success").
+		Str("kind", "password_reset").
 		Str("to", toEmail).
 		Str("reset_url", resetURL).
-		Msg("CA: password reset link (email not sent; copy URL from logs)")
+		Msg("mail: password reset link written to logs successfully (not sent via SMTP)")
 	return nil
 }

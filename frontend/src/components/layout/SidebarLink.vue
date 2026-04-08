@@ -1,15 +1,16 @@
 <template>
   <a
     :href="href"
-    class="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition"
+    class="hd-motion-underline flex items-center gap-3 rounded-xl border border-transparent py-2.5 pl-3 pr-3 text-sm font-semibold"
     :class="isLinkActive
-      ? 'bg-[var(--surface-active)] text-[var(--text-primary)]'
-      : 'text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'"
+      ? 'border-[var(--brand-green)]/25 bg-[var(--surface-mint)]/70 text-[var(--brand-green-dark)] shadow-sm ring-1 ring-[var(--brand-green)]/15'
+      : 'text-[var(--text-secondary)] hover:border-[var(--border-subtle)] hover:bg-white hover:text-[var(--text-primary)] hover:shadow-sm'"
     @click="onClick"
   >
     <component
       :is="icon"
-      class="h-5 w-5 shrink-0 opacity-80"
+      class="h-5 w-5 shrink-0"
+      :class="isLinkActive ? 'text-[var(--brand-green-dark)]' : 'opacity-85'"
     />
     {{ label }}
   </a>

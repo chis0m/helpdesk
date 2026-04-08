@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"helpdesk/backend/internal/config"
+	"helpdesk/backend/internal/logger"
 )
 
 // SMTPMailer sends transactional mail via SMTP (e.g. Mailtrap). Implements StaffInviteNotifier and PasswordResetNotifier.
@@ -25,6 +26,12 @@ func NewSMTPMailer(cfg config.Config) *SMTPMailer {
 
 func (s *SMTPMailer) SendStaffInvite(toEmail, inviteURL string) error {
 	if err := s.validate(); err != nil {
+		logger.L().Error().Err(err).
+			Str("mail_driver", "smtp").
+			Str("mail_outcome", "failed").
+			Str("kind", "staff_invite").
+			Str("to", toEmail).
+			Msg("mail: smtp configuration validation failed")
 		return err
 	}
 	app := strings.TrimSpace(s.cfg.AppName)
@@ -47,13 +54,25 @@ func (s *SMTPMailer) SendStaffInvite(toEmail, inviteURL string) error {
 		Footer:      "You received this because an administrator invited this email address. If this wasn’t you, you can ignore this message.",
 	})
 	if err != nil {
+		logger.L().Error().Err(err).
+			Str("mail_driver", "smtp").
+			Str("mail_outcome", "failed").
+			Str("kind", "staff_invite").
+			Str("to", toEmail).
+			Msg("mail: smtp email HTML render failed")
 		return err
 	}
-	return s.send(toEmail, subject, plain, bodyHTML)
+	return s.send(toEmail, subject, plain, bodyHTML, "staff_invite")
 }
 
 func (s *SMTPMailer) SendPasswordReset(toEmail, resetURL string) error {
 	if err := s.validate(); err != nil {
+		logger.L().Error().Err(err).
+			Str("mail_driver", "smtp").
+			Str("mail_outcome", "failed").
+			Str("kind", "password_reset").
+			Str("to", toEmail).
+			Msg("mail: smtp configuration validation failed")
 		return err
 	}
 	app := strings.TrimSpace(s.cfg.AppName)
@@ -76,9 +95,15 @@ func (s *SMTPMailer) SendPasswordReset(toEmail, resetURL string) error {
 		Footer:      "For security, this link expires after a short time. Never share this email with anyone.",
 	})
 	if err != nil {
+		logger.L().Error().Err(err).
+			Str("mail_driver", "smtp").
+			Str("mail_outcome", "failed").
+			Str("kind", "password_reset").
+			Str("to", toEmail).
+			Msg("mail: smtp email HTML render failed")
 		return err
 	}
-	return s.send(toEmail, subject, plain, bodyHTML)
+	return s.send(toEmail, subject, plain, bodyHTML, "password_reset")
 }
 
 func (s *SMTPMailer) validate() error {
@@ -91,7 +116,7 @@ func (s *SMTPMailer) validate() error {
 	return nil
 }
 
-func (s *SMTPMailer) send(to, subject, plainText, htmlBody string) error {
+func (s *SMTPMailer) send(to, subject, plainText, htmlBody string, kind string) error {
 	from := formatMailFrom(s.cfg.MailFromName, s.cfg.MailFromAddress)
 	fromAddr := strings.TrimSpace(s.cfg.MailFromAddress)
 
@@ -101,7 +126,14 @@ func (s *SMTPMailer) send(to, subject, plainText, htmlBody string) error {
 	}
 	portNum, err := strconv.Atoi(port)
 	if err != nil || portNum < 1 || portNum > 65535 {
-		return fmt.Errorf("mail: invalid MAIL_PORT %q", s.cfg.MailPort)
+		portErr := fmt.Errorf("mail: invalid MAIL_PORT %q", s.cfg.MailPort)
+		logger.L().Error().Err(portErr).
+			Str("mail_driver", "smtp").
+			Str("mail_outcome", "failed").
+			Str("kind", kind).
+			Str("to", to).
+			Msg("mail: smtp invalid port")
+		return portErr
 	}
 
 	host := strings.TrimSpace(s.cfg.MailHost)
@@ -109,7 +141,28 @@ func (s *SMTPMailer) send(to, subject, plainText, htmlBody string) error {
 	auth := smtp.PlainAuth("", strings.TrimSpace(s.cfg.MailUsername), s.cfg.MailPassword, host)
 
 	raw := buildMultipartMessage(from, to, subject, plainText, htmlBody)
-	return smtp.SendMail(addr, auth, fromAddr, []string{to}, raw)
+	if err := smtp.SendMail(addr, auth, fromAddr, []string{to}, raw); err != nil {
+		logger.L().Error().Err(err).
+			Str("mail_driver", "smtp").
+			Str("mail_outcome", "failed").
+			Str("kind", kind).
+			Str("to", to).
+			Str("subject", subject).
+			Str("from", fromAddr).
+			Str("smtp_host", host).
+			Msg("mail: smtp send failed")
+		return err
+	}
+	logger.L().Info().
+		Str("mail_driver", "smtp").
+		Str("mail_outcome", "success").
+		Str("kind", kind).
+		Str("to", to).
+		Str("subject", subject).
+		Str("from", fromAddr).
+		Str("smtp_host", host).
+		Msg("mail: transactional email sent successfully")
+	return nil
 }
 
 func formatMailFrom(name, address string) string {

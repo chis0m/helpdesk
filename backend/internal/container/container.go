@@ -42,7 +42,7 @@ func New(db *gorm.DB, cfg config.Config, tokenMaker auth.MakerInterface) *Contai
 	healthController := controllers.NewHealthController()
 	authController := controllers.NewAuthController(cfg, authService, publicAuthCSRFStore)
 	userController := controllers.NewUserController(userService)
-	inviteController := controllers.NewInviteController(inviteService, userService)
+	inviteController := controllers.NewInviteController(cfg, inviteService, userService)
 	ticketController := controllers.NewTicketController(ticketService, userRepo)
 
 	return &Container{

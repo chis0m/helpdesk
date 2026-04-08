@@ -5,6 +5,7 @@ import type { AuthMeData, LoginResponseData } from '@/api/auth'
 import type { RefreshResponseData } from '@/api/auth-refresh-internal'
 
 const CSRF_KEY = 'secweb-helpdesk-session-csrf'
+const CSRF_EXPIRES_AT_KEY = 'secweb-helpdesk-session-csrf-expires-at-utc'
 const USER_KEY = 'secweb-helpdesk-session-user'
 const ACCESS_EXPIRES_AT_KEY = 'secweb-helpdesk-access-expires-at-utc'
 
@@ -21,6 +22,7 @@ export function setAuthSessionFromLogin(data: LoginResponseData): void {
     return
   try {
     sessionStorage.setItem(CSRF_KEY, data.csrf_token)
+    sessionStorage.setItem(CSRF_EXPIRES_AT_KEY, data.csrf_expires_at_utc)
     sessionStorage.setItem(ACCESS_EXPIRES_AT_KEY, data.access_expires_at_utc)
     const user: AuthUserSnapshot = {
       user_id: data.user_id,
@@ -42,6 +44,7 @@ export function setAuthSessionFromRefresh(data: RefreshResponseData): void {
     return
   try {
     sessionStorage.setItem(CSRF_KEY, data.csrf_token)
+    sessionStorage.setItem(CSRF_EXPIRES_AT_KEY, data.csrf_expires_at_utc)
     sessionStorage.setItem(ACCESS_EXPIRES_AT_KEY, data.access_expires_at_utc)
     const prev = getAuthUserSnapshot()
     if (prev) {
@@ -68,6 +71,26 @@ export function getSessionCsrfToken(): string | null {
   if (typeof sessionStorage === 'undefined')
     return null
   return sessionStorage.getItem(CSRF_KEY)
+}
+
+/** Server CSRF window — used to rotate before mutating requests (independent of access token TTL). */
+export function getCsrfExpiresAtUtc(): string | null {
+  if (typeof sessionStorage === 'undefined')
+    return null
+  return sessionStorage.getItem(CSRF_EXPIRES_AT_KEY)
+}
+
+/** After `GET /api/auth/csrf-token` — new session CSRF and expiry only. */
+export function setSessionCsrfPair(token: string, expiresAtUtc: string): void {
+  if (typeof sessionStorage === 'undefined')
+    return
+  try {
+    sessionStorage.setItem(CSRF_KEY, token)
+    sessionStorage.setItem(CSRF_EXPIRES_AT_KEY, expiresAtUtc)
+  }
+  catch {
+    /* ignore */
+  }
 }
 
 /** After `GET /api/auth/me` — update `must_change_password` and identity fields (TASK.md §8.3). */
@@ -129,6 +152,7 @@ export function clearAuthSession(): void {
   if (typeof sessionStorage === 'undefined')
     return
   sessionStorage.removeItem(CSRF_KEY)
+  sessionStorage.removeItem(CSRF_EXPIRES_AT_KEY)
   sessionStorage.removeItem(USER_KEY)
   sessionStorage.removeItem(ACCESS_EXPIRES_AT_KEY)
 }

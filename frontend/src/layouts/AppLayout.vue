@@ -3,8 +3,12 @@
     <AppSidebar />
     <div class="flex min-w-0 flex-1 flex-col">
       <AppHeader :title="pageTitle" />
-      <main class="flex-1 overflow-auto bg-[var(--surface-main)]">
-        <div class="mx-auto max-w-6xl px-5 py-5 lg:px-8 lg:py-7">
+      <main class="relative flex-1 overflow-auto bg-[var(--surface-main)]">
+        <div
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-10%,rgba(34,197,94,0.09),transparent_55%)]"
+          aria-hidden="true"
+        />
+        <div class="relative mx-auto max-w-6xl px-5 py-6 lg:px-8 lg:py-8">
           <RouterView />
         </div>
       </main>

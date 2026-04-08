@@ -20,6 +20,13 @@ export function registerSessionRefreshFailure(handler: () => void): void {
   onRefreshFailure = handler
 }
 
+/** Clear client session, stop timers, and navigate to login (e.g. after 401 or failed refresh). */
+export function invalidateClientSessionAndRedirect(): void {
+  clearSessionRefreshSchedule()
+  clearAuthSession()
+  onRefreshFailure?.()
+}
+
 /** Paths where 401 is not “access expired” (wrong password, invalid token, etc.). */
 const NO_REFRESH_401_PATHS = new Set([
   '/api/auth/login',
@@ -98,17 +105,15 @@ export async function refreshSessionOnce(): Promise<boolean> {
   if (refreshInFlight)
     return refreshInFlight
   const csrf = getSessionCsrfToken()
-  if (!csrf)
+  if (!csrf) {
+    invalidateClientSessionAndRedirect()
     return false
+  }
   const p = (async (): Promise<boolean> => {
     try {
       const result = await postAuthRefresh(csrf)
       if (!result.ok) {
-        if (result.status === 401 || result.status === 403) {
-          clearSessionRefreshSchedule()
-          clearAuthSession()
-          onRefreshFailure?.()
-        }
+        invalidateClientSessionAndRedirect()
         return false
       }
       setAuthSessionFromRefresh(result.data)
