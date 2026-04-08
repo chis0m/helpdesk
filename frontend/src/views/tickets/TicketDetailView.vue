@@ -37,7 +37,9 @@
         />
         <div class="relative">
         <div class="flex flex-wrap items-center gap-2">
-          <TicketIdChip :id="ticket.id" />
+          <span
+            class="inline-flex items-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
+          >ID: {{ ticket.id }}</span>
           <CategoryBadge :category="ticket.category" />
           <TicketStatusBadge
             :status="ticket.status"
@@ -59,6 +61,14 @@
           class="grid gap-4 sm:grid-cols-2"
           :class="isSupportViewer ? 'lg:grid-cols-3' : 'lg:grid-cols-4'"
         >
+          <div class="min-w-0">
+            <dt class="text-xs text-[var(--text-muted)]">
+              Ticket ID
+            </dt>
+            <dd class="mt-0.5 font-mono text-sm font-semibold tabular-nums text-[var(--text-primary)]">
+              {{ ticket.id }}
+            </dd>
+          </div>
           <div
             v-if="!isSupportViewer"
             class="min-w-0"
@@ -351,7 +361,6 @@ import {
   type ApiTicketRow,
 } from '@/api/tickets'
 import CategoryBadge from '@/components/ui/CategoryBadge.vue'
-import TicketIdChip from '@/components/ui/TicketIdChip.vue'
 import TicketStatusEditor from '@/components/tickets/TicketStatusEditor.vue'
 import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'

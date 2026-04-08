@@ -12,52 +12,52 @@ import (
 
 // CA seed ticket titles (idempotent firstOrCreate by title). Must Change user has no tickets.
 const (
-	// John Doe (settled password) — three tickets
-	TicketJohnOpenTitle       = "Sidebar keeps collapsing when I switch between projects"
-	TicketJohnInProgressTitle = "CSV export times out after about 30 seconds"
-	TicketJohnResolvedTitle   = "Cannot log in after password reset — now fixed on my side"
+	// Mark Anthony (settled password) — three tickets
+	TicketMarkOpenTitle       = "Sidebar keeps collapsing when I switch between projects"
+	TicketMarkInProgressTitle = "CSV export times out after about 30 seconds"
+	TicketMarkResolvedTitle   = "Cannot log in after password reset — now fixed on my side"
 	// Jane Doe — two tickets
 	TicketJaneOpenTitle  = "Question: when are monthly billing reminder emails sent?"
 	TicketJaneClosedTitle = "Invoice PDF shows wrong VAT rate for last month's bill"
 )
 
-// EnsureTickets creates CA demo tickets: 3 for John, 2 for Jane. Assignees balanced between Sam (3) and Cassey (2).
+// EnsureTickets creates CA demo tickets: 3 for Mark, 2 for Jane. Assignees balanced between Sam (3) and Cassey (2).
 func EnsureTickets(
 	db *gorm.DB,
 	uMust *models.User,
-	uJohn *models.User,
+	uMark *models.User,
 	uJane *models.User,
 	staffSam *models.User,
 	staffCassey *models.User,
 ) error {
 	_ = uMust // no tickets for first-login / must-change user
 
-	if uJohn == nil || uJane == nil || staffSam == nil || staffCassey == nil {
+	if uMark == nil || uJane == nil || staffSam == nil || staffCassey == nil {
 		return fmt.Errorf("EnsureTickets: missing user(s)")
 	}
 
 	samID := staffSam.ID
 	casseyID := staffCassey.ID
 
-	// John — open (Sam)
+	// Mark — open (Sam)
 	if _, err := firstOrCreateTicketWithStatus(
-		db, uJohn.ID, TicketJohnOpenTitle,
+		db, uMark.ID, TicketMarkOpenTitle,
 		"Using the web app on Safari 17. The left sidebar collapses every time I click a different project in the dropdown. Expected it to stay open until I toggle it.",
 		"general", models.TicketStatusOpen, &samID,
 	); err != nil {
 		return err
 	}
-	// John — in progress (Cassey)
+	// Mark — in progress (Cassey)
 	if _, err := firstOrCreateTicketWithStatus(
-		db, uJohn.ID, TicketJohnInProgressTitle,
+		db, uMark.ID, TicketMarkInProgressTitle,
 		"Exporting a medium-sized report (~5k rows) to CSV. The request runs then fails after roughly half a minute. Browser: Chrome on macOS.",
 		"general", models.TicketStatusInProgress, &casseyID,
 	); err != nil {
 		return err
 	}
-	// John — resolved (Sam)
+	// Mark — resolved (Sam)
 	if _, err := firstOrCreateTicketWithStatus(
-		db, uJohn.ID, TicketJohnResolvedTitle,
+		db, uMark.ID, TicketMarkResolvedTitle,
 		"After using the password reset link I was stuck in a loop on the login page. This started after the weekend maintenance window.",
 		"general", models.TicketStatusResolved, &samID,
 	); err != nil {

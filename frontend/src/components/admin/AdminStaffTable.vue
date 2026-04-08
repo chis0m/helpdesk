@@ -78,9 +78,9 @@
                 class="mt-1 block text-[11px] text-[var(--text-muted)]"
               >You cannot change your own role here.</span>
               <span
-                v-else-if="!canEditRole(s) && actorRole === 'admin'"
+                v-else-if="!canEditRole(s) && s.role === 'staff' && actorRole !== 'super_admin'"
                 class="mt-1 block text-[11px] text-[var(--text-muted)]"
-              >Only a super administrator can change this role.</span>
+              >Only a super administrator can promote staff to an administrator role.</span>
             </td>
             <td class="px-4 py-3 text-[var(--text-muted)]">
               {{ formatDateTime(s.createdAt) }}
@@ -156,30 +156,20 @@ function isOwnRow(s: StaffMember): boolean {
   return Number(s.id) === id
 }
 
+/** Only super administrators may promote staff; staff may only become admin or super_admin (not customers). */
 function canEditRole(s: StaffMember): boolean {
-  const a = props.actorRole
+  if (props.actorRole !== 'super_admin')
+    return false
   if (isOwnRow(s))
     return false
-  if (a === 'super_admin')
-    return true
-  if (a === 'admin')
-    return s.role === 'staff'
-  return false
+  return s.role === 'staff'
 }
 
 function roleOptionsForRow(s: StaffMember): { value: AdminDirectoryRole; label: string }[] {
-  if (props.actorRole === 'super_admin') {
+  if (props.actorRole === 'super_admin' && s.role === 'staff') {
     return [
-      { value: 'user', label: 'User (customer)' },
-      { value: 'staff', label: 'Staff' },
       { value: 'admin', label: 'Administrator' },
       { value: 'super_admin', label: 'Super administrator' },
-    ]
-  }
-  if (props.actorRole === 'admin' && s.role === 'staff') {
-    return [
-      { value: 'staff', label: 'Staff' },
-      { value: 'user', label: 'User (customer)' },
     ]
   }
   return [{ value: s.role, label: roleLabel(s.role) }]

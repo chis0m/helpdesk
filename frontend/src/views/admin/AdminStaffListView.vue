@@ -8,8 +8,8 @@
         Staff
       </h1>
       <p class="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">
-        Everyone on the internal team. Use the Role column to change access;
-        super administrators can assign any role; administrators can move staff to or from customer accounts.
+        Everyone on the internal team. Super administrators can promote <strong class="font-medium text-[var(--text-primary)]">staff</strong>
+        to administrator or super administrator. Customers and internal roles are not interchangeable here.
       </p>
     </header>
 

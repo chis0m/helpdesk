@@ -19,16 +19,16 @@ This package wires the HTTP server **from process start to listening on a port**
 | Email | Role | Password |
 | --- | --- | --- |
 | `must.change@example.com` | user | `password` (must change on first login) |
-| `john.doe@sample.com` | user | `password` |
+| `mark.anthony@example.com` | user | `password` |
 | `jane.doe@sample.com` | user | `password` |
 | `sam.support@secweb.ie` | staff | `password` |
 | `cassey.support@secweb.ie` | staff | `password` |
 
-**Tickets** (matched by title; skipped if already present). The **Must Change** user has **no tickets**. **John Doe** has three; **Jane Doe** has two. Assignees are balanced: **Sam** holds three tickets (John open, John resolved, Jane closed); **Cassey** holds two (John in progress, Jane open).
+**Tickets** (matched by title; skipped if already present). The **Must Change** user has **no tickets**. **Mark Anthony** has three; **Jane Doe** has two. Assignees are balanced: **Sam** holds three tickets (Mark open, Mark resolved, Jane closed); **Cassey** holds two (Mark in progress, Jane open).
 
-- `Sidebar keeps collapsing when I switch between projects` — reporter: John Doe; assigned to Sam Support; status open.
-- `CSV export times out after about 30 seconds` — reporter: John Doe; assigned to Cassey Support; status in progress.
-- `Cannot log in after password reset — now fixed on my side` — reporter: John Doe; assigned to Sam Support; status resolved.
+- `Sidebar keeps collapsing when I switch between projects` — reporter: Mark Anthony; assigned to Sam Support; status open.
+- `CSV export times out after about 30 seconds` — reporter: Mark Anthony; assigned to Cassey Support; status in progress.
+- `Cannot log in after password reset — now fixed on my side` — reporter: Mark Anthony; assigned to Sam Support; status resolved.
 - `Question: when are monthly billing reminder emails sent?` — reporter: Jane Doe; assigned to Cassey Support; status open.
 - `Invoice PDF shows wrong VAT rate for last month's bill` — reporter: Jane Doe; assigned to Sam Support; status closed.
 

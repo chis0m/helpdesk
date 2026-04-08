@@ -114,9 +114,9 @@ func (u *UserController) UpdateRoleByUserID(c *gin.Context) {
 	}
 	roleStr, ok := roleValue.(string)
 	actorRole := models.UserRole(roleStr)
-	if !ok || (actorRole != models.RoleAdmin && actorRole != models.RoleSuperAdmin) {
-		log.Warn().Str("role", roleStr).Msg("update role failed: admin or super_admin access required")
-		response.FailureWithAbort(c, http.StatusForbidden, "admin or super_admin access required", "admin or super_admin access required")
+	if !ok || actorRole != models.RoleSuperAdmin {
+		log.Warn().Str("role", roleStr).Msg("update role failed: super_admin access required")
+		response.FailureWithAbort(c, http.StatusForbidden, "super_admin access required", "super_admin access required")
 		return
 	}
 

@@ -80,8 +80,10 @@
             :to="paths.dashboard.ticketDetail(String(t.ticket_id))"
             class="group flex items-start gap-3 px-4 py-4 transition duration-200 hover:bg-gradient-to-r hover:from-[var(--surface-mint)]/25 hover:to-transparent sm:items-center sm:gap-4"
           >
-            <div class="hidden pt-0.5 sm:block">
-              <TicketIdChip :id="t.ticket_id" />
+            <div class="shrink-0 pt-0.5">
+              <span
+                class="inline-flex items-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
+              >ID: {{ t.ticket_id }}</span>
             </div>
             <div class="min-w-0 flex-1">
               <p class="text-base font-semibold leading-snug text-[var(--text-primary)] group-hover:text-[var(--brand-green-dark)]">
@@ -130,7 +132,6 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CategoryBadge from '@/components/ui/CategoryBadge.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
-import TicketIdChip from '@/components/ui/TicketIdChip.vue'
 import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
 import { fetchTicketList, fetchTicketSearch, type ApiTicketRow } from '@/api/tickets'

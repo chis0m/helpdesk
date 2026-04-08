@@ -13,12 +13,12 @@ import (
 
 // Exported emails for TASK.md / boot docs (CA seed customer users).
 const (
-	EmailMustChange = "must.change@example.com"
-	EmailJohnDoe    = "john.doe@sample.com"
-	EmailJaneDoe    = "jane.doe@sample.com"
+	EmailMustChange  = "must.change@example.com"
+	EmailMarkAnthony = "mark.anthony@example.com"
+	EmailJaneDoe     = "jane.doe@sample.com"
 )
 
-// EnsureCustomerUsers creates three CA demo customers: Must Change (first login), John Doe, Jane Doe (both passwords settled).
+// EnsureCustomerUsers creates three CA demo customers: Must Change (first login), Mark Anthony, Jane Doe (both passwords settled).
 // Password hashes use Argon2id (same as auth login). Legacy bcrypt rows are upgraded on re-seed.
 func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User, error) {
 	hash, err := auth.HashPassword(caTestPassword)
@@ -44,11 +44,11 @@ func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User,
 		return nil, nil, nil, err
 	}
 
-	uJohn, _, err := firstOrCreateUser(
+	uMark, _, err := firstOrCreateUser(
 		db,
-		EmailJohnDoe,
-		"John",
-		"Doe",
+		EmailMarkAnthony,
+		"Mark",
+		"Anthony",
 		models.RoleUser,
 		false,
 		&settled,
@@ -57,7 +57,7 @@ func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User,
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err := ensureArgon2idPasswordHash(db, uJohn, caTestPassword); err != nil {
+	if err := ensureArgon2idPasswordHash(db, uMark, caTestPassword); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -78,10 +78,10 @@ func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User,
 		return nil, nil, nil, err
 	}
 
-	if uMust == nil || uJohn == nil || uJane == nil {
+	if uMust == nil || uMark == nil || uJane == nil {
 		return nil, nil, nil, fmt.Errorf("EnsureCustomerUsers: missing user(s)")
 	}
-	return uMust, uJohn, uJane, nil
+	return uMust, uMark, uJane, nil
 }
 
 // ensureArgon2idPasswordHash re-hashes with Argon2id if the stored hash is legacy (e.g. bcrypt from an older seed).

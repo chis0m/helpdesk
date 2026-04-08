@@ -39,20 +39,31 @@ func (s *UserService) UpdateRoleByIDAsActor(userID uint64, targetRole models.Use
 		return nil, err
 	}
 
-	switch actorRole {
-	case models.RoleSuperAdmin:
-		return s.userRepo.UpdateRoleByID(userID, targetRole)
-	case models.RoleAdmin:
-		if targetRole != models.RoleUser && targetRole != models.RoleStaff {
-			return nil, ErrUserRoleChangeForbidden
-		}
-		if targetUser.Role == models.RoleAdmin || targetUser.Role == models.RoleSuperAdmin {
-			return nil, ErrUserRoleChangeForbidden
-		}
-		return s.userRepo.UpdateRoleByID(userID, targetRole)
-	default:
+	// Only super_admin may change roles. Staff may only be promoted to admin or super_admin
+	// (never to customer/user). Customers (user) must never be given the staff role via this API.
+	if actorRole != models.RoleSuperAdmin {
 		return nil, ErrUserRoleChangeForbidden
 	}
+	if err := validateRoleTransition(targetUser.Role, targetRole); err != nil {
+		return nil, err
+	}
+	return s.userRepo.UpdateRoleByID(userID, targetRole)
+}
+
+func validateRoleTransition(current, target models.UserRole) error {
+	if current == target {
+		return nil
+	}
+	if current == models.RoleUser && target == models.RoleStaff {
+		return ErrUserRoleChangeForbidden
+	}
+	if current == models.RoleStaff && target == models.RoleUser {
+		return ErrUserRoleChangeForbidden
+	}
+	if current == models.RoleStaff && target != models.RoleAdmin && target != models.RoleSuperAdmin {
+		return ErrUserRoleChangeForbidden
+	}
+	return nil
 }
 
 // VULN-02: IDOR on user profiles — loads user by id with no actor-vs-target authorization.
