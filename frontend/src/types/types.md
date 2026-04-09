@@ -12,5 +12,5 @@ Types for **admin directory** / staff lists (`PortalUser`, `StaffMember`, etc.).
 
 ## Usage
 
-- `import type { ... } from '@/types/ticket'` in views or components.
-- Keep API response shapes next to the API modules (`api/*.ts`); keep **view models** here when they differ from raw JSON.
+- Views and components import from `@/types/...` (e.g. `import type { Ticket } from '@/types/ticket'`).
+- API envelopes and response shapes live with API code (`src/api/types.ts` and modules); this folder holds UI-side types that differ from raw JSON.

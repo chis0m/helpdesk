@@ -36,4 +36,4 @@ If `POST /api/auth/refresh` returns **401/403**, the session is cleared, the ref
 
 ## Logout
 
-`perform-logout.ts` clears the refresh timer, calls `POST /api/auth/logout` when possible, then clears `sessionStorage` and routes away.
+`perform-logout.ts` clears the refresh timer, calls `POST /api/auth/logout` when a session CSRF token exists, then clears `sessionStorage` and routes away.

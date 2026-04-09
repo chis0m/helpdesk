@@ -17,8 +17,8 @@ const (
 	TicketMarkInProgressTitle = "CSV export times out after about 30 seconds"
 	TicketMarkResolvedTitle   = "Cannot log in after password reset — now fixed on my side"
 	// Jane Doe — two tickets
-	TicketJaneOpenTitle  = "Question: when are monthly billing reminder emails sent?"
-	TicketJaneClosedTitle = "Invoice PDF shows wrong VAT rate for last month's bill"
+	TicketJaneOpenTitle = "Question: how do charges for SecWeb technical services appear on our monthly bill?"
+	TicketJaneClosedTitle = "Can't keep the VPN connected today. I'm out for meetings all day and need remote access to work."
 )
 
 // EnsureTickets creates CA demo tickets: 3 for Mark, 2 for Jane. Assignees balanced between Sam (3) and Cassey (2).
@@ -64,19 +64,19 @@ func EnsureTickets(
 		return err
 	}
 
-	// Jane — open (Cassey)
+	// Jane — open (Cassey): billing for technical / professional services vs. base subscription.
 	if _, err := firstOrCreateTicketWithStatus(
 		db, uJane.ID, TicketJaneOpenTitle,
-		"We need to coordinate with finance. Are billing reminders sent on the 1st, or on the invoice date? Thanks.",
+		"Our finance team is reviewing last quarter. I need to understand how fees for technical services SecWeb provides (extra support hours, onboarding assistance, scoped projects) appear on the invoice alongside the standard monthly charge. Details in the comments.",
 		"billing", models.TicketStatusOpen, &casseyID,
 	); err != nil {
 		return err
 	}
-	// Jane — closed (Sam)
+	// Jane — closed (Sam): VPN thread; see ca/comments.go for credential-in-ticket demo (IDOR impact).
 	if _, err := firstOrCreateTicketWithStatus(
 		db, uJane.ID, TicketJaneClosedTitle,
-		"The PDF attached to last month's billing email shows the wrong VAT percentage for our region. Need a corrected document or confirmation on the rate.",
-		"billing", models.TicketStatusClosed, &samID,
+		"I'm unable to stay connected to the company VPN while I'm out for meetings today. I need remote access for work — more detail in the comments below.",
+		"general", models.TicketStatusClosed, &samID,
 	); err != nil {
 		return err
 	}

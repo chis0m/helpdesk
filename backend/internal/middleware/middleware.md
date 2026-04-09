@@ -47,13 +47,7 @@ For **pre-login** routes: validates token issued by **`PublicAuthCSRFStore`**, c
 
 ## `IPRateLimiter`
 
-In-memory **per-IP** sliding window (mutex + map). Used on login, signup, forgot-password, invite verify/accept. **Not distributed** — fine for single instance / coursework; use Redis for horizontal scale.
-
-References that informed the approach:
-
-- https://www.alexedwards.net/blog/how-to-rate-limit-http-requests  
-- https://pkg.go.dev/sync#Mutex  
-- https://go.dev/doc/faq#atomic_maps  
+In-memory **per-IP** sliding window (mutex + map). Used on login, signup, forgot-password, invite verify/accept. Per-process; multiple API replicas require a shared limiter instead of this map.
 
 ## Typical request chains
 

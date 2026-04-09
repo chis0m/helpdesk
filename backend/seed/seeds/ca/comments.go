@@ -10,7 +10,7 @@ import (
 	"helpdesk/backend/internal/models"
 )
 
-// EnsureTicketComments adds realistic thread comments: Mark's in_progress + resolved tickets; Jane's closed ticket (5).
+// EnsureTicketComments adds realistic thread comments: Mark's in_progress + resolved; Jane's open (3); Jane's closed (4).
 // Staff authors are Sam Support and Cassey Support. Idempotent by (ticket_id, body).
 func EnsureTicketComments(
 	db *gorm.DB,
@@ -28,6 +28,10 @@ func EnsureTicketComments(
 		return err
 	}
 	tResolved, err := ticketByTitle(db, TicketMarkResolvedTitle)
+	if err != nil {
+		return err
+	}
+	tJaneOpen, err := ticketByTitle(db, TicketJaneOpenTitle)
 	if err != nil {
 		return err
 	}
@@ -62,14 +66,24 @@ func EnsureTicketComments(
 		return err
 	}
 
-	// Jane — closed: five-comment history (Jane, Sam, Jane, Cassey, Jane)
+	// Jane — open: technical / professional services billing vs. base subscription (Cassey assigned).
+	baseJaneOpen := time.Now().UTC().Add(-150 * time.Hour)
+	if err := seedCommentChain(db, tJaneOpen.ID, []commentSeed{
+		{janeID, "We're consolidating costs with finance. Can you confirm which invoice lines cover technical services SecWeb has delivered for us — extra support hours, the onboarding work, anything beyond the standard monthly fee? I need to avoid double-counting with our internal numbers.", baseJaneOpen},
+		{casseyID, "Hi Jane — the base subscription usually shows as one line item. Technical or professional services (additional hours, onboarding or one-off projects, anything scoped outside the plan) are listed separately with their own descriptions and rates. I can ask billing to email you a sample invoice layout from your account if that helps.", baseJaneOpen.Add(50 * time.Minute)},
+		{janeID, "That's what we needed — yes, please have billing send a sample. I'll align with finance once we have it.", baseJaneOpen.Add(3 * time.Hour)},
+	}); err != nil {
+		return err
+	}
+
+	// Jane — closed: VPN + pasted credentials; support asks removal; Jane can't get online to edit; Cassey gentle reminder 4h later (IDOR demo).
 	base3 := time.Now().UTC().Add(-200 * time.Hour)
+	janeFollowUp := base3.Add(3 * time.Hour)
 	if err := seedCommentChain(db, tJaneClosed.ID, []commentSeed{
-		{janeID, "The invoice PDF in last month's billing email still shows the wrong VAT rate for our region.", base3.Add(0 * time.Minute)},
-		{samID, "Thanks — please share the invoice number and roughly when you received the email.", base3.Add(2 * time.Hour)},
-		{janeID, "Invoice INV-2024-0099 — received the evening of 18 March.", base3.Add(5 * time.Hour)},
-		{casseyID, "Found it on our side — we've corrected the VAT line. Please re-download the PDF from the billing portal (same link).", base3.Add(24 * time.Hour)},
-		{janeID, "Re-downloaded just now — the PDF matches our records. Thanks, we can consider this closed.", base3.Add(26 * time.Hour)},
+		{janeID, "Can't keep the VPN connected today — I'm in meetings all day and need this working. I've tried logging in several times and it keeps dropping me out. I'm listed as an admin on our company account if that helps.\n\nI'm pasting what I use in case it's on our side — please don't share this:\nUsername: jane.doe.acme\nPassword: FakeVPN-Seed-2024-NotReal\n\nWon't be at a real keyboard until late — please fix if you can.", base3},
+		{samID, "Sorry you're stuck on this. Please delete your previous message — don't put passwords in the ticket. Use a password manager or secure channel next time. We're checking VPN on our end.", base3.Add(1 * time.Hour)},
+		{janeID, "Got it. Hotel Wi-Fi is awful — I can't get the portal to load reliably to edit that message right now. I'll remove it when I'm on something stable.", janeFollowUp},
+		{casseyID, "Hi Jane — gentle reminder when you have a moment: could you remove the username and password from your first message so they aren't kept in the ticket? Thanks.", janeFollowUp.Add(4 * time.Hour)},
 	}); err != nil {
 		return err
 	}

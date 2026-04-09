@@ -52,9 +52,3 @@ Constructed per **`Register` call** (new limiter instances each boot). Limits di
 ## VULN tracking
 
 A **`VULN-06`** tag may appear above the `protected` group in source — see `ca2/Vulnerability.md` for narrative; routes file only carries the short marker.
-
-## Adding a route
-
-1. Implement handler on a controller (wired in container).  
-2. Add line in `Register` with correct **group** and **middleware chain**.  
-3. For cookies + CSRF, mirror existing patterns (public vs protected).

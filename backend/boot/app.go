@@ -79,6 +79,7 @@ func applyCORS(engine *gin.Engine, cfg config.Config) {
 	engine.Use(cors.New(cors.Config{
 		AllowOrigins: []string{
 			origin,
+			"http://127.0.0.1:3000",
 		},
 		AllowMethods: []string{
 			"GET",

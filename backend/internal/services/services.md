@@ -1,6 +1,6 @@
 # Services (`internal/services`)
 
-**Domain / application layer**: orchestrates repositories, auth primitives, mail notifiers, and config. **No direct HTTP** — controllers translate Gin → request DTOs → service calls → JSON via `response` helpers.
+Coordinates repositories, auth helpers, mail notifiers, and config. Controllers call in here with parsed requests; responses go back through `response` helpers — no Gin handlers in this package.
 
 ## `AuthService` (`auth_service.go`)
 
@@ -41,7 +41,3 @@ Ticket and comment operations backed by `TicketRepository`, `TicketCommentReposi
 - **Search** — delegates to repository search implementation (baseline may use unsafe SQL — see VULN-07).
 
 Domain errors: invalid status transition, forbidden comment action, forbidden list filters.
-
-## Where to add business rules
-
-Prefer **services** over controllers: same rules apply if you later add gRPC, jobs, or CLI. Controllers should stay thin (bind, call service, map errors to HTTP).

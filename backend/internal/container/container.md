@@ -29,9 +29,3 @@ Internal-only dependencies (not on the struct but built inside `New`): `InviteSe
 5. **Controllers** — each gets the services/stores it needs.
 
 Order matters where constructors take dependencies: e.g. `AuthService` needs `PasswordResetRepository` and `resetNotifier`; `InviteService` needs `inviteRepo`, `userRepo`, notifier.
-
-## Why this pattern?
-
-- **Single place** to change wiring (e.g. swap mail implementation, add a cache).
-- **Routes stay declarative** — only `c.SomeController.Method` and middleware closures with `c.TokenMaker`, `c.SessionRepo`, etc.
-- **Tests** can build a smaller container or pass mocks if you introduce interfaces later.

@@ -1,6 +1,6 @@
 # Controllers (`internal/controllers`)
 
-**HTTP adapters** for Gin: parse path/query/body, call **services**, return JSON via **`internal/response`** (`Success`, `Failure`, `FailureWithAbort`). They should stay **thin** — business rules belong in services.
+**HTTP adapters** for Gin: parse path/query/body, call **services**, return JSON via **`internal/response`** (`Success`, `Failure`, `FailureWithAbort`). Keep policy and branching in services; these files mostly map HTTP ↔ calls.
 
 ## `HealthController`
 
@@ -33,9 +33,3 @@ Parses authenticated user from Gin context for actions that need actor UUID/role
 ## Error handling pattern
 
 Typical flow: service returns `error` → controller switches on `errors.Is` for known sentinel (`gorm.ErrRecordNotFound`, `ErrForbidden`, etc.) → appropriate HTTP code and `FailureWithAbort` to stop middleware chain.
-
-## Adding an endpoint
-
-1. Add route in `internal/routes/routes.go`.  
-2. Add method on controller; inject any new service via **container** if needed.  
-3. Define request struct in `internal/requests` with `binding` tags.

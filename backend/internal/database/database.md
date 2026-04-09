@@ -9,7 +9,7 @@ Two responsibilities: **schema migrations** (Goose) and the **runtime GORM conne
 
 ### Goose filesystem
 
-`init()` calls `goose.SetBaseFS(os.DirFS("."))` so migration paths resolve relative to the **process working directory** (typically the module root when you run the server). SQL files live under repo `migrations/`.
+`init()` calls `goose.SetBaseFS(os.DirFS("."))` so migration paths resolve relative to the **process working directory** (often the module root when the process is started from that directory). SQL files live under repo `migrations/`.
 
 ### DSN
 

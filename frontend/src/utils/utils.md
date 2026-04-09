@@ -10,4 +10,4 @@ Small **plain** helpers (no Vue components).
 | `ticket-ui.ts` | Ticket UI helpers (labels, colors, etc.). |
 | `user-display.ts` | Format user names for display. |
 
-Import from `@/utils/...` in views or components.
+Views and components import helpers from `@/utils/...`.

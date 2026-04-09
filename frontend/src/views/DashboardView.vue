@@ -98,13 +98,17 @@
               :to="paths.dashboard.ticketDetail(t.id)"
               class="group flex items-center justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-main)] px-4 py-3 shadow-sm transition hover:border-[var(--brand-green)]/45 hover:bg-white hover:shadow-[var(--shadow-card)]"
             >
-              <div class="min-w-0 flex-1">
-                <p class="truncate font-semibold text-[var(--text-primary)]">
-                  {{ t.title }}
-                </p>
-                <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <TicketIdChip :id="t.id" />
-                  <CategoryBadge :category="t.category" />
+              <div class="flex min-w-0 flex-1 items-start gap-3">
+                <span
+                  class="inline-flex shrink-0 items-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
+                >ID: {{ t.id }}</span>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate font-semibold text-[var(--text-primary)]">
+                    {{ t.title }}
+                  </p>
+                  <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <CategoryBadge :category="t.category" />
+                  </div>
                 </div>
               </div>
               <TicketStatusBadge
@@ -216,22 +220,17 @@
             >
               <RouterLink
                 :to="paths.dashboard.ticketDetail(String(row.ticketId))"
-                class="group flex cursor-pointer items-center gap-3 border-t border-[var(--border-subtle)] px-4 py-4 transition hover:bg-gradient-to-r hover:from-[var(--surface-mint)]/30 hover:to-transparent"
+                class="group flex cursor-pointer items-start gap-3 border-t border-[var(--border-subtle)] px-4 py-4 transition hover:bg-gradient-to-r hover:from-[var(--surface-mint)]/30 hover:to-transparent sm:items-center"
               >
-                <div
-                  class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-muted)] text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)]"
-                >
-                  <IconTicket class="h-6 w-6" />
-                </div>
+                <span
+                  class="inline-flex shrink-0 items-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
+                >ID: {{ row.ticketId }}</span>
                 <div class="min-w-0 flex-1">
                   <p class="font-semibold text-[var(--text-primary)]">
                     {{ row.title }}
                   </p>
                   <p class="mt-1 text-sm text-[var(--text-secondary)]">
                     {{ row.subtitle }}
-                  </p>
-                  <p class="mt-1 text-xs font-medium text-[var(--text-muted)]">
-                    {{ row.hint }}
                   </p>
                 </div>
                 <div class="flex shrink-0 flex-col items-end gap-1">
@@ -268,10 +267,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import IconTicket from '@/components/icons/IconTicket.vue'
 import CategoryBadge from '@/components/ui/CategoryBadge.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
-import TicketIdChip from '@/components/ui/TicketIdChip.vue'
 import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
 import { fetchTicketList, type ApiTicketRow } from '@/api/tickets'
@@ -369,7 +366,6 @@ const recentGroups = computed(() => {
       title: t.title,
       subtitle: `${formatTicketCategoryLabel(t.category)} · Updated ${formatDateTime(t.updated_at)}`,
       status: t.status as TicketStatus,
-      hint: `Ticket #${t.ticket_id}`,
     })),
   }))
 })

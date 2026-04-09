@@ -17,9 +17,9 @@
 
 ## Patterns
 
-- **API calls** — Usually imported from `@/api/...` (auth, tickets, users, admin).
+- **API calls** — `@/api/...` (auth, tickets, users, admin).
 - **CSRF** — `getSessionCsrfToken()` from `@/stores/auth-session` before mutating calls.
-- **Navigation** — `vue-router` (`useRouter`, `useRoute`); paths in `src/constants/routes.ts` when possible.
+- **Navigation** — `vue-router` (`useRouter`, `useRoute`); shared path strings in `src/constants/routes.ts`.
 
 ## Layouts
 

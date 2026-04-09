@@ -58,8 +58,7 @@
           Ticket details
         </p>
         <dl
-          class="grid gap-4 sm:grid-cols-2"
-          :class="isSupportViewer ? 'lg:grid-cols-3' : 'lg:grid-cols-4'"
+          class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
         >
           <div class="min-w-0">
             <dt class="text-xs text-[var(--text-muted)]">
@@ -69,37 +68,35 @@
               {{ ticket.id }}
             </dd>
           </div>
-          <div
-            v-if="!isSupportViewer"
-            class="min-w-0"
-          >
+          <div class="min-w-0">
             <dt class="text-xs text-[var(--text-muted)]">
               Reported by
             </dt>
-            <dd class="mt-0.5 truncate text-sm font-semibold text-[var(--text-primary)]">
-              {{ ticket.reporterName }}
+            <dd class="mt-0.5">
+              <p class="truncate text-sm font-semibold text-[var(--text-primary)]">
+                {{ ticket.reporterName }}
+              </p>
+              <p class="mt-0.5 break-all font-mono text-[13px] font-medium text-[var(--text-secondary)]">
+                {{ ticket.reporterEmail || '—' }}
+              </p>
             </dd>
           </div>
-          <div
-            v-if="isSupportViewer"
-            class="min-w-0"
-          >
-            <dt class="text-xs text-[var(--text-muted)]">
-              Reporter email
-            </dt>
-            <dd class="mt-0.5 break-all font-mono text-[13px] font-medium text-[var(--text-primary)]">
-              {{ ticket.reporterEmail || '—' }}
-            </dd>
-          </div>
-          <div
-            v-if="!isSupportViewer"
-            class="min-w-0 sm:col-span-2 lg:col-span-1"
-          >
+          <div class="min-w-0 sm:col-span-2 lg:col-span-1">
             <dt class="text-xs text-[var(--text-muted)]">
               Assignee
             </dt>
-            <dd class="mt-0.5 break-all font-mono text-[13px] font-medium text-[var(--text-primary)]">
-              {{ ticket.assigneeEmail ?? 'Unassigned' }}
+            <dd class="mt-0.5">
+              <template v-if="ticket.assigneeEmail == null">
+                <span class="text-sm font-medium text-[var(--text-primary)]">Unassigned</span>
+              </template>
+              <template v-else>
+                <p class="text-sm font-semibold text-[var(--text-primary)]">
+                  {{ ticket.assigneeName }}
+                </p>
+                <p class="mt-0.5 break-all font-mono text-[13px] font-medium text-[var(--text-primary)]">
+                  {{ ticket.assigneeEmail }}
+                </p>
+              </template>
             </dd>
           </div>
           <div class="min-w-0">
@@ -216,7 +213,7 @@
             Comments
           </h2>
           <p class="mt-0.5 text-sm text-[var(--text-secondary)]">
-            Newest comments appear at the bottom. Staff replies are labeled.
+            Newest comments appear at the top. Staff replies are labeled.
           </p>
         </div>
         <span
@@ -400,12 +397,6 @@ function apiRowToTicket(row: ApiTicketRow): Ticket {
   }
 }
 
-/** Staff / admin / super_admin — show reporter email; portal users see assignee email. */
-const isSupportViewer = computed(() => {
-  const r = getAuthUserSnapshot()?.role
-  return r === 'staff' || r === 'admin' || r === 'super_admin'
-})
-
 const ticket = computed((): Ticket | undefined => {
   const id = typeof route.params.id === 'string' ? route.params.id : ''
   if (!id)
@@ -575,7 +566,13 @@ async function onDeleteTicket() {
   await router.push(paths.dashboard.tickets)
 }
 
-const allComments = computed(() => apiComments.value)
+const allComments = computed(() => {
+  const list = [...apiComments.value]
+  list.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )
+  return list
+})
 
 async function onPostComment() {
   commentSubmitError.value = ''

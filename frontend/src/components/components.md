@@ -1,6 +1,6 @@
 # Components (`src/components`)
 
-Vue **SFCs** (`.vue`) grouped by feature. They are **presentational** or **small interactive pieces**; data usually comes from parent views or API calls made in views.
+Vue **SFCs** (`.vue`) grouped by feature. They are **presentational** or **small interactive pieces**; data comes from parent views or from API calls issued in views.
 
 ## Layout (`components/layout/`)
 
@@ -21,4 +21,4 @@ Vue **SFCs** (`.vue`) grouped by feature. They are **presentational** or **small
 
 ## `HelloWorld.vue`
 
-Default Vite starter; not part of the helpdesk flow. Safe to remove if unused.
+Default Vite starter; not wired into helpdesk routes (leftover scaffold).

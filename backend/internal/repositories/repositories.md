@@ -38,7 +38,3 @@ Comments: add, list by ticket, get by id, update/delete with ticket+comment id.
 - Return **`gorm.ErrRecordNotFound`** where appropriate so services map to 404.
 - Prefer **explicit column lists** or structs over unscoped global updates for clarity.
 - Transactions: if a service operation needs atomicity across tables, either start `tx` in the service and pass `tx` into repo methods, or add a repository method that runs `db.Transaction(...)`.
-
-## Testing angle
-
-Repositories are the easiest layer to integration-test against a real MySQL test DB; keep SQL side effects isolated here.

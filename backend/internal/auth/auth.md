@@ -29,11 +29,9 @@ Helpers: **`IsExpired`**, **`IsValidJTI`**, **`IsValidSessionID`**, **`IsValid`*
 
 ## Public auth CSRF — `public_auth_csrf_store.go`
 
-Short-lived, **one-time-style** tokens for **unauthenticated** POST endpoints (login, signup, etc.). Stored **in memory** in the container; **not** the same as session CSRF stored on `auth_sessions` (see `middleware/public_auth_csrf_middleware.go`).
+Short-lived, **one-time-style** tokens for **unauthenticated** POST endpoints (login, signup, etc.). Stored **in memory** in the container; **not** the same as session CSRF stored on `auth_sessions` (see `middleware/public_auth_csrf_middleware.go`). Per-process — multiple API instances behind a load balancer do not share this store.
 
-Production note: replace with Redis or similar if you need multi-instance consistency.
-
-## Mental model for new engineers
+## Mental model
 
 1. **Password** → Argon2id hash in DB.  
 2. **Session** → row in `auth_sessions` (refresh JTI, CSRF fields, revocation).  
