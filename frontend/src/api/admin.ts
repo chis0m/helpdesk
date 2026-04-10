@@ -149,7 +149,7 @@ export type CreateStaffBody = {
   last_name: string
   middle_name?: string
   is_active?: boolean
-  /** Omit or `staff`. `admin` only when the caller is super_admin (API enforces). */
+  /** Omit or `staff`. `admin` only when the caller is admin or super_admin (API enforces). */
   role?: 'staff' | 'admin'
 }
 
@@ -180,7 +180,7 @@ export async function createStaffUser(
     payload.middle_name = mid
   if (typeof body.is_active === 'boolean')
     payload.is_active = body.is_active
-  /** API: optional `staff` | `admin` (default staff). Only super_admin may use `admin`. */
+  /** API: optional `staff` | `admin` (default staff). Admin or super_admin callers may use `admin`. */
   payload.role = body.role ?? 'staff'
 
   const res = await fetchWithSessionRefresh(url, {
@@ -213,7 +213,7 @@ export type CreateStaffInviteBody = {
   first_name: string
   last_name: string
   middle_name?: string
-  /** Omit or `staff`. `admin` only when the caller is super_admin (API enforces). */
+  /** Omit or `staff`. `admin` only when the caller is admin or super_admin (API enforces). */
   role?: 'staff' | 'admin'
 }
 

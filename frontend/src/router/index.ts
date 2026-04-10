@@ -1,6 +1,6 @@
 /** App routes — landing, auth, and dashboard. */
 // VULN-02: `profile/:userId` — any numeric id can be opened in the SPA (backend IDOR completes the issue).
-// VULN-04: `tickets/:id` — ticket detail/comments keyed only by id in the URL (backend IDOR completes the issue).
+// VULN-02: `tickets/:id` — ticket detail/comments keyed only by id in the URL (backend IDOR completes the issue).
 import { createRouter, createWebHistory } from 'vue-router'
 import type { NavigationGuard } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'

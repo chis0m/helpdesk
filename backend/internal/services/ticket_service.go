@@ -106,7 +106,7 @@ func (s *TicketService) ListForActor(actorUserUUID string, actorRole models.User
 	return s.ticketRepo.List(filter)
 }
 
-// VULN-04: IDOR on tickets and comments — GetByID through ListComments lack reporter/assignee/admin checks on ticket id.
+// VULN-02: IDOR on tickets and comments — GetByID through ListComments lack reporter/assignee/admin checks on ticket id.
 
 func (s *TicketService) GetByID(ticketID uint64) (*models.Ticket, error) {
 	return s.ticketRepo.GetByID(ticketID)

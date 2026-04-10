@@ -85,9 +85,9 @@ func (ic *InviteController) CreateStaffInvite(c *gin.Context) {
 		case errors.Is(err, services.ErrInviteForbidden):
 			log.Warn().Msg("create staff invite failed: forbidden")
 			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
-		case errors.Is(err, services.ErrInviteAdminRequiresSuperAdmin):
-			log.Warn().Str("actor_role", string(actorRole)).Msg("create staff invite failed: only super_admin may invite admin")
-			response.FailureWithAbort(c, http.StatusForbidden, "only super_admin may invite users with role admin", "only super_admin may invite users with role admin")
+		case errors.Is(err, services.ErrInviteAdminForbidden):
+			log.Warn().Str("actor_role", string(actorRole)).Msg("create staff invite failed: only admin or super_admin may invite admin")
+			response.FailureWithAbort(c, http.StatusForbidden, "only admin or super_admin may invite users with role admin", "only admin or super_admin may invite users with role admin")
 		case errors.Is(err, services.ErrInviteEmailTaken):
 			log.Warn().Str("email", req.Email).Msg("create staff invite failed: email already registered")
 			response.FailureWithAbort(c, http.StatusConflict, "email already registered", "email already registered")

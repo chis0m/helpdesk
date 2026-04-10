@@ -140,7 +140,7 @@
       @update:status="onStatusUpdate"
     />
 
-    <!-- VULN-04: Assign/unassign/delete use ticket id from the URL only — backend IDOR completes unauthorized access. -->
+    <!-- VULN-02: Assign/unassign/delete use ticket id from the URL only — backend IDOR completes unauthorized access. -->
     <section
       v-if="isApiTicket"
       class="rounded-2xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-black/[0.03]"
@@ -344,7 +344,7 @@
 </template>
 
 <script setup lang="ts">
-// VULN-04: Loads ticket/comments by `route.params.id` only — backend IDOR completes unauthorized access.
+// VULN-02: Loads ticket/comments by `route.params.id` only — backend IDOR completes unauthorized access.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -473,7 +473,7 @@ async function onStatusUpdate(status: TicketStatus) {
   const id = ticket.value?.id
   if (!id)
     return
-  // VULN-04: Status PATCH uses ticket id from the URL — backend IDOR completes unauthorized changes.
+  // VULN-02: Status PATCH uses ticket id from the URL — backend IDOR completes unauthorized changes.
   statusError.value = ''
   const ticketNum = Number.parseInt(id, 10)
   if (!Number.isFinite(ticketNum) || ticketNum <= 0)

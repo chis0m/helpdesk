@@ -10,8 +10,6 @@ import (
 	"helpdesk/backend/internal/models"
 )
 
-// EnsureTicketComments adds realistic thread comments: Mark's in_progress + resolved; Jane's open (3); Jane's VPN in_progress (4).
-// Staff authors are Sam Support and Cassey Support. Idempotent by (ticket_id, body).
 func EnsureTicketComments(
 	db *gorm.DB,
 	uMark *models.User,
@@ -35,6 +33,10 @@ func EnsureTicketComments(
 	if err != nil {
 		return err
 	}
+	tJaneOpen2, err := ticketByTitle(db, TicketJaneOpen2Title)
+	if err != nil {
+		return err
+	}
 	tJaneVPN, err := ticketByTitle(db, TicketJaneVPNTitle)
 	if err != nil {
 		return err
@@ -45,7 +47,6 @@ func EnsureTicketComments(
 	markID := uMark.ID
 	janeID := uJane.ID
 
-	// Mark — in progress (Cassey's ticket): dialogue with Cassey
 	base := time.Now().UTC().Add(-72 * time.Hour)
 	if err := seedCommentChain(db, tInProg.ID, []commentSeed{
 		{markID, "Hi — I'm still seeing the timeout after about 30s on CSV export. Happy to send logs if useful.", base.Add(0 * time.Minute)},
@@ -56,7 +57,6 @@ func EnsureTicketComments(
 		return err
 	}
 
-	// Mark — resolved (Sam's ticket): Mark, Sam, Cassey
 	base2 := time.Now().UTC().Add(-120 * time.Hour)
 	if err := seedCommentChain(db, tResolved.ID, []commentSeed{
 		{markID, "Quick update: I can log in normally again after the patch you deployed on Tuesday.", base2.Add(0 * time.Minute)},
@@ -66,7 +66,6 @@ func EnsureTicketComments(
 		return err
 	}
 
-	// Jane — open: technical / professional services billing vs. base subscription (Cassey assigned).
 	baseJaneOpen := time.Now().UTC().Add(-150 * time.Hour)
 	if err := seedCommentChain(db, tJaneOpen.ID, []commentSeed{
 		{janeID, "We're consolidating costs with finance. Can you confirm which invoice lines cover technical services SecWeb has delivered for us — extra support hours, the onboarding work, anything beyond the standard monthly fee? I need to avoid double-counting with our internal numbers.", baseJaneOpen},
@@ -76,7 +75,14 @@ func EnsureTicketComments(
 		return err
 	}
 
-	// Jane — VPN in progress: pasted credentials; support asks removal; Jane can't get online to edit; Cassey gentle reminder 4h later (IDOR demo).
+	baseJaneOpen2 := time.Now().UTC().Add(-36 * time.Hour)
+	if err := seedCommentChain(db, tJaneOpen2.ID, []commentSeed{
+		{janeID, "Happening again this morning — widgets showed 0 active users for 20+ minutes until I refreshed. Same as in the description above.", baseJaneOpen2},
+		{samID, "Thanks Jane — we’re tracking a cache TTL issue on the dashboard service. I’ll link this to the engineering ticket and update you when a fix is scheduled.", baseJaneOpen2.Add(2 * time.Hour)},
+	}); err != nil {
+		return err
+	}
+
 	base3 := time.Now().UTC().Add(-200 * time.Hour)
 	janeFollowUp := base3.Add(3 * time.Hour)
 	if err := seedCommentChain(db, tJaneVPN.ID, []commentSeed{

@@ -158,7 +158,7 @@
             >Administrator</label>
             <p class="mt-0.5 text-xs text-[var(--text-muted)]">
               Sends <code class="rounded bg-black/5 px-1 py-0.5 text-[11px]">role: admin</code>.
-              Only a <strong>super admin</strong> may choose this; a normal admin will get an error.
+              Only an <strong>administrator</strong> or <strong>super administrator</strong> may choose this; staff and customers cannot.
             </p>
           </div>
         </div>

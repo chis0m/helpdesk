@@ -11,15 +11,12 @@ import (
 	"helpdesk/backend/internal/models"
 )
 
-// Exported emails for TASK.md / boot docs (CA seed customer users).
 const (
 	EmailMustChange  = "must.change@example.com"
 	EmailMarkAnthony = "mark.anthony@example.com"
 	EmailJaneDoe     = "jane.doe@sample.com"
 )
 
-// EnsureCustomerUsers creates three CA demo customers: Must Change (first login), Mark Anthony, Jane Doe (both passwords settled).
-// Password hashes use Argon2id (same as auth login). Legacy bcrypt rows are upgraded on re-seed.
 func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User, error) {
 	hash, err := auth.HashPassword(caTestPassword)
 	if err != nil {
@@ -84,7 +81,6 @@ func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User,
 	return uMust, uMark, uJane, nil
 }
 
-// ensureArgon2idPasswordHash re-hashes with Argon2id if the stored hash is legacy (e.g. bcrypt from an older seed).
 func ensureArgon2idPasswordHash(db *gorm.DB, u *models.User, plaintext string) error {
 	if u == nil {
 		return nil

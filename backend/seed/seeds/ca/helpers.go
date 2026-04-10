@@ -10,16 +10,13 @@ import (
 	"helpdesk/backend/internal/models"
 )
 
-// caTestPassword is the shared plaintext for all CA seed users (local/dev testing only; min length satisfies app rules).
 const caTestPassword = "password"
 
-// emailAt builds firstname.lastname@domain (lowercased local part).
 func emailAt(firstName, lastName, domain string) string {
 	local := strings.ToLower(strings.TrimSpace(firstName)) + "." + strings.ToLower(strings.TrimSpace(lastName))
 	return local + "@" + strings.TrimSpace(domain)
 }
 
-// firstOrCreateUser creates a user if missing. Returns (user, created, error).
 func firstOrCreateUser(
 	db *gorm.DB,
 	email, firstName, lastName string,

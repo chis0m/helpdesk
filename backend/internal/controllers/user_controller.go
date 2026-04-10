@@ -266,9 +266,9 @@ func (u *UserController) CreateStaff(c *gin.Context) {
 
 	user, err := u.userService.CreateStaffFromRequest(actorRole, req)
 	if err != nil {
-		if errors.Is(err, services.ErrCreateStaffAdminRequiresSuperAdmin) {
-			log.Warn().Str("actor_role", string(actorRole)).Msg("create staff failed: only super_admin may set role admin")
-			response.FailureWithAbort(c, http.StatusForbidden, "only super_admin may create staff with role admin", "only super_admin may create staff with role admin")
+		if errors.Is(err, services.ErrCreateStaffAdminForbidden) {
+			log.Warn().Str("actor_role", string(actorRole)).Msg("create staff failed: only admin or super_admin may set role admin")
+			response.FailureWithAbort(c, http.StatusForbidden, "only admin or super_admin may create staff with role admin", "only admin or super_admin may create staff with role admin")
 			return
 		}
 		log.Error().Err(err).Msg("create staff failed")

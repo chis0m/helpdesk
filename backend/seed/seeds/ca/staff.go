@@ -12,13 +12,11 @@ import (
 
 const staffDomain = "secweb.ie"
 
-// EmailStaffSam and EmailStaffCassey use firstname.lastname@secweb.ie (both staff).
 var (
 	EmailStaffSam    = emailAt("Sam", "Support", staffDomain)
-	EmailStaffCassey = emailAt("Cassey", "Support", staffDomain)
+	EmailCasseyAdmin = emailAt("Cassey", "Admin", staffDomain)
 )
 
-// EnsureStaffUsers seeds two staff members (Sam + Cassey); both use caTestPassword (same as CA customers).
 func EnsureStaffUsers(db *gorm.DB) (sam *models.User, cassey *models.User, err error) {
 	now := time.Now().UTC()
 	ptrNow := &now
@@ -52,10 +50,10 @@ func EnsureStaffUsers(db *gorm.DB) (sam *models.User, cassey *models.User, err e
 
 	uCassey, createdCassey, err := firstOrCreateUser(
 		db,
-		EmailStaffCassey,
+		EmailCasseyAdmin,
 		"Cassey",
-		"Support",
-		models.RoleStaff,
+		"Admin",
+		models.RoleAdmin,
 		false,
 		ptrNow,
 		hash,
@@ -68,6 +66,9 @@ func EnsureStaffUsers(db *gorm.DB) (sam *models.User, cassey *models.User, err e
 			Str("email", uCassey.Email).
 			Bool("must_change_password", uCassey.MustChangePassword).
 			Msg("CA seed: test user created")
+	}
+	if err := db.Model(&models.User{}).Where("id = ?", uCassey.ID).Update("role", models.RoleAdmin).Error; err != nil {
+		return nil, nil, err
 	}
 
 	return uSam, uCassey, nil

@@ -139,7 +139,9 @@ func (s *SMTPMailer) send(to, subject, plainText, htmlBody string, kind string) 
 	host := strings.TrimSpace(s.cfg.MailHost)
 	addr := net.JoinHostPort(host, strconv.Itoa(portNum))
 	auth := smtp.PlainAuth("", strings.TrimSpace(s.cfg.MailUsername), s.cfg.MailPassword, host)
-
+	if s.cfg.MailUsername == "" || s.cfg.MailPassword == "" {
+		auth = nil
+	}
 	raw := buildMultipartMessage(from, to, subject, plainText, htmlBody)
 	if err := smtp.SendMail(addr, auth, fromAddr, []string{to}, raw); err != nil {
 		logger.L().Error().Err(err).

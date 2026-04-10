@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	ErrUserRoleChangeForbidden         = errors.New("forbidden role change")
-	ErrCreateStaffAdminRequiresSuperAdmin = errors.New("only super_admin may create staff with role admin")
+	ErrUserRoleChangeForbidden   = errors.New("forbidden role change")
+	ErrCreateStaffAdminForbidden = errors.New("only admin or super_admin may create staff with role admin")
 )
 
 type UserService struct {
@@ -97,8 +97,8 @@ func (s *UserService) CreateStaffFromRequest(actorRole models.UserRole, req requ
 	if r := strings.TrimSpace(req.Role); r != "" {
 		targetRole = models.UserRole(r)
 	}
-	if targetRole == models.RoleAdmin && actorRole != models.RoleSuperAdmin {
-		return nil, ErrCreateStaffAdminRequiresSuperAdmin
+	if targetRole == models.RoleAdmin && actorRole != models.RoleAdmin && actorRole != models.RoleSuperAdmin {
+		return nil, ErrCreateStaffAdminForbidden
 	}
 
 	passwordHash, err := auth.HashPassword(strings.TrimSpace(req.Password))

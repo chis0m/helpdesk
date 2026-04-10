@@ -184,7 +184,7 @@ func (t *TicketController) Search(c *gin.Context) {
 
 func (t *TicketController) GetByID(c *gin.Context) {
 	log := logger.L()
-	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
+	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -216,7 +216,7 @@ func (t *TicketController) GetByID(c *gin.Context) {
 
 func (t *TicketController) UpdateByID(c *gin.Context) {
 	log := logger.L()
-	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
+	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -255,7 +255,7 @@ func (t *TicketController) UpdateByID(c *gin.Context) {
 
 func (t *TicketController) UpdateStatus(c *gin.Context) {
 	log := logger.L()
-	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
+	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -299,7 +299,7 @@ func (t *TicketController) UpdateStatus(c *gin.Context) {
 
 func (t *TicketController) Assign(c *gin.Context) {
 	log := logger.L()
-	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
+	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -338,7 +338,7 @@ func (t *TicketController) Assign(c *gin.Context) {
 
 func (t *TicketController) DeleteByID(c *gin.Context) {
 	log := logger.L()
-	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
+	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -369,7 +369,7 @@ func (t *TicketController) DeleteByID(c *gin.Context) {
 
 func (t *TicketController) AddComment(c *gin.Context) {
 	log := logger.L()
-	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
+	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -416,7 +416,7 @@ func (t *TicketController) AddComment(c *gin.Context) {
 
 func (t *TicketController) ListComments(c *gin.Context) {
 	log := logger.L()
-	// VULN-04: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
+	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -447,7 +447,7 @@ func (t *TicketController) ListComments(c *gin.Context) {
 
 func (t *TicketController) UpdateComment(c *gin.Context) {
 	log := logger.L()
-	// VULN-04: IDOR on tickets and comments — ticket id in path not access-controlled; comment edit is author/admin only.
+	// VULN-02: IDOR on tickets and comments — ticket id in path not access-controlled; comment edit is author/admin only.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -505,7 +505,7 @@ func (t *TicketController) UpdateComment(c *gin.Context) {
 
 func (t *TicketController) DeleteComment(c *gin.Context) {
 	log := logger.L()
-	// VULN-04: IDOR on tickets and comments — ticket id in path not access-controlled; comment delete is author/admin only.
+	// VULN-02: IDOR on tickets and comments — ticket id in path not access-controlled; comment delete is author/admin only.
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {

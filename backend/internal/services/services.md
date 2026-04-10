@@ -20,13 +20,13 @@ Exported **errors** (e.g. `ErrInvalidCredentials`, `ErrInvalidRefreshToken`) let
 
 ## `UserService` (`user_service.go`)
 
-User CRUD-style operations: get by id/UUID, list (admin), create from requests, **`CreateStaffFromRequest`** (`POST /api/admin/staff`) with optional **`role`**: `staff` (default) or `admin` — only **super_admin** may set **`admin`** (`ErrCreateStaffAdminRequiresSuperAdmin`), **role updates** with role-gating (who may promote whom). Some endpoints intentionally reflect **baseline IDOR** behavior documented in `ca2/Vulnerability.md` — secure branch should tighten checks here + in controllers.
+User CRUD-style operations: get by id/UUID, list (admin), create from requests, **`CreateStaffFromRequest`** (`POST /api/admin/staff`) with optional **`role`**: `staff` (default) or `admin` — **admin** or **super_admin** may set **`admin`** (`ErrCreateStaffAdminForbidden` if the actor cannot), **role updates** with role-gating (who may promote whom). Some endpoints intentionally reflect **baseline IDOR** behavior documented in `ca2/Vulnerability.md` — secure branch should tighten checks here + in controllers.
 
 ## `InviteService` (`invite_service.go`)
 
 Staff invitation flow:
 
-- **CreateStaffInvite** — admin/super_admin only; optional **`role`**: `staff` (default) or `admin`. Only **super_admin** may set `admin`. Ensures email not registered and no conflicting pending invite; generates raw token, stores **hash**, sends notifier with accept URL.
+- **CreateStaffInvite** — admin/super_admin only; optional **`role`**: `staff` (default) or `admin`. **Admin** or **super_admin** may set `admin`. Ensures email not registered and no conflicting pending invite; generates raw token, stores **hash**, sends notifier with accept URL.
 - **Verify** — validate token hash, expiry, used flag.
 - **Accept** — create staff user, mark invite used (transactional expectations in repo layer).
 
@@ -37,7 +37,7 @@ Uses **`FRONTEND_URL`** to build links consistent with the SPA.
 Ticket and comment operations backed by `TicketRepository`, `TicketCommentRepository`, `UserRepository`.
 
 - **`ListForActor`** — **authorization for listing**: admins see all (subject to filters); non-admins are scoped to tickets they **report** or are **assigned** to. This is the main non-trivial policy method.
-- **By-id methods** (`GetByID`, updates, comments, etc.) — repository lookups by id; baseline intentionally **does not** re-check reporter/assignee on every by-id call (see VULN-04 in `Vulnerability.md`).
+- **By-id methods** (`GetByID`, updates, comments, etc.) — repository lookups by id; baseline intentionally **does not** re-check reporter/assignee on every by-id call (see VULN-02 in `Vulnerability.md`).
 - **Search** — delegates to repository search implementation (baseline may use unsafe SQL — see VULN-07).
 
 Domain errors: invalid status transition, forbidden comment action, forbidden list filters.

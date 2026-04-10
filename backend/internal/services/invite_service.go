@@ -26,8 +26,8 @@ var (
 	ErrInviteEmailTaken    = errors.New("email already registered")
 	ErrInviteForbidden     = errors.New("forbidden invite action")
 	ErrInvitePendingExists = errors.New("pending invite already exists for this email")
-	// ErrInviteAdminRequiresSuperAdmin when target role is admin but the actor is not super_admin.
-	ErrInviteAdminRequiresSuperAdmin = errors.New("only super_admin may invite with role admin")
+	// ErrInviteAdminForbidden when target role is admin but the actor is not admin or super_admin.
+	ErrInviteAdminForbidden = errors.New("only admin or super_admin may invite with role admin")
 )
 
 type InviteService struct {
@@ -75,8 +75,8 @@ func (s *InviteService) CreateStaffInvite(actorID uint64, actorRole models.UserR
 	if r := strings.TrimSpace(req.Role); r != "" {
 		targetRole = models.UserRole(r)
 	}
-	if targetRole == models.RoleAdmin && actorRole != models.RoleSuperAdmin {
-		return nil, "", ErrInviteAdminRequiresSuperAdmin
+	if targetRole == models.RoleAdmin && actorRole != models.RoleAdmin && actorRole != models.RoleSuperAdmin {
+		return nil, "", ErrInviteAdminForbidden
 	}
 
 	email := strings.ToLower(strings.TrimSpace(req.Email))

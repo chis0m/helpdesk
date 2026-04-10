@@ -1,5 +1,5 @@
 // VULN-03: Create ticket sends title/description/category as JSON — weak sanitization server-side; UI may render with v-html (see TicketDetailView).
-// VULN-04: Ticket id in URL/path for get/update/assign/delete/comments — no client-side authorization (backend IDOR).
+// VULN-02: Ticket id in URL/path for get/update/assign/delete/comments — no client-side authorization (backend IDOR).
 // VULN-05: Mutating ticket calls send `X-CSRF-Token`; weak verification is backend CSRF middleware.
 // VULN-07: `GET /api/tickets/search?q=` forwards `q` into unsafe SQL on the server (see backend `TicketController.Search`).
 import { apiUrl, CSRF_HEADER, readJson } from './client'
@@ -303,7 +303,7 @@ export async function fetchTicketSearch(q: string): Promise<
   return { ok: true, items, queryEcho }
 }
 
-/** VULN-04: Assignment by ticket id in path — backend IDOR completes unauthorized access. */
+/** VULN-02: Assignment by ticket id in path — backend IDOR completes unauthorized access. */
 export type AssignTicketBody =
   | { assigned_user_id: number }
   | { unassign: true }
@@ -344,7 +344,7 @@ export async function assignTicket(
   return { ok: true, data: env.data }
 }
 
-/** VULN-04: Delete by ticket id in path — backend IDOR completes unauthorized access. */
+/** VULN-02: Delete by ticket id in path — backend IDOR completes unauthorized access. */
 export async function deleteTicket(
   ticketId: number,
   sessionCsrf: string,
@@ -377,7 +377,7 @@ export async function deleteTicket(
   return { ok: true, data: env.data }
 }
 
-/** VULN-03: Optional fields may carry HTML; weak sanitization server-side. VULN-04: ticket id in path (IDOR). */
+/** VULN-03: Optional fields may carry HTML; weak sanitization server-side. VULN-02: ticket id in path (IDOR). */
 export type PatchTicketBody = Partial<{
   title: string
   description: string
@@ -422,7 +422,7 @@ export async function patchTicket(
   return { ok: true, data: env.data }
 }
 
-/** VULN-04: Status change by ticket id in path (IDOR). */
+/** VULN-02: Status change by ticket id in path (IDOR). */
 export async function patchTicketStatus(
   ticketId: number,
   status: ApiTicketStatus,
@@ -453,7 +453,7 @@ export async function patchTicketStatus(
   return { ok: true, data: env.data }
 }
 
-/** VULN-03: Comment body persisted with weak sanitization. VULN-04: ticket id in path (IDOR). */
+/** VULN-03: Comment body persisted with weak sanitization. VULN-02: ticket id in path (IDOR). */
 export async function patchTicketComment(
   ticketId: number,
   commentId: number,
@@ -488,7 +488,7 @@ export async function patchTicketComment(
   return { ok: true, data: env.data }
 }
 
-/** VULN-04: Comment delete by ticket id in path (IDOR). */
+/** VULN-02: Comment delete by ticket id in path (IDOR). */
 export async function deleteTicketComment(
   ticketId: number,
   commentId: number,
