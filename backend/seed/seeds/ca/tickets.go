@@ -18,7 +18,7 @@ const (
 	TicketMarkResolvedTitle   = "Cannot log in after password reset — now fixed on my side"
 	// Jane Doe — two tickets
 	TicketJaneOpenTitle = "Question: how do charges for SecWeb technical services appear on our monthly bill?"
-	TicketJaneClosedTitle = "Can't keep the VPN connected today. I'm out for meetings all day and need remote access to work."
+	TicketJaneVPNTitle = "Can't keep the VPN connected today. I'm out for meetings all day and need remote access to work."
 )
 
 // EnsureTickets creates CA demo tickets: 3 for Mark, 2 for Jane. Assignees balanced between Sam (3) and Cassey (2).
@@ -72,12 +72,18 @@ func EnsureTickets(
 	); err != nil {
 		return err
 	}
-	// Jane — closed (Sam): VPN thread; see ca/comments.go for credential-in-ticket demo (IDOR impact).
+	// Jane — in progress (Sam): VPN thread; see ca/comments.go for credential-in-ticket demo (IDOR impact).
 	if _, err := firstOrCreateTicketWithStatus(
-		db, uJane.ID, TicketJaneClosedTitle,
+		db, uJane.ID, TicketJaneVPNTitle,
 		"I'm unable to stay connected to the company VPN while I'm out for meetings today. I need remote access for work — more detail in the comments below.",
-		"general", models.TicketStatusClosed, &samID,
+		"general", models.TicketStatusInProgress, &samID,
 	); err != nil {
+		return err
+	}
+	// Align VPN ticket status when DB was seeded before this ticket was in_progress.
+	if err := db.Model(&models.Ticket{}).
+		Where("title = ?", strings.TrimSpace(TicketJaneVPNTitle)).
+		Update("status", models.TicketStatusInProgress).Error; err != nil {
 		return err
 	}
 

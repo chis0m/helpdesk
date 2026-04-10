@@ -10,7 +10,7 @@ import (
 	"helpdesk/backend/internal/models"
 )
 
-// EnsureTicketComments adds realistic thread comments: Mark's in_progress + resolved; Jane's open (3); Jane's closed (4).
+// EnsureTicketComments adds realistic thread comments: Mark's in_progress + resolved; Jane's open (3); Jane's VPN in_progress (4).
 // Staff authors are Sam Support and Cassey Support. Idempotent by (ticket_id, body).
 func EnsureTicketComments(
 	db *gorm.DB,
@@ -35,7 +35,7 @@ func EnsureTicketComments(
 	if err != nil {
 		return err
 	}
-	tJaneClosed, err := ticketByTitle(db, TicketJaneClosedTitle)
+	tJaneVPN, err := ticketByTitle(db, TicketJaneVPNTitle)
 	if err != nil {
 		return err
 	}
@@ -76,10 +76,10 @@ func EnsureTicketComments(
 		return err
 	}
 
-	// Jane — closed: VPN + pasted credentials; support asks removal; Jane can't get online to edit; Cassey gentle reminder 4h later (IDOR demo).
+	// Jane — VPN in progress: pasted credentials; support asks removal; Jane can't get online to edit; Cassey gentle reminder 4h later (IDOR demo).
 	base3 := time.Now().UTC().Add(-200 * time.Hour)
 	janeFollowUp := base3.Add(3 * time.Hour)
-	if err := seedCommentChain(db, tJaneClosed.ID, []commentSeed{
+	if err := seedCommentChain(db, tJaneVPN.ID, []commentSeed{
 		{janeID, "Can't keep the VPN connected today — I'm in meetings all day and need this working. I've tried logging in several times and it keeps dropping me out. I'm listed as an admin on our company account if that helps.\n\nI'm pasting what I use in case it's on our side — please don't share this:\nUsername: jane.doe.acme\nPassword: FakeVPN-Seed-2024-NotReal\n\nWon't be at a real keyboard until late — please fix if you can.", base3},
 		{samID, "Sorry you're stuck on this. Please delete your previous message — don't put passwords in the ticket. Use a password manager or secure channel next time. We're checking VPN on our end.", base3.Add(1 * time.Hour)},
 		{janeID, "Got it. Hotel Wi-Fi is awful — I can't get the portal to load reliably to edit that message right now. I'll remove it when I'm on something stable.", janeFollowUp},

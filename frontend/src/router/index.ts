@@ -6,6 +6,7 @@ import type { NavigationGuard } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
 import { paths } from '@/constants/routes'
 import { getAuthUserSnapshot } from '@/stores/auth-session'
+import { isAdminPortalRole } from '@/utils/admin-access'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -131,19 +132,19 @@ const router = createRouter({
         {
           path: 'admin/users',
           name: 'admin-users',
-          meta: { title: 'Users' },
+          meta: { title: 'Users', requiresAdmin: true },
           component: () => import('@/views/admin/AdminUsersListView.vue'),
         },
         {
           path: 'admin/staff/new',
           name: 'admin-staff-new',
-          meta: { title: 'Create staff' },
+          meta: { title: 'Create staff', requiresAdmin: true },
           component: () => import('@/views/admin/AdminStaffView.vue'),
         },
         {
           path: 'admin/staff',
           name: 'admin-staff',
-          meta: { title: 'Staff' },
+          meta: { title: 'Staff', requiresAdmin: true },
           component: () => import('@/views/admin/AdminStaffListView.vue'),
         },
         {
@@ -157,7 +158,6 @@ const router = createRouter({
   ],
 })
 
-/** TASK.md §8.3 — block app until `must_change_password` is cleared (client-side baseline). */
 const mustChangeGuard: NavigationGuard = (to, _from, next) => {
   const u = getAuthUserSnapshot()
 
@@ -186,6 +186,26 @@ const mustChangeGuard: NavigationGuard = (to, _from, next) => {
   next()
 }
 
+/** GET/POST /api/admin/*` requires `admin` or `super_admin` (not `staff` or `user`). */
+const adminRoutesGuard: NavigationGuard = (to, _from, next) => {
+  const needsAdmin = to.matched.some(r => r.meta.requiresAdmin === true)
+  if (!needsAdmin) {
+    next()
+    return
+  }
+  const u = getAuthUserSnapshot()
+  if (!u) {
+    next({ path: paths.login, query: { redirect: to.fullPath }, replace: true })
+    return
+  }
+  if (!isAdminPortalRole(u.role)) {
+    next({ path: paths.dashboard.home, replace: true })
+    return
+  }
+  next()
+}
+
 router.beforeEach(mustChangeGuard)
+router.beforeEach(adminRoutesGuard)
 
 export default router

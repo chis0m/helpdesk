@@ -133,29 +133,6 @@
         </div>
       </div>
 
-      <!-- Stats -->
-      <section
-        class="land-in land-delay-3 mt-20 rounded-2xl border border-[var(--border-subtle)] bg-white/80 p-8 shadow-[0_1px_3px_rgba(0,0,0,0.06)] backdrop-blur-sm sm:p-10"
-      >
-        <div class="grid gap-10 sm:grid-cols-3 sm:gap-8">
-          <div
-            v-for="s in stats"
-            :key="s.label"
-            class="text-center sm:text-left"
-          >
-            <p class="text-3xl font-semibold tracking-tight text-[var(--text-primary)] tabular-nums lg:text-4xl">
-              {{ s.value }}
-            </p>
-            <p class="mt-1 text-sm font-medium text-[var(--text-secondary)]">
-              {{ s.label }}
-            </p>
-            <p class="mt-1 text-xs text-[var(--text-muted)]">
-              {{ s.hint }}
-            </p>
-          </div>
-        </div>
-      </section>
-
       <!-- Bento -->
       <section class="mt-14">
         <h2 class="land-in land-delay-4 text-lg font-semibold text-[var(--text-primary)]">
@@ -213,12 +190,61 @@
           </article>
         </div>
       </section>
+
+      <!-- Testimonials -->
+      <section
+        class="land-in land-delay-10 mt-14"
+        aria-labelledby="landing-testimonials-heading"
+      >
+        <h2
+          id="landing-testimonials-heading"
+          class="text-lg font-semibold text-[var(--text-primary)]"
+        >
+          Testimonials
+        </h2>
+        <p class="mt-1 text-sm text-[var(--text-secondary)]">
+          What customers say about SecWeb support.
+        </p>
+        <div class="mt-6 grid gap-4 md:grid-cols-2">
+          <figure
+            v-for="t in testimonials"
+            :key="t.name"
+            class="landing-card rounded-2xl border border-[var(--border-subtle)] bg-white/90 p-6 shadow-sm"
+          >
+            <blockquote class="border-l-[3px] border-[var(--brand-green)] pl-4 text-sm leading-relaxed text-[var(--text-secondary)]">
+              {{ t.quote }}
+            </blockquote>
+            <figcaption class="mt-4 flex items-center gap-3 border-t border-[var(--border-subtle)] pt-4">
+              <div
+                class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--surface-mint)] text-xs font-bold text-[var(--brand-green-dark)]"
+                aria-hidden="true"
+              >
+                {{ t.initials }}
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-[var(--text-primary)]">
+                  {{ t.name }}
+                </p>
+                <p class="text-xs text-[var(--text-muted)]">
+                  {{ t.role }}
+                </p>
+                <p class="mt-0.5">
+                  <a
+                    :href="`mailto:${t.email}`"
+                    class="text-xs text-[var(--text-secondary)] underline decoration-[var(--border-strong)] underline-offset-2 transition hover:text-[var(--brand-green-dark)]"
+                  >{{ t.email }}</a>
+                </p>
+              </div>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { fetchHealth } from '@/api/health'
 
 const healthLoading = ref(true)
@@ -238,29 +264,6 @@ onMounted(async () => {
   else {
     healthError.value = res.message
   }
-})
-
-/** Live data from `GET /api/health` (public). */
-const stats = computed(() => {
-  if (healthLoading.value) {
-    return [
-      { value: '…', label: 'Service status', hint: 'Checking API…' },
-      { value: '…', label: 'Message', hint: '' },
-      { value: '…', label: 'Reachable', hint: '' },
-    ]
-  }
-  if (!healthOk.value) {
-    return [
-      { value: '—', label: 'Service status', hint: healthError.value || 'Unavailable' },
-      { value: '—', label: 'Message', hint: 'Fix API URL or start the server.' },
-      { value: 'No', label: 'Reachable', hint: 'See browser network tab for details.' },
-    ]
-  }
-  return [
-    { value: healthStatus.value, label: 'Service status', hint: 'From GET /api/health' },
-    { value: healthMessage.value, label: 'Message', hint: 'Backend response' },
-    { value: 'Yes', label: 'Reachable', hint: 'Helpdesk API is responding' },
-  ]
 })
 
 const featured = {
@@ -288,6 +291,25 @@ const bottomCards = [
     body: 'Coursework baseline for Secure Web Development — authentication and tickets use the running API.',
   },
 ]
+
+const testimonials = [
+  {
+    name: 'Mark Anthony',
+    role: 'Product Manager',
+    email: 'mark.anthony@example.com',
+    initials: 'MA',
+    quote:
+      'SecWeb customer service has been outstanding — quick responses, clear updates, and they actually follow through until the issue is sorted.',
+  },
+  {
+    name: 'Jane Doe',
+    role: 'IT Lead',
+    email: 'jane.doe@sample.com',
+    initials: 'JD',
+    quote:
+      "Our team relies on timely support when integrations act up. SecWeb's helpdesk keeps us moving; escalation feels professional every time.",
+  },
+] as const
 
 function landDelayClass(n: number) {
   return `land-in land-delay-${n}`
@@ -345,6 +367,9 @@ function landDelayClass(n: number) {
 }
 .land-delay-9 {
   animation-delay: 0.54s;
+}
+.land-delay-10 {
+  animation-delay: 0.6s;
 }
 
 @keyframes land-in {
