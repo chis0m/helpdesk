@@ -11,8 +11,6 @@ import (
 )
 
 func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
-	_ = cfg
-
 	accessMaxAge := int(time.Until(tokens.AccessExpires).Seconds())
 	if accessMaxAge < 0 {
 		accessMaxAge = 0
@@ -23,9 +21,9 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 		refreshMaxAge = 0
 	}
 
-	// VULN-01: Weak session cookie flags — HttpOnly/Secure false (SameSite=Strict for same-site dev; cookies still readable if HttpOnly false).
-	secureCookie := false
-	httpOnlyCookie := false
+	// SECURE-01: HttpOnly always; Secure when production or COOKIE_SECURE=true (plain HTTP localhost keeps Secure=false).
+	secureCookie := cfg.CookieSecure()
+	httpOnlyCookie := true
 	cookiePath := "/"
 	cookieDomain := ""
 	sameSite := http.SameSiteStrictMode
@@ -35,10 +33,10 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 	c.SetCookie(auth.RefreshCookieName, tokens.RefreshToken, refreshMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 }
 
-func clearAuthCookies(c *gin.Context) {
-	// VULN-01: Match setAuthCookies — same Path/Domain/SameSite so the browser clears the session cookies.
-	secureCookie := false
-	httpOnlyCookie := false
+func clearAuthCookies(c *gin.Context, cfg config.Config) {
+	// SECURE-01: Match setAuthCookies Path/Domain/SameSite/Secure/HttpOnly so logout clears cookies reliably.
+	secureCookie := cfg.CookieSecure()
+	httpOnlyCookie := true
 	cookiePath := "/"
 	cookieDomain := ""
 	sameSite := http.SameSiteStrictMode

@@ -1,8 +1,8 @@
 /**
  * API client helpers.
  *
- * VULN-01: Mutating/session requests use `credentials: 'include'` (see callers) — session cookies are
- * issued by the backend with weak flags; the SPA stores/sends them as the browser allows.
+ * SECURE-01: Mutating/session requests use `credentials: 'include'` (see callers). Session cookies are
+ * HttpOnly (set by the backend; Secure when HTTPS/production). Not readable from JS.
  * VULN-05: `CSRF_HEADER` — client sends `X-CSRF-Token`; broken comparison / validation is server middleware.
  */
 import { getApiBaseUrl } from './base-url'

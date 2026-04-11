@@ -1,4 +1,4 @@
-// VULN-01: Login/refresh/logout/change-password rely on cookie session (weak flags set server-side).
+// SECURE-01: Session uses HttpOnly cookies from the API (`credentials: 'include'`); Secure flag when backend uses HTTPS/production.
 // VULN-05: Public vs session CSRF tokens sent here; weak verification is backend CSRF middleware.
 import { postAuthRefresh, type RefreshResponseData } from './auth-refresh-internal'
 import { apiUrl, CSRF_HEADER, readJson } from './client'
@@ -182,7 +182,7 @@ export async function logoutRequest(
   return { ok: true, data: env.data }
 }
 
-/** VULN-01: Session cookies via `credentials: 'include'`. VULN-05: `X-CSRF-Token` on POST. */
+/** SECURE-01: Session cookies via `credentials: 'include'` (HttpOnly; not visible in `document.cookie`). VULN-05: `X-CSRF-Token` on POST. */
 export type ChangePasswordBody = {
   current_password: string
   new_password: string
@@ -275,7 +275,7 @@ export async function resetPasswordRequest(
   return { ok: true, data: env.data }
 }
 
-/** VULN-01: `refresh_token` cookie; VULN-05: session CSRF on POST. Uses raw `fetch` via `postAuthRefresh`. */
+/** SECURE-01: `refresh_token` HttpOnly cookie. VULN-05: session CSRF on POST. Uses raw `fetch` via `postAuthRefresh`. */
 export type { RefreshResponseData }
 
 export async function refreshRequest(
@@ -287,7 +287,7 @@ export async function refreshRequest(
   return postAuthRefresh(sessionCsrf)
 }
 
-/** VULN-01: Session cookie required. */
+/** SECURE-01: Session cookie required. */
 export async function fetchSessionCsrfToken(): Promise<
   | { ok: true; data: PublicCsrfData }
   | { ok: false; status: number; message: string }
@@ -313,7 +313,7 @@ export async function fetchSessionCsrfToken(): Promise<
   return { ok: true, data: env.data }
 }
 
-/** VULN-01: Session cookie; response includes numeric `user_id` (VULN-02 baseline). */
+/** SECURE-01: Session cookie; response includes numeric `user_id` (VULN-02 baseline). */
 export interface AuthMeData {
   user_id: number
   user_uuid: string
@@ -350,7 +350,7 @@ export async function fetchMe(): Promise<
   return { ok: true, data: env.data }
 }
 
-/** VULN-01: Requires authenticated session cookie. */
+/** SECURE-01: Requires authenticated session cookie. */
 export interface AuthSessionRow {
   session_id: string
   created_at: string

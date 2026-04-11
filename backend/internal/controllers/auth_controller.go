@@ -63,7 +63,7 @@ func (a *AuthController) Login(c *gin.Context) {
 		return
 	}
 
-	// VULN-01: Weak session cookie flags — HttpOnly/Secure false (SameSite=Strict in setAuthCookies).
+	// SECURE-01: HttpOnly + Secure when configured — see setAuthCookies.
 	setAuthCookies(c, a.cfg, result.Tokens)
 
 	// user_id: exposed for vulnerable baseline (browser uses numeric id in routes/state, e.g. VULN-02 demos).
@@ -151,7 +151,7 @@ func (a *AuthController) Refresh(c *gin.Context) {
 		return
 	}
 
-	// VULN-01: Weak session cookie flags — HttpOnly/Secure false (SameSite=Strict in setAuthCookies).
+	// SECURE-01: HttpOnly + Secure when configured — see setAuthCookies.
 	setAuthCookies(c, a.cfg, *result)
 
 	user, err := a.authService.GetMe(refreshPayload.Sub)
@@ -238,7 +238,7 @@ func (a *AuthController) Logout(c *gin.Context) {
 		return
 	}
 
-	clearAuthCookies(c)
+	clearAuthCookies(c, a.cfg)
 	response.Success(c, http.StatusOK, gin.H{
 		"redirect_to": "/login",
 	}, "logout successful")
@@ -490,7 +490,7 @@ func (a *AuthController) RevokeSession(c *gin.Context) {
 	}
 
 	if isCurrent {
-		clearAuthCookies(c)
+		clearAuthCookies(c, a.cfg)
 	}
 
 	response.Success(c, http.StatusOK, gin.H{

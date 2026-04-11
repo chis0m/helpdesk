@@ -1,4 +1,4 @@
-// VULN-01: Logout calls API to clear session cookies issued under weak cookie flags (server-side VULN-01).
+// SECURE-01: Logout calls API to clear HttpOnly session cookies (server must mirror Set-Cookie attrs on clear).
 import type { Router } from 'vue-router'
 import { logoutRequest } from '@/api/auth'
 import { clearSessionRefreshSchedule } from '@/api/session-refresh'

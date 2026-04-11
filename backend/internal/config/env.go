@@ -10,20 +10,20 @@ import (
 )
 
 type Config struct {
-	Port                  string
-	FrontendURL           string
-	DBHost                string
-	DBDatabase            string
-	DBUsername            string
-	DBPassword            string
-	DBPort                string
-	SeedAdminEmail        string
-	SeedAdminPassword     string
-	SeedAdminFirstName    string
-	SeedAdminMiddleName   string
-	SeedAdminLastName     string
+	Port                string
+	FrontendURL         string
+	DBHost              string
+	DBDatabase          string
+	DBUsername          string
+	DBPassword          string
+	DBPort              string
+	SeedAdminEmail      string
+	SeedAdminPassword   string
+	SeedAdminFirstName  string
+	SeedAdminMiddleName string
+	SeedAdminLastName   string
 	// SeedCA enables CA assessment fixtures (customers, staff, tickets). See SEED_CA env.
-	SeedCA bool
+	SeedCA                bool
 	AppName               string
 	PasetoSymmetricKey    string
 	AccessTokenDuration   string
@@ -150,6 +150,15 @@ func (c Config) TokenAudience() string {
 // UseSMTPMail is true when MAIL_MAILER=smtp (case-insensitive).
 func (c Config) UseSMTPMail() bool {
 	return strings.EqualFold(strings.TrimSpace(c.MailDriver), "smtp")
+}
+
+// CookieSecure is true when auth cookies use the Secure flag (HTTPS). If COOKIE_SECURE is set, it wins; else true when GO_ENV=production.
+func (c Config) CookieSecure() bool {
+	raw := strings.TrimSpace(os.Getenv("COOKIE_SECURE"))
+	if raw != "" {
+		return getEnvBool("COOKIE_SECURE", false)
+	}
+	return strings.EqualFold(strings.TrimSpace(c.GoEnv), "production")
 }
 
 func parseDuration(raw string, fallback time.Duration) time.Duration {

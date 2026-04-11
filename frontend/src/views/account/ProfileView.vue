@@ -111,7 +111,7 @@
       </button>
     </form>
 
-    <!-- VULN-01: Change password POST uses session cookies. VULN-05: `X-CSRF-Token` on POST; weak verification is backend CSRF middleware. -->
+    <!-- SECURE-01: Change password POST uses session cookies (`credentials: 'include'`). VULN-05: `X-CSRF-Token` on POST; weak verification is backend CSRF middleware. -->
     <section
       v-if="!loading && !loadError"
       class="space-y-5 rounded-2xl border border-[var(--border-subtle)] bg-white p-6 shadow-sm"

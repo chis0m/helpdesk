@@ -1,5 +1,5 @@
 <template>
-  <!-- VULN-01: Session list requires authenticated cookies. VULN-05: Revoke actions send `X-CSRF-Token`. -->
+  <!-- SECURE-01: Session list requires authenticated cookies. VULN-05: Revoke actions send `X-CSRF-Token`. -->
   <div class="mx-auto max-w-2xl space-y-6">
     <header>
       <h2 class="text-lg font-semibold text-[var(--text-primary)]">

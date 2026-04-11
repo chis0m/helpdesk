@@ -113,7 +113,7 @@
 </template>
 
 <script setup lang="ts">
-// VULN-01: Successful login stores weak server-set session cookies via `credentials: 'include'` (see api/auth).
+// SECURE-01: Successful login receives HttpOnly session cookies via `credentials: 'include'` (see api/auth).
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchPublicCsrfToken, loginRequest } from '@/api/auth'
