@@ -80,12 +80,13 @@ func (a *AuthController) Login(c *gin.Context) {
 	setAuthCookies(c, a.cfg, result.Tokens)
 
 	uid := result.User.ID
+	uu := result.User.UUID.String()
 	audit.Write(c, a.auditLogRepo, audit.Event{
-		Action:       audit.ActionAuthLoginSuccess,
-		Success:      true,
-		ActorUserID:  &uid,
-		ResourceType: audit.Str(audit.ResourceTypeUser),
-		ResourceID:   &uid,
+		Action:        audit.ActionAuthLoginSuccess,
+		Success:       true,
+		ActorUserUUID: &uu,
+		ResourceType:  audit.Str(audit.ResourceTypeUser),
+		ResourceID:    &uid,
 		Metadata: map[string]interface{}{
 			"email": req.Email,
 			"role":  string(result.User.Role),

@@ -73,13 +73,13 @@ func (t *TicketController) Create(c *gin.Context) {
 	}
 
 	rid := ticket.ID
-	actorID := ticket.ReporterUserID
+	uu := userUUIDStr
 	audit.Write(c, t.auditLogRepo, audit.Event{
-		Action:       audit.ActionTicketCreate,
-		Success:      true,
-		ActorUserID:  &actorID,
-		ResourceType: audit.Str(audit.ResourceTypeTicket),
-		ResourceID:   &rid,
+		Action:        audit.ActionTicketCreate,
+		Success:       true,
+		ActorUserUUID: &uu,
+		ResourceType:  audit.Str(audit.ResourceTypeTicket),
+		ResourceID:    &rid,
 		Metadata: map[string]interface{}{
 			"title":    ticket.Title,
 			"category": ticket.Category,
@@ -440,9 +440,9 @@ func (t *TicketController) DeleteByID(c *gin.Context) {
 		ResourceType: audit.Str(audit.ResourceTypeTicket),
 		ResourceID:   &rid,
 		Metadata: map[string]interface{}{
-			"title":             ticket.Title,
-			"reporter_user_id":  ticket.ReporterUserID,
-			"assigned_user_id":  ticket.AssignedUserID,
+			"title":            ticket.Title,
+			"reporter_user_id": ticket.ReporterUserID,
+			"assigned_user_id": ticket.AssignedUserID,
 		},
 	})
 

@@ -29,10 +29,17 @@ func Write(c *gin.Context, repo LogAppender, e Event) {
 	}
 }
 
-// EnrichFromGin fills HTTP and auth context. It does not overwrite ActorUserID if already set.
+// EnrichFromGin fills HTTP and auth context. It does not overwrite ActorUserUUID if already set.
 func EnrichFromGin(c *gin.Context, e *Event) {
 	e.HTTPMethod = c.Request.Method
 	e.Path = c.Request.URL.Path
+
+	if v, ok := c.Get(middleware.CtxUserUUID); ok {
+		if s, ok := v.(string); ok && s != "" && e.ActorUserUUID == nil {
+			u := s
+			e.ActorUserUUID = &u
+		}
+	}
 
 	if v, ok := c.Get(middleware.CtxSessionID); ok {
 		if s, ok := v.(string); ok && s != "" {
@@ -63,12 +70,12 @@ func eventToModel(e *Event) (*models.AuditLog, error) {
 	}
 
 	row := &models.AuditLog{
-		ActorUserID: e.ActorUserID,
-		SessionID:   e.SessionID,
-		TokenJTI:    e.TokenJTI,
-		HTTPMethod:  e.HTTPMethod,
-		Path:        e.Path,
-		Action:      e.Action,
+		ActorUserUUID: e.ActorUserUUID,
+		SessionID:     e.SessionID,
+		TokenJTI:      e.TokenJTI,
+		HTTPMethod:    e.HTTPMethod,
+		Path:          e.Path,
+		Action:        e.Action,
 		Success:       e.Success,
 		ResourceType:  e.ResourceType,
 		ResourceID:    e.ResourceID,

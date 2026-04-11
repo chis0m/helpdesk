@@ -110,12 +110,13 @@ func (ic *InviteController) CreateStaffInvite(c *gin.Context) {
 		delivery = "smtp"
 	}
 	iid := inv.ID
+	au := actor.UUID.String()
 	audit.Write(c, ic.auditLogRepo, audit.Event{
-		Action:       audit.ActionInviteStaffCreate,
-		Success:      true,
-		ActorUserID:  &actor.ID,
-		ResourceType: audit.Str(audit.ResourceTypeInvite),
-		ResourceID:   &iid,
+		Action:        audit.ActionInviteStaffCreate,
+		Success:       true,
+		ActorUserUUID: &au,
+		ResourceType:  audit.Str(audit.ResourceTypeInvite),
+		ResourceID:    &iid,
 		Metadata: map[string]interface{}{
 			"target_email": inv.Email,
 			"target_role":  string(inv.TargetRole),
@@ -198,12 +199,13 @@ func (ic *InviteController) AcceptInvite(c *gin.Context) {
 	}
 
 	uid := user.ID
+	uu := user.UUID.String()
 	audit.Write(c, ic.auditLogRepo, audit.Event{
-		Action:       audit.ActionInviteAccepted,
-		Success:      true,
-		ActorUserID:  &uid,
-		ResourceType: audit.Str(audit.ResourceTypeUser),
-		ResourceID:   &uid,
+		Action:        audit.ActionInviteAccepted,
+		Success:       true,
+		ActorUserUUID: &uu,
+		ResourceType:  audit.Str(audit.ResourceTypeUser),
+		ResourceID:    &uid,
 		Metadata: map[string]interface{}{
 			"email":  user.Email,
 			"role":   user.Role,
