@@ -124,16 +124,16 @@ func (s *TicketService) GetForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, a
 	return s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
 }
 
-func (s *TicketService) SearchTicketsUnsafe(keyword string) ([]models.Ticket, error) {
+func (s *TicketService) SearchTicketsSafe(keyword string) ([]models.Ticket, error) {
 	keyword = strings.TrimSpace(keyword)
 	if keyword == "" {
 		return []models.Ticket{}, nil
 	}
-	return s.ticketRepo.SearchByKeywordConcatUnsafe(keyword)
+	return s.ticketRepo.SearchByKeywordConcatSafe(keyword)
 }
 
 func (s *TicketService) SearchForActor(actorUUID uuid.UUID, actorRole models.UserRole, keyword string) ([]models.Ticket, error) {
-	tickets, err := s.SearchTicketsUnsafe(keyword)
+	tickets, err := s.SearchTicketsSafe(keyword)
 	if err != nil {
 		return nil, err
 	}
