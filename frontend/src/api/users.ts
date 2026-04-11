@@ -1,4 +1,4 @@
-// VULN-02: GET/PATCH `/api/users/:id` by numeric id from the UI — no client-side actor-vs-target check (backend IDOR).
+// SEC-02: Profile uses GET/PATCH `/api/users/me` only — no user id in the path (session-scoped).
 // VULN-05: PATCH sends `X-CSRF-Token`; weak verification is backend CSRF middleware.
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'
@@ -34,10 +34,8 @@ function errorMessage(body: unknown): string {
   return 'Request failed'
 }
 
-export async function fetchUser(
-  userId: number,
-): Promise<{ ok: true; data: UserProfileData } | { ok: false; status: number; message: string }> {
-  const url = apiUrl(`/api/users/${userId}`)
+export async function fetchMe(): Promise<{ ok: true; data: UserProfileData } | { ok: false; status: number; message: string }> {
+  const url = apiUrl('/api/users/me')
   const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
@@ -46,24 +44,23 @@ export async function fetchUser(
   const json = await readJson(res)
   logger.debug('api:users', `GET ${url} → ${res.status}`)
   if (!res.ok) {
-    logger.debug('api:users', 'GET user error envelope (dev)', json)
+    logger.debug('api:users', 'GET /users/me error envelope (dev)', json)
     return { ok: false, status: res.status, message: errorMessage(json) }
   }
   const env = json as ApiSuccessEnvelope<UserProfileData>
   if (!env.data) {
-    logger.debug('api:users', 'GET user missing data (dev)', json)
+    logger.debug('api:users', 'GET /users/me missing data (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
-  logger.debug('api:users', 'GET user success data (dev)', env.data)
+  logger.debug('api:users', 'GET /users/me success data (dev)', env.data)
   return { ok: true, data: env.data }
 }
 
-export async function patchUser(
-  userId: number,
+export async function patchMe(
   body: PatchUserBody,
   csrfToken: string,
 ): Promise<{ ok: true; data: UserProfileData } | { ok: false; status: number; message: string }> {
-  const url = apiUrl(`/api/users/${userId}`)
+  const url = apiUrl('/api/users/me')
   const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
@@ -80,14 +77,14 @@ export async function patchUser(
     'X-CSRF-Token (session)': csrfToken,
   })
   if (!res.ok) {
-    logger.debug('api:users', 'PATCH user error envelope (dev)', json)
+    logger.debug('api:users', 'PATCH /users/me error envelope (dev)', json)
     return { ok: false, status: res.status, message: errorMessage(json) }
   }
   const env = json as ApiSuccessEnvelope<UserProfileData>
   if (!env.data) {
-    logger.debug('api:users', 'PATCH user missing data (dev)', json)
+    logger.debug('api:users', 'PATCH /users/me missing data (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
-  logger.debug('api:users', 'PATCH user success envelope (dev)', json)
+  logger.debug('api:users', 'PATCH /users/me success envelope (dev)', json)
   return { ok: true, data: env.data }
 }

@@ -3,6 +3,7 @@ package repositories
 import (
 	"fmt"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"helpdesk/backend/internal/models"
@@ -19,13 +20,13 @@ func NewTicketRepository(db *gorm.DB) *TicketRepository {
 
 func (r *TicketRepository) Create(input requests.CreateTicketInput) (*models.Ticket, error) {
 	ticket := &models.Ticket{
+		UUID:           uuid.New(),
 		ReporterUserID: input.ReporterUserID,
 		Title:          input.Title,
 		Description:    input.Description,
 		Category:       input.Category,
 		Status:         models.TicketStatusOpen,
 	}
-
 	if err := r.db.Create(ticket).Error; err != nil {
 		return nil, err
 	}
@@ -35,6 +36,14 @@ func (r *TicketRepository) Create(input requests.CreateTicketInput) (*models.Tic
 func (r *TicketRepository) GetByID(ticketID uint64) (*models.Ticket, error) {
 	var ticket models.Ticket
 	if err := r.db.Preload("Reporter").Preload("Assignee").First(&ticket, "id = ?", ticketID).Error; err != nil {
+		return nil, err
+	}
+	return &ticket, nil
+}
+
+func (r *TicketRepository) GetByUUID(ticketUUID uuid.UUID) (*models.Ticket, error) {
+	var ticket models.Ticket
+	if err := r.db.Preload("Reporter").Preload("Assignee").First(&ticket, "uuid = ?", ticketUUID).Error; err != nil {
 		return nil, err
 	}
 	return &ticket, nil

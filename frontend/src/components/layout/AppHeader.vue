@@ -82,7 +82,7 @@ async function onLogout() {
 
 const profilePath = computed(() => {
   const u = getAuthUserSnapshot()
-  return u ? paths.dashboard.profile(u.user_id) : paths.login
+  return u ? paths.dashboard.profile : paths.login
 })
 
 const displayName = computed(() => {

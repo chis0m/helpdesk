@@ -1,8 +1,6 @@
 /**
  * Central route paths — keep in sync with `src/router/index.ts`.
  * Use these in RouterLink, router.push, and docs instead of string literals.
- *
- * VULN-02: `profile(userId)` builds paths with numeric user id (vulnerable baseline; UUID-only on remediation branch).
  */
 export const paths = {
   landing: '/',
@@ -17,12 +15,9 @@ export const paths = {
     home: '/dashboard',
     tickets: '/dashboard/tickets',
     ticketNew: '/dashboard/tickets/new',
-    ticketDetail: (id: string) => `/dashboard/tickets/${encodeURIComponent(id)}`,
-    /** Numeric user id (vulnerable baseline); remediation may switch to UUID-only paths. */
-    profile: (userId: string | number) =>
-      `/dashboard/profile/${encodeURIComponent(String(userId))}`,
-    /** Use with router redirect so `/dashboard/profile` resolves to the signed-in user. */
-    profileRedirect: '/dashboard/profile',
+    ticketDetail: (ticketUuid: string) =>
+      `/dashboard/tickets/${encodeURIComponent(ticketUuid)}`,
+    profile: '/dashboard/profile',
     adminUsers: '/dashboard/admin/users',
     /** Internal staff directory (includes administrator flag per row). */
     adminStaff: '/dashboard/admin/staff',

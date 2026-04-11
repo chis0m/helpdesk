@@ -11,6 +11,7 @@ export type TicketComment = {
 }
 
 export type Ticket = {
+  /** Opaque ticket UUID (routing). */
   id: string
   title: string
   description: string

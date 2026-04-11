@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"helpdesk/backend/internal/auth/policy"
 	"helpdesk/backend/internal/models"
 	"helpdesk/backend/internal/repositories"
 	"helpdesk/backend/internal/requests"
@@ -14,6 +15,7 @@ import (
 var ErrInvalidTicketStatusTransition = errors.New("invalid ticket status transition")
 var ErrTicketCommentForbidden = errors.New("forbidden comment action")
 var ErrTicketListForbidden = errors.New("forbidden ticket list filters")
+var ErrTicketAccessDenied = errors.New("ticket access denied")
 
 type TicketService struct {
 	ticketRepo  *repositories.TicketRepository
@@ -33,7 +35,21 @@ func NewTicketService(
 	}
 }
 
-// VULN-03: Weak input validation / stored XSS risk — persists ticket text with length-only validation.
+func (s *TicketService) loadTicketForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole) (*models.Ticket, error) {
+	ticket, err := s.ticketRepo.GetByUUID(ticketUUID)
+	if err != nil {
+		return nil, err
+	}
+	actor, err := s.userRepo.GetByUUID(actorUUID)
+	if err != nil {
+		return nil, err
+	}
+	if !policy.CanAccessTicket(actor, actorRole, ticket) {
+		return nil, ErrTicketAccessDenied
+	}
+	return ticket, nil
+}
+
 func (s *TicketService) CreateByUserUUID(userUUID string, req requests.CreateTicketRequest) (*models.Ticket, error) {
 	parsedUUID, err := uuid.Parse(userUUID)
 	if err != nil {
@@ -67,8 +83,6 @@ func (s *TicketService) List(filter requests.ListTicketsFilter) ([]models.Ticket
 	return s.ticketRepo.List(filter)
 }
 
-// ListForActor applies authorization: only admin and super_admin may list without scope;
-// other roles only see tickets they reported or are assigned to.
 func (s *TicketService) ListForActor(actorUserUUID string, actorRole models.UserRole, filter requests.ListTicketsFilter) ([]models.Ticket, int64, error) {
 	if filter.Page < 1 {
 		filter.Page = 1
@@ -106,13 +120,10 @@ func (s *TicketService) ListForActor(actorUserUUID string, actorRole models.User
 	return s.ticketRepo.List(filter)
 }
 
-// VULN-02: IDOR on tickets and comments — GetByID through ListComments lack reporter/assignee/admin checks on ticket id.
-
-func (s *TicketService) GetByID(ticketID uint64) (*models.Ticket, error) {
-	return s.ticketRepo.GetByID(ticketID)
+func (s *TicketService) GetForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole) (*models.Ticket, error) {
+	return s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
 }
 
-// VULN-07: SQL injection (ticket keyword search) — forwards q to Raw SQL built with string concatenation.
 func (s *TicketService) SearchTicketsUnsafe(keyword string) ([]models.Ticket, error) {
 	keyword = strings.TrimSpace(keyword)
 	if keyword == "" {
@@ -121,69 +132,116 @@ func (s *TicketService) SearchTicketsUnsafe(keyword string) ([]models.Ticket, er
 	return s.ticketRepo.SearchByKeywordConcatUnsafe(keyword)
 }
 
-func (s *TicketService) UpdateByID(ticketID uint64, req requests.UpdateTicketRequest) (*models.Ticket, error) {
+func (s *TicketService) SearchForActor(actorUUID uuid.UUID, actorRole models.UserRole, keyword string) ([]models.Ticket, error) {
+	tickets, err := s.SearchTicketsUnsafe(keyword)
+	if err != nil {
+		return nil, err
+	}
+	actor, err := s.userRepo.GetByUUID(actorUUID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]models.Ticket, 0, len(tickets))
+	for i := range tickets {
+		tk := tickets[i]
+		if policy.CanAccessTicket(actor, actorRole, &tk) {
+			out = append(out, tk)
+		}
+	}
+	return out, nil
+}
+
+func (s *TicketService) UpdateForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole, req requests.UpdateTicketRequest) (*models.Ticket, error) {
+	ticket, err := s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
+	if err != nil {
+		return nil, err
+	}
 	input := requests.UpdateTicketInput{
 		Title:       req.Title,
 		Description: req.Description,
 		Category:    req.Category,
 	}
-	return s.ticketRepo.UpdateByID(ticketID, input)
+	return s.ticketRepo.UpdateByID(ticket.ID, input)
 }
 
-func (s *TicketService) UpdateStatus(ticketID uint64, status models.TicketStatus) (*models.Ticket, error) {
-	current, err := s.ticketRepo.GetByID(ticketID)
+func (s *TicketService) UpdateStatusForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole, status models.TicketStatus) (*models.Ticket, error) {
+	ticket, err := s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
 	if err != nil {
 		return nil, err
 	}
-	if !isAllowedTransition(current.Status, status) {
+	if !isAllowedTransition(ticket.Status, status) {
 		return nil, ErrInvalidTicketStatusTransition
 	}
-	return s.ticketRepo.UpdateStatus(ticketID, status)
+	return s.ticketRepo.UpdateStatus(ticket.ID, status)
 }
 
-func (s *TicketService) Assign(ticketID uint64, assignedUserID *uint64, unassign bool) (*models.Ticket, error) {
+func (s *TicketService) AssignForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole, assignedUserID *uint64, unassign bool) (*models.Ticket, error) {
+	ticket, err := s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
+	if err != nil {
+		return nil, err
+	}
 	if unassign {
-		return s.ticketRepo.UpdateAssignment(ticketID, nil)
+		return s.ticketRepo.UpdateAssignment(ticket.ID, nil)
 	}
 	if assignedUserID == nil {
-		return s.ticketRepo.GetByID(ticketID)
+		return s.ticketRepo.GetByID(ticket.ID)
 	}
 	if _, err := s.userRepo.GetByID(*assignedUserID); err != nil {
 		return nil, err
 	}
-	return s.ticketRepo.UpdateAssignment(ticketID, assignedUserID)
+	return s.ticketRepo.UpdateAssignment(ticket.ID, assignedUserID)
 }
 
-func (s *TicketService) DeleteByID(ticketID uint64) error {
-	return s.ticketRepo.DeleteByID(ticketID)
-}
-
-func (s *TicketService) AddComment(ticketID uint64, actorUserUUID string, body string) (*models.TicketComment, error) {
-	if _, err := s.ticketRepo.GetByID(ticketID); err != nil {
-		return nil, err
+func (s *TicketService) DeleteForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole) error {
+	ticket, err := s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
+	if err != nil {
+		return err
 	}
+	return s.ticketRepo.DeleteByID(ticket.ID)
+}
 
-	actor, err := s.getActorByUUID(actorUserUUID)
+func (s *TicketService) AddCommentForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole, body string) (*models.TicketComment, error) {
+	ticket, err := s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
 	if err != nil {
 		return nil, err
 	}
-
+	actor, err := s.userRepo.GetByUUID(actorUUID)
+	if err != nil {
+		return nil, err
+	}
 	input := requests.CreateTicketCommentInput{
-		TicketID:     ticketID,
+		TicketID:     ticket.ID,
 		AuthorUserID: actor.ID,
 		Body:         strings.TrimSpace(body),
 	}
 	return s.commentRepo.Create(input)
 }
 
-func (s *TicketService) ListComments(ticketID uint64) ([]models.TicketCommentWithAuthor, error) {
-	if _, err := s.ticketRepo.GetByID(ticketID); err != nil {
+func (s *TicketService) ListCommentsForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole) ([]models.TicketCommentWithAuthor, error) {
+	ticket, err := s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
+	if err != nil {
 		return nil, err
 	}
-	return s.commentRepo.ListByTicketID(ticketID)
+	return s.commentRepo.ListByTicketID(ticket.ID)
 }
 
-func (s *TicketService) UpdateComment(ticketID uint64, commentID uint64, actorUserUUID string, role models.UserRole, body string) (*models.TicketComment, error) {
+func (s *TicketService) UpdateCommentForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole, commentID uint64, body string) (*models.TicketComment, error) {
+	ticket, err := s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
+	if err != nil {
+		return nil, err
+	}
+	return s.updateCommentBody(ticket.ID, commentID, actorUUID.String(), actorRole, body)
+}
+
+func (s *TicketService) DeleteCommentForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole, commentID uint64) error {
+	ticket, err := s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
+	if err != nil {
+		return err
+	}
+	return s.deleteComment(ticket.ID, commentID, actorUUID.String(), actorRole)
+}
+
+func (s *TicketService) updateCommentBody(ticketID uint64, commentID uint64, actorUserUUID string, role models.UserRole, body string) (*models.TicketComment, error) {
 	comment, err := s.commentRepo.GetByIDAndTicketID(commentID, ticketID)
 	if err != nil {
 		return nil, err
@@ -201,7 +259,7 @@ func (s *TicketService) UpdateComment(ticketID uint64, commentID uint64, actorUs
 	return s.commentRepo.UpdateBody(commentID, strings.TrimSpace(body))
 }
 
-func (s *TicketService) DeleteComment(ticketID uint64, commentID uint64, actorUserUUID string, role models.UserRole) error {
+func (s *TicketService) deleteComment(ticketID uint64, commentID uint64, actorUserUUID string, role models.UserRole) error {
 	comment, err := s.commentRepo.GetByIDAndTicketID(commentID, ticketID)
 	if err != nil {
 		return err

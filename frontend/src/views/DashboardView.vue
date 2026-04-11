@@ -91,7 +91,7 @@
           class="mt-5 space-y-2"
         >
           <li
-            v-for="t in ticketPreview"
+            v-for="(t, idx) in ticketPreview"
             :key="t.id"
           >
             <RouterLink
@@ -100,8 +100,9 @@
             >
               <div class="flex min-w-0 flex-1 items-start gap-3">
                 <span
-                  class="inline-flex shrink-0 items-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
-                >ID: {{ t.id }}</span>
+                  class="inline-flex min-w-[1.75rem] shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
+                  :aria-label="`Row ${idx + 1} of ${ticketPreview.length}`"
+                >{{ idx + 1 }}</span>
                 <div class="min-w-0 flex-1">
                   <p class="truncate font-semibold text-[var(--text-primary)]">
                     {{ t.title }}
@@ -219,12 +220,13 @@
               :key="row.id"
             >
               <RouterLink
-                :to="paths.dashboard.ticketDetail(String(row.ticketId))"
+                :to="paths.dashboard.ticketDetail(row.id)"
                 class="group flex cursor-pointer items-start gap-3 border-t border-[var(--border-subtle)] px-4 py-4 transition hover:bg-gradient-to-r hover:from-[var(--surface-mint)]/30 hover:to-transparent sm:items-center"
               >
                 <span
-                  class="inline-flex shrink-0 items-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
-                >ID: {{ row.ticketId }}</span>
+                  class="inline-flex min-w-[1.75rem] shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
+                  :aria-label="`Row ${row.listIndex} of ${recentActivityTotal}`"
+                >{{ row.listIndex }}</span>
                 <div class="min-w-0 flex-1">
                   <p class="font-semibold text-[var(--text-primary)]">
                     {{ row.title }}
@@ -298,12 +300,20 @@ const openTicketCount = computed(() =>
   items.value.filter(t => t.status === 'open' || t.status === 'in_progress').length,
 )
 
+/** Rows shown in Recent activity (same slice used for numbering 1…n). */
+const recentActivityTotal = computed(() => {
+  const sorted = [...items.value].sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+  )
+  return Math.min(12, sorted.length)
+})
+
 const ticketPreview = computed(() => {
   const sorted = [...items.value].sort(
     (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   )
   return sorted.slice(0, 3).map(t => ({
-    id: String(t.ticket_id),
+    id: t.ticket_uuid,
     title: t.title,
     category: t.category,
     status: t.status as TicketStatus,
@@ -350,23 +360,24 @@ const recentGroups = computed(() => {
   const sorted = [...items.value].sort(
     (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   )
-  const top = sorted.slice(0, 12)
-  const map = new Map<string, ApiTicketRow[]>()
-  for (const t of top) {
-    const label = dayGroupLabel(t.updated_at)
+  const top = sorted.slice(0, 12).map((t, idx) => ({
+    id: t.ticket_uuid,
+    listIndex: idx + 1,
+    title: t.title,
+    subtitle: `${formatTicketCategoryLabel(t.category)} · Updated ${formatDateTime(t.updated_at)}`,
+    status: t.status as TicketStatus,
+    updated_at: t.updated_at,
+  }))
+  const map = new Map<string, typeof top>()
+  for (const row of top) {
+    const label = dayGroupLabel(row.updated_at)
     if (!map.has(label))
       map.set(label, [])
-    map.get(label)!.push(t)
+    map.get(label)!.push(row)
   }
   return Array.from(map.entries()).map(([date, rows]) => ({
     date,
-    items: rows.map(t => ({
-      id: `t-${t.ticket_id}`,
-      ticketId: t.ticket_id,
-      title: t.title,
-      subtitle: `${formatTicketCategoryLabel(t.category)} · Updated ${formatDateTime(t.updated_at)}`,
-      status: t.status as TicketStatus,
-    })),
+    items: rows.map(({ updated_at: _u, ...rest }) => rest),
   }))
 })
 </script>

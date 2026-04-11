@@ -1,12 +1,11 @@
 <template>
-  <!-- VULN-02: Profile UI is keyed by route `userId`; no check that it matches the signed-in user (backend IDOR). -->
   <div class="mx-auto max-w-xl space-y-6">
     <header>
       <h2 class="text-lg font-semibold text-[var(--text-primary)]">
         Your profile
       </h2>
       <p class="mt-1 text-sm text-[var(--text-secondary)]">
-        User ID {{ userId }} — update the details on your SecWeb Helpdesk account.
+        Update the details on your SecWeb Helpdesk account.
       </p>
     </header>
 
@@ -227,20 +226,14 @@
 </template>
 
 <script setup lang="ts">
-// VULN-02: fetch/patch user by numeric id from route — pairs with backend GET/PATCH /users/:id IDOR.
-import { computed, reactive, ref, watch } from 'vue'
+// SEC-02: Loads and saves via `/api/users/me` only (no user id in URL).
+import { reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { changePasswordRequest } from '@/api/auth'
-import { fetchUser, patchUser } from '@/api/users'
+import { fetchMe, patchMe } from '@/api/users'
 import { getSessionCsrfToken } from '@/stores/auth-session'
 
 const route = useRoute()
-
-const userId = computed(() => {
-  const raw = route.params.userId
-  const n = typeof raw === 'string' ? Number.parseInt(raw, 10) : Number.NaN
-  return Number.isFinite(n) && n > 0 ? n : null
-})
 
 const loading = ref(true)
 const loadError = ref('')
@@ -269,14 +262,7 @@ const form = reactive({
 async function loadProfile() {
   loadError.value = ''
   loading.value = true
-  const id = userId.value
-  if (id === null) {
-    loadError.value = 'Invalid profile link.'
-    loading.value = false
-    return
-  }
-
-  const result = await fetchUser(id)
+  const result = await fetchMe()
   loading.value = false
   if (!result.ok) {
     loadError.value = result.message
@@ -289,7 +275,7 @@ async function loadProfile() {
 }
 
 watch(
-  () => route.params.userId,
+  () => route.fullPath,
   () => {
     void loadProfile()
   },
@@ -299,11 +285,6 @@ watch(
 async function onSave() {
   saveError.value = ''
   savedBanner.value = false
-  const id = userId.value
-  if (id === null) {
-    saveError.value = 'Invalid profile.'
-    return
-  }
   const csrf = getSessionCsrfToken()
   if (!csrf) {
     saveError.value = 'Your session expired. Sign in again.'
@@ -311,8 +292,7 @@ async function onSave() {
   }
 
   saving.value = true
-  const result = await patchUser(
-    id,
+  const result = await patchMe(
     {
       email: form.email.trim(),
       first_name: form.firstName.trim(),

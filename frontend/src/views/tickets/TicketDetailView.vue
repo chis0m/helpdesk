@@ -39,7 +39,7 @@
         <div class="flex flex-wrap items-center gap-2">
           <span
             class="inline-flex items-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
-          >ID: {{ ticket.id }}</span>
+          >{{ ticketUuidDisplayRef(ticket.id) }}</span>
           <CategoryBadge :category="ticket.category" />
           <TicketStatusBadge
             :status="ticket.status"
@@ -62,10 +62,10 @@
         >
           <div class="min-w-0">
             <dt class="text-xs text-[var(--text-muted)]">
-              Ticket ID
+              Reference
             </dt>
             <dd class="mt-0.5 font-mono text-sm font-semibold tabular-nums text-[var(--text-primary)]">
-              {{ ticket.id }}
+              {{ ticketUuidDisplayRef(ticket.id) }}
             </dd>
           </div>
           <div class="min-w-0">
@@ -332,7 +332,7 @@
       Ticket not found
     </p>
     <p class="mt-2 text-sm text-[var(--text-secondary)]">
-      We couldn’t find ticket #{{ route.params.id }}.
+      We couldn’t find this ticket.
     </p>
     <RouterLink
       :to="paths.dashboard.tickets"
@@ -344,7 +344,6 @@
 </template>
 
 <script setup lang="ts">
-// VULN-02: Loads ticket/comments by `route.params.id` only — backend IDOR completes unauthorized access.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
@@ -363,7 +362,11 @@ import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
 import { getAuthUserSnapshot, getSessionCsrfToken } from '@/stores/auth-session'
 import { formatDateTime } from '@/utils/date-format'
-import { assigneeDisplayLabel, reporterDisplayLabel } from '@/utils/ticket-ui'
+import {
+  assigneeDisplayLabel,
+  reporterDisplayLabel,
+  ticketUuidDisplayRef,
+} from '@/utils/ticket-ui'
 import type { Ticket, TicketComment, TicketStatus } from '@/types/ticket'
 
 const route = useRoute()
@@ -382,7 +385,7 @@ function apiRowToTicket(row: ApiTicketRow): Ticket {
       ? String(row.assigned_email).trim()
       : null
   return {
-    id: String(row.ticket_id),
+    id: row.ticket_uuid,
     title: row.title,
     description: row.description,
     category: row.category,
@@ -397,11 +400,16 @@ function apiRowToTicket(row: ApiTicketRow): Ticket {
   }
 }
 
+function routeTicketId(): string {
+  const raw = route.params.id
+  return typeof raw === 'string' ? raw.trim() : ''
+}
+
 const ticket = computed((): Ticket | undefined => {
-  const id = typeof route.params.id === 'string' ? route.params.id : ''
-  if (!id)
+  const id = routeTicketId()
+  if (!id || !fromApi.value)
     return undefined
-  if (fromApi.value && String(fromApi.value.ticket_id) === id)
+  if (fromApi.value.ticket_uuid.toLowerCase() === id.toLowerCase())
     return apiRowToTicket(fromApi.value)
   return undefined
 })
@@ -427,9 +435,9 @@ const assignUserIdParsed = computed(() => {
 const statusSaving = ref(false)
 const statusError = ref('')
 
-async function refreshApiComments(ticketId: number) {
+async function refreshApiComments(ticketUuid: string) {
   commentsLoadError.value = ''
-  const res = await fetchTicketComments(ticketId)
+  const res = await fetchTicketComments(ticketUuid)
   if (!res.ok) {
     commentsLoadError.value = res.message
     apiComments.value = []
@@ -450,41 +458,43 @@ watch(
     assignUserIdInput.value = ''
     assignDeleteError.value = ''
     statusError.value = ''
-    const id = typeof raw === 'string' ? raw : ''
-    if (!id)
-      return
-    const n = Number.parseInt(id, 10)
-    if (!Number.isFinite(n) || n <= 0)
-      return
-    loadingTicket.value = true
-    const res = await fetchTicket(n)
-    loadingTicket.value = false
-    if (!res.ok) {
-      loadError.value = res.message
+    const id = typeof raw === 'string' ? raw.trim() : ''
+    if (!id) {
+      loadingTicket.value = false
       return
     }
-    fromApi.value = res.data
-    await refreshApiComments(n)
+    loadingTicket.value = true
+    try {
+      const res = await fetchTicket(id)
+      if (!res.ok) {
+        loadError.value = res.message
+        return
+      }
+      fromApi.value = res.data
+      await refreshApiComments(id)
+    }
+    catch (e) {
+      loadError.value = e instanceof Error ? e.message : 'Could not load ticket.'
+    }
+    finally {
+      loadingTicket.value = false
+    }
   },
   { immediate: true },
 )
 
 async function onStatusUpdate(status: TicketStatus) {
-  const id = ticket.value?.id
-  if (!id)
+  const tu = currentTicketUuid()
+  if (!tu)
     return
-  // VULN-02: Status PATCH uses ticket id from the URL — backend IDOR completes unauthorized changes.
   statusError.value = ''
-  const ticketNum = Number.parseInt(id, 10)
-  if (!Number.isFinite(ticketNum) || ticketNum <= 0)
-    return
   const csrf = getSessionCsrfToken()
   if (!csrf) {
     statusError.value = 'Your session expired. Sign in again.'
     return
   }
   statusSaving.value = true
-  const res = await patchTicketStatus(ticketNum, status, csrf)
+  const res = await patchTicketStatus(tu, status, csrf)
   statusSaving.value = false
   if (!res.ok) {
     statusError.value = res.message
@@ -493,18 +503,17 @@ async function onStatusUpdate(status: TicketStatus) {
   fromApi.value = res.data
 }
 
-function currentTicketNumericId(): number | null {
+function currentTicketUuid(): string | null {
   const raw = route.params.id
-  const id = typeof raw === 'string' ? raw : ''
-  const n = Number.parseInt(id, 10)
-  return Number.isFinite(n) && n > 0 ? n : null
+  const id = typeof raw === 'string' ? raw.trim() : ''
+  return id.length > 0 ? id : null
 }
 
 async function onAssign() {
   assignDeleteError.value = ''
-  const ticketNum = currentTicketNumericId()
+  const ticketU = currentTicketUuid()
   const uid = assignUserIdParsed.value
-  if (ticketNum === null || uid === null) {
+  if (ticketU === null || uid === null) {
     assignDeleteError.value = 'Enter a valid assignee user id.'
     return
   }
@@ -514,7 +523,7 @@ async function onAssign() {
     return
   }
   assigning.value = true
-  const res = await assignTicket(ticketNum, { assigned_user_id: uid }, csrf)
+  const res = await assignTicket(ticketU, { assigned_user_id: uid }, csrf)
   assigning.value = false
   if (!res.ok) {
     assignDeleteError.value = res.message
@@ -526,8 +535,8 @@ async function onAssign() {
 
 async function onUnassign() {
   assignDeleteError.value = ''
-  const ticketNum = currentTicketNumericId()
-  if (ticketNum === null)
+  const ticketU = currentTicketUuid()
+  if (ticketU === null)
     return
   const csrf = getSessionCsrfToken()
   if (!csrf) {
@@ -535,7 +544,7 @@ async function onUnassign() {
     return
   }
   assigning.value = true
-  const res = await assignTicket(ticketNum, { unassign: true }, csrf)
+  const res = await assignTicket(ticketU, { unassign: true }, csrf)
   assigning.value = false
   if (!res.ok) {
     assignDeleteError.value = res.message
@@ -548,8 +557,8 @@ async function onDeleteTicket() {
   assignDeleteError.value = ''
   if (!window.confirm('Delete this ticket permanently? This cannot be undone.'))
     return
-  const ticketNum = currentTicketNumericId()
-  if (ticketNum === null)
+  const ticketU = currentTicketUuid()
+  if (ticketU === null)
     return
   const csrf = getSessionCsrfToken()
   if (!csrf) {
@@ -557,7 +566,7 @@ async function onDeleteTicket() {
     return
   }
   deleting.value = true
-  const res = await deleteTicket(ticketNum, csrf)
+  const res = await deleteTicket(ticketU, csrf)
   deleting.value = false
   if (!res.ok) {
     assignDeleteError.value = res.message
@@ -579,9 +588,8 @@ async function onPostComment() {
   const text = draft.value.trim()
   if (!text || !ticket.value)
     return
-  const id = typeof route.params.id === 'string' ? route.params.id : ''
-  const ticketNum = Number.parseInt(id, 10)
-  if (!Number.isFinite(ticketNum) || ticketNum <= 0)
+  const tu = currentTicketUuid()
+  if (!tu)
     return
   const csrf = getSessionCsrfToken()
   if (!csrf) {
@@ -589,13 +597,13 @@ async function onPostComment() {
     return
   }
   postingComment.value = true
-  const res = await createTicketComment(ticketNum, text, csrf)
+  const res = await createTicketComment(tu, text, csrf)
   postingComment.value = false
   if (!res.ok) {
     commentSubmitError.value = res.message
     return
   }
   draft.value = ''
-  await refreshApiComments(ticketNum)
+  await refreshApiComments(tu)
 }
 </script>

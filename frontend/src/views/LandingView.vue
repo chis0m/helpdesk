@@ -228,12 +228,6 @@
                 <p class="text-xs text-[var(--text-muted)]">
                   {{ t.role }}
                 </p>
-                <p class="mt-0.5">
-                  <a
-                    :href="`mailto:${t.email}`"
-                    class="text-xs text-[var(--text-secondary)] underline decoration-[var(--border-strong)] underline-offset-2 transition hover:text-[var(--brand-green-dark)]"
-                  >{{ t.email }}</a>
-                </p>
               </div>
             </figcaption>
           </figure>
@@ -296,7 +290,6 @@ const testimonials = [
   {
     name: 'Mark Anthony',
     role: 'Product Manager',
-    email: 'mark.anthony@example.com',
     initials: 'MA',
     quote:
       'SecWeb customer service has been outstanding — quick responses, clear updates, and they actually follow through until the issue is sorted.',
@@ -304,7 +297,6 @@ const testimonials = [
   {
     name: 'Jane Doe',
     role: 'IT Lead',
-    email: 'jane.doe@sample.com',
     initials: 'JD',
     quote:
       "Our team relies on timely support when integrations act up. SecWeb's helpdesk keeps us moving; escalation feels professional every time.",

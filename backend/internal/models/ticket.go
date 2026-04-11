@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -17,6 +18,7 @@ const (
 
 type Ticket struct {
 	ID             uint64       `gorm:"primaryKey;autoIncrement"`
+	UUID           uuid.UUID    `gorm:"column:uuid;type:char(36);uniqueIndex;not null"`
 	ReporterUserID uint64       `gorm:"not null;index"`
 	AssignedUserID *uint64      `gorm:"index"`
 	Title          string       `gorm:"size:180;not null"`

@@ -1,6 +1,11 @@
 import type { ApiTicketRow } from '@/api/tickets'
 import type { TicketStatus } from '@/types/ticket'
 
+/** Short label derived from `ticket_uuid` for chips only (no backend serial). */
+export function ticketUuidDisplayRef(ticketUuid: string): string {
+  return ticketUuid.replace(/-/g, '').slice(0, 8).toUpperCase()
+}
+
 /** Workflow steps for ticket status (UI copy + value). */
 export const TICKET_STATUS_DEFINITIONS: {
   value: TicketStatus

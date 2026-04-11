@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"helpdesk/backend/internal/models"
@@ -107,6 +108,7 @@ func firstOrCreateTicketWithStatus(
 
 	now := time.Now().UTC()
 	t := models.Ticket{
+		UUID:           uuid.New(),
 		Title:          normalizedTitle,
 		Description:    strings.TrimSpace(description),
 		Status:         status,

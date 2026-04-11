@@ -1,6 +1,4 @@
 /** App routes — landing, auth, and dashboard. */
-// VULN-02: `profile/:userId` — any numeric id can be opened in the SPA (backend IDOR completes the issue).
-// VULN-02: `tickets/:id` — ticket detail/comments keyed only by id in the URL (backend IDOR completes the issue).
 import { createRouter, createWebHistory } from 'vue-router'
 import type { NavigationGuard } from 'vue-router'
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -110,15 +108,6 @@ const router = createRouter({
         },
         {
           path: 'profile',
-          redirect() {
-            const u = getAuthUserSnapshot()
-            if (!u)
-              return { path: '/login', query: { redirect: '/dashboard/profile' } }
-            return { name: 'dashboard-profile', params: { userId: String(u.user_id) } }
-          },
-        },
-        {
-          path: 'profile/:userId',
           name: 'dashboard-profile',
           meta: { title: 'Your profile' },
           component: () => import('@/views/account/ProfileView.vue'),

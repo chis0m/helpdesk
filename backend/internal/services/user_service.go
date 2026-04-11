@@ -66,9 +66,27 @@ func validateRoleTransition(current, target models.UserRole) error {
 	return nil
 }
 
-// VULN-02: IDOR on user profiles — loads user by id with no actor-vs-target authorization.
-func (s *UserService) GetByID(userID uint64) (*models.User, error) {
-	return s.userRepo.GetByID(userID)
+func (s *UserService) GetProfileByActorUUID(actorUUID string) (*models.User, error) {
+	p, err := uuid.Parse(strings.TrimSpace(actorUUID))
+	if err != nil {
+		return nil, err
+	}
+	return s.userRepo.GetByUUID(p)
+}
+
+func (s *UserService) UpdateProfileByActorUUID(actorUUID string, req requests.UpdateUserRequest) (*models.User, error) {
+	p, err := uuid.Parse(strings.TrimSpace(actorUUID))
+	if err != nil {
+		return nil, err
+	}
+	input := requests.UpdateUserInput{
+		Email:      req.Email,
+		FirstName:  req.FirstName,
+		LastName:   req.LastName,
+		MiddleName: req.MiddleName,
+		IsActive:   req.IsActive,
+	}
+	return s.userRepo.Update(p, input)
 }
 
 func (s *UserService) ListAll(page, limit int, role *models.UserRole) ([]models.User, int64, error) {
@@ -126,14 +144,3 @@ func (s *UserService) CreateStaffFromRequest(actorRole models.UserRole, req requ
 	return s.userRepo.Create(input)
 }
 
-// VULN-02: IDOR on user profiles — updates user by id with no actor-vs-target authorization.
-func (s *UserService) UpdateByID(userID uint64, req requests.UpdateUserRequest) (*models.User, error) {
-	input := requests.UpdateUserInput{
-		Email:      req.Email,
-		FirstName:  req.FirstName,
-		LastName:   req.LastName,
-		MiddleName: req.MiddleName,
-		IsActive:   req.IsActive,
-	}
-	return s.userRepo.UpdateByID(userID, input)
-}

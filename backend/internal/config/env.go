@@ -50,10 +50,10 @@ func Load() Config {
 	return Config{
 		AppName:               getEnv("APP_NAME", "SecWeb HelpDesk"),
 		Port:                  getEnv("PORT", "8080"),
-		FrontendURL:           getEnv("FRONTEND_URL", "http://localhost:3000"),
+		FrontendURL:           getEnv("FRONTEND_URL", "http://127.0.0.1:3000"),
 		GoEnv:                 getEnv("GO_ENV", "development"),
 		DBHost:                getEnv("DB_HOST", "localhost"),
-		DBDatabase:            getEnv("DB_DATABASE", "helpdesk"),
+		DBDatabase:            getEnv("DB_DATABASE", "secure_helpdesk"),
 		DBUsername:            getEnv("DB_USERNAME", "admin"),
 		DBPassword:            getEnv("DB_PASSWORD", "password"),
 		DBPort:                getEnv("DB_PORT", "3306"),

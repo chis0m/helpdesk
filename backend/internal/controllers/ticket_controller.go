@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"helpdesk/backend/internal/logger"
@@ -27,7 +28,6 @@ func NewTicketController(ticketService *services.TicketService, userRepo *reposi
 	return &TicketController{ticketService: ticketService, userRepo: userRepo}
 }
 
-// VULN-03: Weak input validation / stored XSS risk — Create binds ticket JSON with no HTML/script sanitization.
 func (t *TicketController) Create(c *gin.Context) {
 	log := logger.L()
 
@@ -74,7 +74,6 @@ func (t *TicketController) Create(c *gin.Context) {
 
 func (t *TicketController) List(c *gin.Context) {
 	log := logger.L()
-	// Non-admin roles are scoped to tickets they report or are assigned to; admins may list all.
 
 	var query requests.ListTicketsQuery
 	if err := c.ShouldBindQuery(&query); err != nil {
@@ -146,7 +145,6 @@ func (t *TicketController) List(c *gin.Context) {
 	}, "tickets fetched")
 }
 
-// VULN-07: SQL injection (ticket keyword search) — forwards q to repository Raw SQL without parameter binding.
 func (t *TicketController) Search(c *gin.Context) {
 	log := logger.L()
 
@@ -156,7 +154,20 @@ func (t *TicketController) Search(c *gin.Context) {
 		return
 	}
 
-	tickets, err := t.ticketService.SearchTicketsUnsafe(q)
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
+	if !ok {
+		log.Warn().Msg("ticket search failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		log.Warn().Err(err).Msg("ticket search failed: invalid actor uuid")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	tickets, err := t.ticketService.SearchForActor(actorUUID, role, q)
 	if err != nil {
 		log.Error().Err(err).Str("q", q).Msg("ticket search failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
@@ -184,30 +195,46 @@ func (t *TicketController) Search(c *gin.Context) {
 
 func (t *TicketController) GetByID(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
-	ticketID, ok := parseUintID(c.Param("id"))
-	if !ok {
-		log.Warn().Str("ticket_id", c.Param("id")).Msg("get ticket failed: invalid id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+	ticketUUID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		log.Warn().Str("ticket_uuid", c.Param("id")).Msg("get ticket failed: invalid uuid")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid ticket id", "invalid ticket id")
 		return
 	}
 
-	ticket, err := t.ticketService.GetByID(ticketID)
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
+	if !ok {
+		log.Warn().Msg("get ticket failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
 	if err != nil {
+		log.Warn().Err(err).Msg("get ticket failed: invalid actor uuid")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	ticket, err := t.ticketService.GetForActor(ticketUUID, actorUUID, role)
+	if err != nil {
+		if errors.Is(err, services.ErrTicketAccessDenied) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("ticket_id", ticketID).Msg("get ticket failed: ticket not found")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Msg("get ticket failed: ticket not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "ticket not found", "ticket not found")
 			return
 		}
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("get ticket failed")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("get ticket failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
 
 	users, err := t.loadTicketUsers([]models.Ticket{*ticket})
 	if err != nil {
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("get ticket failed: load user names")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("get ticket failed: load user names")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
@@ -216,37 +243,53 @@ func (t *TicketController) GetByID(c *gin.Context) {
 
 func (t *TicketController) UpdateByID(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
-	ticketID, ok := parseUintID(c.Param("id"))
+	ticketUUID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		log.Warn().Str("ticket_uuid", c.Param("id")).Msg("update ticket failed: invalid uuid")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid ticket id", "invalid ticket id")
+		return
+	}
+
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
 	if !ok {
-		log.Warn().Str("ticket_id", c.Param("id")).Msg("update ticket failed: invalid id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+		log.Warn().Msg("update ticket failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		log.Warn().Err(err).Msg("update ticket failed: invalid actor uuid")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
 		return
 	}
 
 	var req requests.UpdateTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Warn().Err(err).Uint64("ticket_id", ticketID).Msg("update ticket failed: invalid request payload")
+		log.Warn().Err(err).Msg("update ticket failed: invalid request payload")
 		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
 		return
 	}
 
-	ticket, err := t.ticketService.UpdateByID(ticketID, req)
+	ticket, err := t.ticketService.UpdateForActor(ticketUUID, actorUUID, role, req)
 	if err != nil {
+		if errors.Is(err, services.ErrTicketAccessDenied) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("ticket_id", ticketID).Msg("update ticket failed: ticket not found")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Msg("update ticket failed: ticket not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "ticket not found", "ticket not found")
 			return
 		}
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("update ticket failed")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("update ticket failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
 
 	users, err := t.loadTicketUsers([]models.Ticket{*ticket})
 	if err != nil {
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("update ticket failed: load user names")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("update ticket failed: load user names")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
@@ -255,42 +298,58 @@ func (t *TicketController) UpdateByID(c *gin.Context) {
 
 func (t *TicketController) UpdateStatus(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
-	ticketID, ok := parseUintID(c.Param("id"))
+	ticketUUID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		log.Warn().Str("ticket_uuid", c.Param("id")).Msg("update ticket status failed: invalid uuid")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid ticket id", "invalid ticket id")
+		return
+	}
+
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
 	if !ok {
-		log.Warn().Str("ticket_id", c.Param("id")).Msg("update ticket status failed: invalid id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+		log.Warn().Msg("update ticket status failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		log.Warn().Err(err).Msg("update ticket status failed: invalid actor uuid")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
 		return
 	}
 
 	var req requests.UpdateTicketStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Warn().Err(err).Uint64("ticket_id", ticketID).Msg("update ticket status failed: invalid request payload")
+		log.Warn().Err(err).Msg("update ticket status failed: invalid request payload")
 		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
 		return
 	}
 
-	ticket, err := t.ticketService.UpdateStatus(ticketID, req.Status)
+	ticket, err := t.ticketService.UpdateStatusForActor(ticketUUID, actorUUID, role, req.Status)
 	if err != nil {
 		if errors.Is(err, services.ErrInvalidTicketStatusTransition) {
-			log.Warn().Uint64("ticket_id", ticketID).Str("requested_status", string(req.Status)).Msg("update ticket status failed: invalid status transition")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Str("requested_status", string(req.Status)).Msg("update ticket status failed: invalid status transition")
 			response.FailureWithAbort(c, http.StatusBadRequest, "invalid status transition", "invalid status transition")
 			return
 		}
+		if errors.Is(err, services.ErrTicketAccessDenied) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("ticket_id", ticketID).Msg("update ticket status failed: ticket not found")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Msg("update ticket status failed: ticket not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "ticket not found", "ticket not found")
 			return
 		}
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("update ticket status failed")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("update ticket status failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
 
 	users, err := t.loadTicketUsers([]models.Ticket{*ticket})
 	if err != nil {
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("update ticket status failed: load user names")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("update ticket status failed: load user names")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
@@ -299,37 +358,53 @@ func (t *TicketController) UpdateStatus(c *gin.Context) {
 
 func (t *TicketController) Assign(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
-	ticketID, ok := parseUintID(c.Param("id"))
+	ticketUUID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		log.Warn().Str("ticket_uuid", c.Param("id")).Msg("assign ticket failed: invalid uuid")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid ticket id", "invalid ticket id")
+		return
+	}
+
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
 	if !ok {
-		log.Warn().Str("ticket_id", c.Param("id")).Msg("assign ticket failed: invalid id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+		log.Warn().Msg("assign ticket failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		log.Warn().Err(err).Msg("assign ticket failed: invalid actor uuid")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
 		return
 	}
 
 	var req requests.AssignTicketRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Warn().Err(err).Uint64("ticket_id", ticketID).Msg("assign ticket failed: invalid request payload")
+		log.Warn().Err(err).Msg("assign ticket failed: invalid request payload")
 		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
 		return
 	}
 
-	ticket, err := t.ticketService.Assign(ticketID, req.AssignedUserID, req.Unassign)
+	ticket, err := t.ticketService.AssignForActor(ticketUUID, actorUUID, role, req.AssignedUserID, req.Unassign)
 	if err != nil {
+		if errors.Is(err, services.ErrTicketAccessDenied) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("ticket_id", ticketID).Msg("assign ticket failed: ticket or user not found")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Msg("assign ticket failed: ticket or user not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "resource not found", "resource not found")
 			return
 		}
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("assign ticket failed")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("assign ticket failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
 
 	users, err := t.loadTicketUsers([]models.Ticket{*ticket})
 	if err != nil {
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("assign ticket failed: load user names")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("assign ticket failed: load user names")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
@@ -338,74 +413,94 @@ func (t *TicketController) Assign(c *gin.Context) {
 
 func (t *TicketController) DeleteByID(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
-	ticketID, ok := parseUintID(c.Param("id"))
-	if !ok {
-		log.Warn().Str("ticket_id", c.Param("id")).Msg("delete ticket failed: invalid id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+	ticketUUID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		log.Warn().Str("ticket_uuid", c.Param("id")).Msg("delete ticket failed: invalid uuid")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid ticket id", "invalid ticket id")
 		return
 	}
 
-	if _, err := t.ticketService.GetByID(ticketID); err != nil {
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
+	if !ok {
+		log.Warn().Msg("delete ticket failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		log.Warn().Err(err).Msg("delete ticket failed: invalid actor uuid")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	if err := t.ticketService.DeleteForActor(ticketUUID, actorUUID, role); err != nil {
+		if errors.Is(err, services.ErrTicketAccessDenied) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("ticket_id", ticketID).Msg("delete ticket failed: ticket not found")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Msg("delete ticket failed: ticket not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "ticket not found", "ticket not found")
 			return
 		}
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("delete ticket failed: pre-delete lookup failed")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("delete ticket failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
 
-	if err := t.ticketService.DeleteByID(ticketID); err != nil {
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("delete ticket failed")
-		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
-		return
-	}
-
-	response.Success(c, http.StatusOK, gin.H{"ticket_id": ticketID}, "ticket deleted")
+	response.Success(c, http.StatusOK, gin.H{"ticket_uuid": ticketUUID.String()}, "ticket deleted")
 }
 
 func (t *TicketController) AddComment(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
-	ticketID, ok := parseUintID(c.Param("id"))
-	if !ok {
-		log.Warn().Str("ticket_id", c.Param("id")).Msg("add ticket comment failed: invalid ticket id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+	ticketUUID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		log.Warn().Str("ticket_uuid", c.Param("id")).Msg("add ticket comment failed: invalid uuid")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid ticket id", "invalid ticket id")
 		return
 	}
 
-	userUUID, _, ok := getAuthenticatedUser(c)
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
 	if !ok {
-		log.Warn().Uint64("ticket_id", ticketID).Msg("add ticket comment failed: missing authenticated user context")
+		log.Warn().Msg("add ticket comment failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		log.Warn().Err(err).Msg("add ticket comment failed: invalid actor uuid")
 		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
 		return
 	}
 
 	var req requests.CreateTicketCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Warn().Err(err).Uint64("ticket_id", ticketID).Msg("add ticket comment failed: invalid request payload")
+		log.Warn().Err(err).Msg("add ticket comment failed: invalid request payload")
 		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
 		return
 	}
 
-	comment, err := t.ticketService.AddComment(ticketID, userUUID, req.Body)
+	comment, err := t.ticketService.AddCommentForActor(ticketUUID, actorUUID, role, req.Body)
 	if err != nil {
+		if errors.Is(err, services.ErrTicketAccessDenied) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("ticket_id", ticketID).Msg("add ticket comment failed: ticket or actor not found")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Msg("add ticket comment failed: ticket or actor not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "resource not found", "resource not found")
 			return
 		}
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("add ticket comment failed")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("add ticket comment failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
 
 	response.Success(c, http.StatusCreated, gin.H{
 		"comment_id":     comment.ID,
+		"comment_uuid":   comment.UUID.String(),
 		"ticket_id":      comment.TicketID,
 		"author_user_id": comment.AuthorUserID,
 		"body":           comment.Body,
@@ -416,28 +511,43 @@ func (t *TicketController) AddComment(c *gin.Context) {
 
 func (t *TicketController) ListComments(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
 
-	ticketID, ok := parseUintID(c.Param("id"))
-	if !ok {
-		log.Warn().Str("ticket_id", c.Param("id")).Msg("list ticket comments failed: invalid ticket id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+	ticketUUID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		log.Warn().Str("ticket_uuid", c.Param("id")).Msg("list ticket comments failed: invalid uuid")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid ticket id", "invalid ticket id")
 		return
 	}
 
-	comments, err := t.ticketService.ListComments(ticketID)
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
+	if !ok {
+		log.Warn().Msg("list ticket comments failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
 	if err != nil {
+		log.Warn().Err(err).Msg("list ticket comments failed: invalid actor uuid")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+
+	comments, err := t.ticketService.ListCommentsForActor(ticketUUID, actorUUID, role)
+	if err != nil {
+		if errors.Is(err, services.ErrTicketAccessDenied) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("ticket_id", ticketID).Msg("list ticket comments failed: ticket not found")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Msg("list ticket comments failed: ticket not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "ticket not found", "ticket not found")
 			return
 		}
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Msg("list ticket comments failed")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("list ticket comments failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
 
-	// Nil slice JSON-marshals as null; clients expect data.items to always be an array.
 	if comments == nil {
 		comments = []models.TicketCommentWithAuthor{}
 	}
@@ -447,12 +557,11 @@ func (t *TicketController) ListComments(c *gin.Context) {
 
 func (t *TicketController) UpdateComment(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — ticket id in path not access-controlled; comment edit is author/admin only.
 
-	ticketID, ok := parseUintID(c.Param("id"))
-	if !ok {
-		log.Warn().Str("ticket_id", c.Param("id")).Msg("update ticket comment failed: invalid ticket id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+	ticketUUID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		log.Warn().Str("ticket_uuid", c.Param("id")).Msg("update ticket comment failed: invalid uuid")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid ticket id", "invalid ticket id")
 		return
 	}
 	commentID, ok := parseUintID(c.Param("commentId"))
@@ -462,39 +571,50 @@ func (t *TicketController) UpdateComment(c *gin.Context) {
 		return
 	}
 
-	userUUID, role, ok := getAuthenticatedUser(c)
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
 	if !ok {
-		log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("update ticket comment failed: missing authenticated user context")
+		log.Warn().Msg("update ticket comment failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		log.Warn().Err(err).Msg("update ticket comment failed: invalid actor uuid")
 		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
 		return
 	}
 
 	var req requests.UpdateTicketCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Warn().Err(err).Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("update ticket comment failed: invalid request payload")
+		log.Warn().Err(err).Msg("update ticket comment failed: invalid request payload")
 		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
 		return
 	}
 
-	comment, err := t.ticketService.UpdateComment(ticketID, commentID, userUUID, role, req.Body)
+	comment, err := t.ticketService.UpdateCommentForActor(ticketUUID, actorUUID, role, commentID, req.Body)
 	if err != nil {
+		if errors.Is(err, services.ErrTicketAccessDenied) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		if errors.Is(err, services.ErrTicketCommentForbidden) {
-			log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Str("actor_role", string(role)).Msg("update ticket comment failed: forbidden")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Uint64("comment_id", commentID).Str("actor_role", string(role)).Msg("update ticket comment failed: forbidden")
 			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
 			return
 		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("update ticket comment failed: comment not found")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Uint64("comment_id", commentID).Msg("update ticket comment failed: comment not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "comment not found", "comment not found")
 			return
 		}
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("update ticket comment failed")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Uint64("comment_id", commentID).Msg("update ticket comment failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
 
 	response.Success(c, http.StatusOK, gin.H{
 		"comment_id":     comment.ID,
+		"comment_uuid":   comment.UUID.String(),
 		"ticket_id":      comment.TicketID,
 		"author_user_id": comment.AuthorUserID,
 		"body":           comment.Body,
@@ -505,12 +625,11 @@ func (t *TicketController) UpdateComment(c *gin.Context) {
 
 func (t *TicketController) DeleteComment(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — ticket id in path not access-controlled; comment delete is author/admin only.
 
-	ticketID, ok := parseUintID(c.Param("id"))
-	if !ok {
-		log.Warn().Str("ticket_id", c.Param("id")).Msg("delete ticket comment failed: invalid ticket id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+	ticketUUID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		log.Warn().Str("ticket_uuid", c.Param("id")).Msg("delete ticket comment failed: invalid uuid")
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid ticket id", "invalid ticket id")
 		return
 	}
 	commentID, ok := parseUintID(c.Param("commentId"))
@@ -520,31 +639,41 @@ func (t *TicketController) DeleteComment(c *gin.Context) {
 		return
 	}
 
-	userUUID, role, ok := getAuthenticatedUser(c)
+	userUUIDStr, role, ok := getAuthenticatedUser(c)
 	if !ok {
-		log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("delete ticket comment failed: missing authenticated user context")
+		log.Warn().Msg("delete ticket comment failed: missing authenticated user context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, err := uuid.Parse(strings.TrimSpace(userUUIDStr))
+	if err != nil {
+		log.Warn().Err(err).Msg("delete ticket comment failed: invalid actor uuid")
 		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
 		return
 	}
 
-	err := t.ticketService.DeleteComment(ticketID, commentID, userUUID, role)
+	err = t.ticketService.DeleteCommentForActor(ticketUUID, actorUUID, role, commentID)
 	if err != nil {
+		if errors.Is(err, services.ErrTicketAccessDenied) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
 		if errors.Is(err, services.ErrTicketCommentForbidden) {
-			log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Str("actor_role", string(role)).Msg("delete ticket comment failed: forbidden")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Uint64("comment_id", commentID).Str("actor_role", string(role)).Msg("delete ticket comment failed: forbidden")
 			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
 			return
 		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("delete ticket comment failed: comment not found")
+			log.Warn().Str("ticket_uuid", ticketUUID.String()).Uint64("comment_id", commentID).Msg("delete ticket comment failed: comment not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "comment not found", "comment not found")
 			return
 		}
-		log.Error().Err(err).Uint64("ticket_id", ticketID).Uint64("comment_id", commentID).Msg("delete ticket comment failed")
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Uint64("comment_id", commentID).Msg("delete ticket comment failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
 
-	response.Success(c, http.StatusOK, gin.H{"comment_id": commentID, "ticket_id": ticketID}, "ticket comment deleted")
+	response.Success(c, http.StatusOK, gin.H{"comment_id": commentID, "ticket_uuid": ticketUUID.String()}, "ticket comment deleted")
 }
 
 func parseUintID(raw string) (uint64, bool) {
@@ -605,7 +734,6 @@ func ticketDisplayName(u models.User) string {
 	return strings.TrimSpace(u.Email)
 }
 
-// formatTicketUserPublic returns a safe subset for API responses (no password hash).
 func formatTicketUserPublic(u *models.User) interface{} {
 	if u == nil {
 		return nil
@@ -626,6 +754,7 @@ func (tc *TicketController) loadTicketUsers(tickets []models.Ticket) (map[uint64
 	return tc.userRepo.GetMapByIDs(ids)
 }
 
+// SEC-02: Public ticket JSON uses opaque ticket_uuid only; internal numeric id is not exposed.
 func formatTicket(ticket *models.Ticket, users map[uint64]models.User) gin.H {
 	reporterPtr := ticket.Reporter
 	if reporterPtr == nil {
@@ -666,7 +795,7 @@ func formatTicket(ticket *models.Ticket, users map[uint64]models.User) gin.H {
 	}
 
 	return gin.H{
-		"ticket_id":             ticket.ID,
+		"ticket_uuid":           ticket.UUID.String(),
 		"reporter_user_id":      ticket.ReporterUserID,
 		"reporter_display_name": reporterDisplay,
 		"reporter_email":        reporterEmail,

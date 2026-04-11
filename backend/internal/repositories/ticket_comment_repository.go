@@ -3,6 +3,7 @@ package repositories
 import (
 	"errors"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"helpdesk/backend/internal/models"
@@ -19,6 +20,7 @@ func NewTicketCommentRepository(db *gorm.DB) *TicketCommentRepository {
 
 func (r *TicketCommentRepository) Create(input requests.CreateTicketCommentInput) (*models.TicketComment, error) {
 	comment := &models.TicketComment{
+		UUID:         uuid.New(),
 		TicketID:     input.TicketID,
 		AuthorUserID: input.AuthorUserID,
 		Body:         input.Body,

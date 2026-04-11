@@ -3,11 +3,13 @@ package models
 import (
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type TicketComment struct {
 	ID           uint64 `gorm:"primaryKey;autoIncrement"`
+	UUID         uuid.UUID `gorm:"column:uuid;type:char(36);uniqueIndex;not null"`
 	TicketID     uint64 `gorm:"not null;index"`
 	AuthorUserID uint64 `gorm:"not null;index"`
 	Body         string `gorm:"type:text;not null"`

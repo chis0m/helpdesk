@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 
 	"helpdesk/backend/internal/models"
@@ -135,6 +136,7 @@ func firstOrCreateComment(db *gorm.DB, ticketID, authorUserID uint64, body strin
 	}
 
 	c := models.TicketComment{
+		UUID:         uuid.New(),
 		TicketID:     ticketID,
 		AuthorUserID: authorUserID,
 		Body:         b,

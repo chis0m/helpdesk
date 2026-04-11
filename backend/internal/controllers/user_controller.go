@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -24,26 +25,31 @@ func NewUserController(userService *services.UserService) *UserController {
 	return &UserController{userService: userService}
 }
 
-// VULN-02: IDOR on user profiles — GET /users/:id without checking path id matches authenticated user.
-func (u *UserController) GetByID(c *gin.Context) {
+// SEC-02: Self-service profile — identity from session/JWT only (`/users/me`), no user id in the path.
+func (u *UserController) GetMe(c *gin.Context) {
 	log := logger.L()
 
-	userIDParam := c.Param("id")
-	userID, err := strconv.ParseUint(userIDParam, 10, 64)
-	if err != nil {
-		log.Warn().Err(err).Str("user_id", userIDParam).Msg("get user failed: invalid id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+	raw, ok := c.Get(middleware.CtxUserUUID)
+	if !ok {
+		log.Warn().Msg("get me failed: missing user uuid in context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, ok := raw.(string)
+	if !ok || strings.TrimSpace(actorUUID) == "" {
+		log.Warn().Msg("get me failed: invalid user uuid in context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
 		return
 	}
 
-	user, err := u.userService.GetByID(userID)
+	user, err := u.userService.GetProfileByActorUUID(actorUUID)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("user_id", userID).Msg("get user failed: user not found")
+			log.Warn().Str("user_uuid", strings.TrimSpace(actorUUID)).Msg("get me failed: user not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "user not found", "user not found")
 			return
 		}
-		log.Error().Err(err).Uint64("user_id", userID).Msg("get user failed")
+		log.Error().Err(err).Str("user_uuid", strings.TrimSpace(actorUUID)).Msg("get me failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
@@ -60,33 +66,37 @@ func (u *UserController) GetByID(c *gin.Context) {
 	}, "user fetched")
 }
 
-// VULN-02: IDOR on user profiles — PATCH /users/:id without checking path id matches authenticated user.
-func (u *UserController) UpdateByID(c *gin.Context) {
+func (u *UserController) PatchMe(c *gin.Context) {
 	log := logger.L()
 
-	userIDParam := c.Param("id")
-	userID, err := strconv.ParseUint(userIDParam, 10, 64)
-	if err != nil {
-		log.Warn().Err(err).Str("user_id", userIDParam).Msg("update user failed: invalid id")
-		response.FailureWithAbort(c, http.StatusBadRequest, "invalid id", "invalid id")
+	raw, ok := c.Get(middleware.CtxUserUUID)
+	if !ok {
+		log.Warn().Msg("patch me failed: missing user uuid in context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
+	actorUUID, ok := raw.(string)
+	if !ok || strings.TrimSpace(actorUUID) == "" {
+		log.Warn().Msg("patch me failed: invalid user uuid in context")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
 		return
 	}
 
 	var req requests.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Warn().Err(err).Msg("update user failed: invalid request payload")
+		log.Warn().Err(err).Msg("patch me failed: invalid request payload")
 		response.FailureWithAbort(c, http.StatusBadRequest, "invalid request payload", "invalid request payload")
 		return
 	}
 
-	user, err := u.userService.UpdateByID(userID, req)
+	user, err := u.userService.UpdateProfileByActorUUID(actorUUID, req)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			log.Warn().Uint64("user_id", userID).Msg("update user failed: user not found")
+			log.Warn().Str("user_uuid", strings.TrimSpace(actorUUID)).Msg("patch me failed: user not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "user not found", "user not found")
 			return
 		}
-		log.Error().Err(err).Uint64("user_id", userID).Msg("update user failed")
+		log.Error().Err(err).Str("user_uuid", strings.TrimSpace(actorUUID)).Msg("patch me failed")
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}

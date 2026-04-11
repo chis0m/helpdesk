@@ -1,5 +1,5 @@
+// SEC-02: Ticket API paths use opaque `ticket_uuid` (no numeric ticket id in URLs).
 // VULN-03: Create ticket sends title/description/category as JSON — weak sanitization server-side; UI may render with v-html (see TicketDetailView).
-// VULN-02: Ticket id in URL/path for get/update/assign/delete/comments — no client-side authorization (backend IDOR).
 // VULN-05: Mutating ticket calls send `X-CSRF-Token`; weak verification is backend CSRF middleware.
 // VULN-07: `GET /api/tickets/search?q=` forwards `q` into unsafe SQL on the server (see backend `TicketController.Search`).
 import { apiUrl, CSRF_HEADER, readJson } from './client'
@@ -12,15 +12,12 @@ import { logger } from '@/utils/logger'
 export type ApiTicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
 
 export interface ApiTicketRow {
-  ticket_id: number
+  ticket_uuid: string
   reporter_user_id: number
-  /** First + last name (or email) from the API when available. */
   reporter_display_name?: string
   reporter_email?: string
   assigned_user_id: number | null
-  /** First + last name (or email) when assigned; omitted/null when unassigned. */
   assigned_display_name?: string | null
-  /** Support assignee’s email when assigned; null when unassigned. */
   assigned_email?: string | null
   title: string
   description: string
@@ -49,6 +46,13 @@ function errorMessage(body: unknown): string {
 
 function apiErrorMessage(res: Response, json: unknown): string {
   return friendlyHttpError(res.status, errorMessage(json))
+}
+
+function isTicketRow(data: unknown): data is ApiTicketRow {
+  if (!data || typeof data !== 'object')
+    return false
+  const d = data as ApiTicketRow
+  return typeof d.ticket_uuid === 'string' && d.ticket_uuid.length > 0
 }
 
 export async function createTicket(
@@ -82,7 +86,7 @@ export async function createTicket(
   }
 
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
-  if (!env.data || typeof env.data.ticket_id !== 'number') {
+  if (!isTicketRow(env.data)) {
     logger.debug('api:tickets', 'create ticket invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
@@ -91,9 +95,9 @@ export async function createTicket(
 }
 
 export async function fetchTicket(
-  ticketId: number,
+  ticketUuid: string,
 ): Promise<{ ok: true; data: ApiTicketRow } | { ok: false; status: number; message: string }> {
-  const url = apiUrl(`/api/tickets/${ticketId}`)
+  const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}`)
   const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
@@ -106,7 +110,7 @@ export async function fetchTicket(
     return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
-  if (!env.data || typeof env.data.ticket_id !== 'number') {
+  if (!isTicketRow(env.data)) {
     logger.debug('api:tickets', 'get ticket invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
@@ -114,7 +118,6 @@ export async function fetchTicket(
   return { ok: true, data: env.data }
 }
 
-/** List item from `GET /api/tickets/:id/comments`. */
 export interface TicketCommentListItem {
   comment_id: number
   ticket_id: number
@@ -127,7 +130,6 @@ export interface TicketCommentListItem {
   updated_at: string
 }
 
-/** UI convention: treat @secweb.ie as internal staff (matches CA seed emails). */
 export function mapTicketCommentListItemToTicketComment(row: TicketCommentListItem): TicketComment {
   const parts = [row.author_first_name?.trim(), row.author_last_name?.trim()].filter(Boolean)
   const authorName = parts.length > 0 ? parts.join(' ') : row.author_email
@@ -141,12 +143,12 @@ export function mapTicketCommentListItemToTicketComment(row: TicketCommentListIt
 }
 
 export async function fetchTicketComments(
-  ticketId: number,
+  ticketUuid: string,
 ): Promise<
   | { ok: true; items: TicketCommentListItem[] }
   | { ok: false; status: number; message: string }
 > {
-  const url = apiUrl(`/api/tickets/${ticketId}/comments`)
+  const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}/comments`)
   const res = await fetchWithSessionRefresh(url, {
     method: 'GET',
     credentials: 'include',
@@ -162,7 +164,6 @@ export async function fetchTicketComments(
     items?: TicketCommentListItem[] | null
   }>
   const raw = env.data?.items
-  // Backend may send `items: null` when the Go slice was nil (JSON null is not an array).
   if (raw === undefined || raw === null) {
     logger.debug('api:tickets', 'list comments success (dev)', { count: 0 })
     return { ok: true, items: [] }
@@ -177,6 +178,7 @@ export async function fetchTicketComments(
 
 export interface CreatedTicketCommentData {
   comment_id: number
+  comment_uuid?: string
   ticket_id: number
   author_user_id: number
   body: string
@@ -185,14 +187,14 @@ export interface CreatedTicketCommentData {
 }
 
 export async function createTicketComment(
-  ticketId: number,
+  ticketUuid: string,
   body: string,
   sessionCsrf: string,
 ): Promise<
   | { ok: true; data: CreatedTicketCommentData }
   | { ok: false; status: number; message: string }
 > {
-  const url = apiUrl(`/api/tickets/${ticketId}/comments`)
+  const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}/comments`)
   const res = await fetchWithSessionRefresh(url, {
     method: 'POST',
     credentials: 'include',
@@ -226,7 +228,6 @@ export interface TicketListPagination {
   total: number
 }
 
-/** `GET /api/tickets` — list scoped by role on the server. */
 export async function fetchTicketList(opts?: {
   page?: number
   limit?: number
@@ -269,10 +270,13 @@ export async function fetchTicketList(opts?: {
     logger.debug('api:tickets', 'list tickets invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
+  for (const row of items) {
+    if (!isTicketRow(row))
+      return { ok: false, status: res.status, message: 'Invalid response' }
+  }
   return { ok: true, items, pagination }
 }
 
-/** VULN-07: `q` is URL-encoded only; server interpolates into raw SQL (unsafe). */
 export async function fetchTicketSearch(q: string): Promise<
   | { ok: true; items: ApiTicketRow[]; queryEcho: string }
   | { ok: false; status: number; message: string }
@@ -300,20 +304,23 @@ export async function fetchTicketSearch(q: string): Promise<
     logger.debug('api:tickets', 'search tickets invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
+  for (const row of items) {
+    if (!isTicketRow(row))
+      return { ok: false, status: res.status, message: 'Invalid response' }
+  }
   return { ok: true, items, queryEcho }
 }
 
-/** VULN-02: Assignment by ticket id in path — backend IDOR completes unauthorized access. */
 export type AssignTicketBody =
   | { assigned_user_id: number }
   | { unassign: true }
 
 export async function assignTicket(
-  ticketId: number,
+  ticketUuid: string,
   body: AssignTicketBody,
   sessionCsrf: string,
 ): Promise<{ ok: true; data: ApiTicketRow } | { ok: false; status: number; message: string }> {
-  const url = apiUrl(`/api/tickets/${ticketId}/assign`)
+  const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}/assign`)
   const payload =
     'unassign' in body && body.unassign
       ? { unassign: true as const }
@@ -337,22 +344,21 @@ export async function assignTicket(
     return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
-  if (!env.data || typeof env.data.ticket_id !== 'number') {
+  if (!isTicketRow(env.data)) {
     logger.debug('api:tickets', 'assign ticket invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
   return { ok: true, data: env.data }
 }
 
-/** VULN-02: Delete by ticket id in path — backend IDOR completes unauthorized access. */
 export async function deleteTicket(
-  ticketId: number,
+  ticketUuid: string,
   sessionCsrf: string,
 ): Promise<
-  | { ok: true; data: { ticket_id: number } }
+  | { ok: true; data: { ticket_uuid: string } }
   | { ok: false; status: number; message: string }
 > {
-  const url = apiUrl(`/api/tickets/${ticketId}`)
+  const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}`)
   const res = await fetchWithSessionRefresh(url, {
     method: 'DELETE',
     credentials: 'include',
@@ -369,15 +375,14 @@ export async function deleteTicket(
     logger.debug('api:tickets', 'delete ticket error envelope (dev)', json)
     return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
-  const env = json as ApiSuccessEnvelope<{ ticket_id: number }>
-  if (!env.data || typeof env.data.ticket_id !== 'number') {
+  const env = json as ApiSuccessEnvelope<{ ticket_uuid: string }>
+  if (!env.data || typeof env.data.ticket_uuid !== 'string') {
     logger.debug('api:tickets', 'delete ticket invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
   return { ok: true, data: env.data }
 }
 
-/** VULN-03: Optional fields may carry HTML; weak sanitization server-side. VULN-02: ticket id in path (IDOR). */
 export type PatchTicketBody = Partial<{
   title: string
   description: string
@@ -385,7 +390,7 @@ export type PatchTicketBody = Partial<{
 }>
 
 export async function patchTicket(
-  ticketId: number,
+  ticketUuid: string,
   body: PatchTicketBody,
   sessionCsrf: string,
 ): Promise<{ ok: true; data: ApiTicketRow } | { ok: false; status: number; message: string }> {
@@ -397,7 +402,7 @@ export async function patchTicket(
   if (body.category !== undefined)
     payload.category = body.category.trim()
 
-  const url = apiUrl(`/api/tickets/${ticketId}`)
+  const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}`)
   const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
@@ -415,20 +420,19 @@ export async function patchTicket(
     return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
-  if (!env.data || typeof env.data.ticket_id !== 'number') {
+  if (!isTicketRow(env.data)) {
     logger.debug('api:tickets', 'patch ticket invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
   return { ok: true, data: env.data }
 }
 
-/** VULN-02: Status change by ticket id in path (IDOR). */
 export async function patchTicketStatus(
-  ticketId: number,
+  ticketUuid: string,
   status: ApiTicketStatus,
   sessionCsrf: string,
 ): Promise<{ ok: true; data: ApiTicketRow } | { ok: false; status: number; message: string }> {
-  const url = apiUrl(`/api/tickets/${ticketId}/status`)
+  const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}/status`)
   const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
@@ -446,16 +450,15 @@ export async function patchTicketStatus(
     return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
   const env = json as ApiSuccessEnvelope<ApiTicketRow>
-  if (!env.data || typeof env.data.ticket_id !== 'number') {
+  if (!isTicketRow(env.data)) {
     logger.debug('api:tickets', 'patch ticket status invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }
   return { ok: true, data: env.data }
 }
 
-/** VULN-03: Comment body persisted with weak sanitization. VULN-02: ticket id in path (IDOR). */
 export async function patchTicketComment(
-  ticketId: number,
+  ticketUuid: string,
   commentId: number,
   body: string,
   sessionCsrf: string,
@@ -463,7 +466,7 @@ export async function patchTicketComment(
   | { ok: true; data: CreatedTicketCommentData }
   | { ok: false; status: number; message: string }
 > {
-  const url = apiUrl(`/api/tickets/${ticketId}/comments/${commentId}`)
+  const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}/comments/${commentId}`)
   const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',
@@ -488,16 +491,15 @@ export async function patchTicketComment(
   return { ok: true, data: env.data }
 }
 
-/** VULN-02: Comment delete by ticket id in path (IDOR). */
 export async function deleteTicketComment(
-  ticketId: number,
+  ticketUuid: string,
   commentId: number,
   sessionCsrf: string,
 ): Promise<
-  | { ok: true; data: { comment_id: number; ticket_id: number } }
+  | { ok: true; data: { comment_id: number; ticket_uuid: string } }
   | { ok: false; status: number; message: string }
 > {
-  const url = apiUrl(`/api/tickets/${ticketId}/comments/${commentId}`)
+  const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}/comments/${commentId}`)
   const res = await fetchWithSessionRefresh(url, {
     method: 'DELETE',
     credentials: 'include',
@@ -512,8 +514,8 @@ export async function deleteTicketComment(
     logger.debug('api:tickets', 'delete comment error envelope (dev)', json)
     return { ok: false, status: res.status, message: apiErrorMessage(res, json) }
   }
-  const env = json as ApiSuccessEnvelope<{ comment_id: number; ticket_id: number }>
-  if (!env.data || typeof env.data.comment_id !== 'number') {
+  const env = json as ApiSuccessEnvelope<{ comment_id: number; ticket_uuid: string }>
+  if (!env.data || typeof env.data.comment_id !== 'number' || typeof env.data.ticket_uuid !== 'string') {
     logger.debug('api:tickets', 'delete comment invalid shape (dev)', json)
     return { ok: false, status: res.status, message: 'Invalid response' }
   }

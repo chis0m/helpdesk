@@ -151,7 +151,7 @@ async function onSubmit() {
       errorMessage.value = result.message
       return
     }
-    await router.replace(paths.dashboard.ticketDetail(String(result.data.ticket_id)))
+    await router.replace(paths.dashboard.ticketDetail(result.data.ticket_uuid))
   }
   catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
