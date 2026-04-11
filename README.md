@@ -165,7 +165,7 @@ Code locations are tagged with `// VULN-…` e.g **//VULN-01** in the vulnerabil
 
 ---
 
-## Testing process (WIP)
+## Testing process (Work In Progress)
 
 Testing is required to cover **functional** behaviour and **static analysis (SAST)**.
 
