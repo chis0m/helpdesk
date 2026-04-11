@@ -1,6 +1,6 @@
 // SEC-02: Ticket API paths use opaque `ticket_uuid` (no numeric ticket id in URLs).
-// VULN-03: Create ticket sends title/description/category as JSON — weak sanitization server-side; UI may render with v-html (see TicketDetailView).
-// VULN-05: Mutating ticket calls send `X-CSRF-Token`; weak verification is backend CSRF middleware.
+// SEC-03: Create/update ticket text is trimmed server-side (outer whitespace); ticket detail renders description/comments as escaped text (no v-html).
+// Mutating ticket calls send `X-CSRF-Token`; compared to session row on the server (VULN-04 remediated).
 // VULN-07: `GET /api/tickets/search?q=` forwards `q` into unsafe SQL on the server (see backend `TicketController.Search`).
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'

@@ -311,9 +311,9 @@ func (s *AuthService) Refresh(refreshPayload *auth.Payload) (*auth.TokenPair, er
 		return nil, fmt.Errorf("rotate refresh token: %w", err)
 	}
 
-	csrfToken, err := s.GetOrIssueCSRFToken(session)
+	csrfToken, err := s.IssueCSRFToken(sessionID)
 	if err != nil {
-		return nil, fmt.Errorf("get or issue csrf token: %w", err)
+		return nil, fmt.Errorf("issue csrf token: %w", err)
 	}
 
 	return &auth.TokenPair{

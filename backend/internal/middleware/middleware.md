@@ -38,8 +38,7 @@ Runs on **unsafe HTTP methods** (not GET/HEAD/OPTIONS). For authenticated sessio
 
 1. Requires non-empty CSRF header.
 2. Loads session by id from context; checks CSRF token pointer + expiry on the **session row**.
-
-Baseline CA behavior: see **`Vulnerability.md`** VULN-05 — header is **not** compared to stored secret in code (intentional weak branch). On a secure branch, add constant-time comparison to `session.CSRFToken`.
+3. Compares the header value to `session.CSRFToken` with **constant-time** equality on equal-length byte slices; rejects on length mismatch or mismatch (**VULN-04** remediated on secure branch).
 
 ## `PublicAuthCSRFRequired(store, headerName)`
 

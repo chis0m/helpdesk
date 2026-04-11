@@ -66,7 +66,7 @@ func Load() Config {
 		PasetoSymmetricKey:    getEnv("PASETO_SYMMETRIC_KEY", "12345678901234567890123456789012"),
 		AccessTokenDuration:   getEnv("ACCESS_TOKEN_DURATION", "15m"),
 		RefreshTokenDuration:  getEnv("REFRESH_TOKEN_DURATION", "168h"),
-		CSRFTokenDuration:     getEnv("CSRF_TOKEN_DURATION", "60m"),
+		CSRFTokenDuration:     getEnv("CSRF_TOKEN_DURATION", "30m"),
 		InviteDuration:        getEnv("INVITE_TTL", "72h"),
 		PasswordResetDuration: getEnv("PASSWORD_RESET_TTL", "1h"),
 		LogLevel:              getEnv("LOG_LEVEL", "info"),

@@ -1,5 +1,5 @@
 <template>
-  <!-- VULN-03: Form submits ticket text to API with length-only style validation server-side; XSS if rendered as HTML elsewhere. -->
+  <!-- SEC-03: Server trims outer whitespace; ticket detail escapes description (no v-html). -->
   <div class="mx-auto max-w-2xl space-y-6">
     <RouterLink
       :to="paths.dashboard.tickets"
@@ -100,7 +100,7 @@
 </template>
 
 <script setup lang="ts">
-// VULN-03: createTicket() sends raw title/description/category — server persists with weak sanitization.
+// SEC-03: createTicket() JSON body; server applies strings.TrimSpace on title/description/category; detail view escapes text.
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import PageHeader from '@/components/ui/PageHeader.vue'

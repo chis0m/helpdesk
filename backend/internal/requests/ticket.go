@@ -3,7 +3,7 @@ package requests
 import "helpdesk/backend/internal/models"
 
 type CreateTicketRequest struct {
-	// VULN-03: Weak input validation / stored XSS risk — no HTML/script sanitization on ticket text.
+	// SEC-03: After bind, service applies strings.TrimSpace (outer whitespace only); angle brackets preserved. UI escapes output.
 	Title       string `json:"title" binding:"required,min=3,max=180"`
 	Description string `json:"description" binding:"required,min=5,max=5000"`
 	Category    string `json:"category" binding:"required,min=2,max=80"`
@@ -17,7 +17,7 @@ type CreateTicketInput struct {
 }
 
 type UpdateTicketRequest struct {
-	// VULN-03: Weak input validation / stored XSS risk — no HTML/script sanitization on ticket text.
+	// SEC-03: After bind, service applies strings.TrimSpace on set fields; angle brackets preserved. UI escapes output.
 	Title       *string `json:"title" binding:"omitempty,min=3,max=180"`
 	Description *string `json:"description" binding:"omitempty,min=5,max=5000"`
 	Category    *string `json:"category" binding:"omitempty,min=2,max=80"`

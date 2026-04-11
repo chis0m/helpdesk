@@ -20,13 +20,4 @@ module.exports = {
   rules: {
     "vue/multi-word-component-names": "off",
   },
-  overrides: [
-    {
-      files: ["src/views/tickets/TicketDetailView.vue"],
-      rules: {
-        // VULN-03 (vulnerable baseline): intentional v-html for stored-XSS coursework; re-enable on secure branch.
-        "vue/no-v-html": "off",
-      },
-    },
-  ],
 };

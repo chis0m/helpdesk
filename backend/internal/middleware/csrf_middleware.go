@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"crypto/subtle"
 	"errors"
 	"net/http"
 	"strings"
@@ -105,7 +106,28 @@ func CSRFRequired(sessionRepo *repositories.AuthSessionRepository, headerName st
 			return
 		}
 
-		// VULN-05: Broken CSRF (session token not verified) — header not compared to session.CSRFToken; any non-empty value passes.
+		stored := *session.CSRFToken
+		headerBytes := []byte(token)
+		storedBytes := []byte(stored)
+		if len(headerBytes) != len(storedBytes) {
+			log.Warn().
+				Str("path", c.Request.URL.Path).
+				Str("method", c.Request.Method).
+				Str("session_id", sessionID).
+				Msg("csrf validation failed: csrf token length mismatch")
+			response.FailureWithAbort(c, http.StatusForbidden, "csrf validation failed", "csrf validation failed")
+			return
+		}
+		if subtle.ConstantTimeCompare(headerBytes, storedBytes) != 1 {
+			log.Warn().
+				Str("path", c.Request.URL.Path).
+				Str("method", c.Request.Method).
+				Str("session_id", sessionID).
+				Msg("csrf validation failed: csrf token mismatch")
+			response.FailureWithAbort(c, http.StatusForbidden, "csrf validation failed", "csrf validation failed")
+			return
+		}
+
 		c.Next()
 	}
 }

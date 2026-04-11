@@ -156,10 +156,18 @@ func (s *TicketService) UpdateForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID
 	if err != nil {
 		return nil, err
 	}
-	input := requests.UpdateTicketInput{
-		Title:       req.Title,
-		Description: req.Description,
-		Category:    req.Category,
+	input := requests.UpdateTicketInput{}
+	if req.Title != nil {
+		t := strings.TrimSpace(*req.Title)
+		input.Title = &t
+	}
+	if req.Description != nil {
+		d := strings.TrimSpace(*req.Description)
+		input.Description = &d
+	}
+	if req.Category != nil {
+		cat := strings.TrimSpace(*req.Category)
+		input.Category = &cat
 	}
 	return s.ticketRepo.UpdateByID(ticket.ID, input)
 }

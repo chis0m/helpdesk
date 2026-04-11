@@ -118,7 +118,7 @@
         </dl>
       </div>
 
-      <!-- VULN-03: v-html on description — stored XSS with weak server validation; remediate: {{ }} or sanitize (e.g. DOMPurify). -->
+      <!-- SEC-03: description via text interpolation (escaped); server trims outer whitespace only. -->
       <div class="px-5 pb-6 pt-5 sm:px-6">
         <h2 class="text-base font-semibold text-[var(--text-primary)]">
           Description
@@ -127,9 +127,10 @@
           Full text as submitted with this ticket.
         </p>
         <div
-          class="ticket-html-content mt-4 max-w-none rounded-xl border border-[var(--border-subtle)] bg-white px-5 py-4 text-[15px] leading-relaxed text-[var(--text-secondary)] shadow-[var(--shadow-sm)]"
-          v-html="ticket.description"
-        />
+          class="mt-4 max-w-none whitespace-pre-wrap break-words rounded-xl border border-[var(--border-subtle)] bg-white px-5 py-4 text-[15px] leading-relaxed text-[var(--text-secondary)] shadow-[var(--shadow-sm)]"
+        >
+          {{ ticket.description }}
+        </div>
       </div>
     </article>
 
@@ -258,11 +259,12 @@
               :datetime="c.createdAt"
             >{{ formatDateTime(c.createdAt) }}</time>
           </div>
-          <!-- VULN-03: v-html on comment body — stored XSS with weak server validation. -->
+          <!-- SEC-03: comment body via text interpolation (escaped); server trims outer whitespace only. -->
           <div
-            class="ticket-html-content px-4 py-3 text-sm leading-relaxed text-[var(--text-secondary)]"
-            v-html="c.body"
-          />
+            class="whitespace-pre-wrap break-words px-4 py-3 text-sm leading-relaxed text-[var(--text-secondary)]"
+          >
+            {{ c.body }}
+          </div>
         </li>
       </ul>
 
