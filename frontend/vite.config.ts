@@ -39,6 +39,7 @@ export default defineConfig(({ mode }) => {
       port: Number.parseInt(env.VITE_PORT || '3000', 10),
       host: '0.0.0.0',
       open: false,
+      allowedHosts: ['secweb.local'],
     },
   }
 })
