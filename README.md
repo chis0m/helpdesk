@@ -244,6 +244,7 @@ npm run lint -- --fix
 | Migrations | [Goose](https://github.com/pressly/goose) |
 | Frontend | [Vue.js](https://vuejs.org/), [Vite](https://vitejs.dev/), [Vue Router](https://router.vuejs.org/) |
 | Password hashing | [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto) (Argon2) |
+|Argon2d Implementation|[How to Hash and Verify Passwords with Argon2 in Go](https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go)
 | Tokens | [PASETO](https://github.com/o1egl/paseto) |
 |MySQL Databae|
 
