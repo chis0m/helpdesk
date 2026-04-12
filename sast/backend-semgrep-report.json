@@ -1,0 +1,166 @@
+{
+  "version": "1.159.0",
+  "results": [],
+  "errors": [],
+  "paths": {
+    "scanned": [
+      ".env.example",
+      ".gitignore",
+      "README.md",
+      "boot/app.go",
+      "boot/boot.md",
+      "cmd/server/main.go",
+      "go.mod",
+      "go.sum",
+      "internal/auth/argon2id.go",
+      "internal/auth/auth.md",
+      "internal/auth/paseto.go",
+      "internal/auth/payload.go",
+      "internal/auth/policy/ticket.go",
+      "internal/auth/public_auth_csrf_store.go",
+      "internal/auth/types.go",
+      "internal/config/env.go",
+      "internal/container/container.go",
+      "internal/container/container.md",
+      "internal/controllers/auth_controller.go",
+      "internal/controllers/auth_cookie.go",
+      "internal/controllers/controllers.md",
+      "internal/controllers/health_controller.go",
+      "internal/controllers/invite_controller.go",
+      "internal/controllers/ticket_controller.go",
+      "internal/controllers/user_controller.go",
+      "internal/database/connect.go",
+      "internal/database/database.md",
+      "internal/database/migrate.go",
+      "internal/logger/zerolog.go",
+      "internal/mail/factory.go",
+      "internal/mail/layout.go",
+      "internal/mail/log_mailer.go",
+      "internal/mail/smtp_mailer.go",
+      "internal/mail/templates/layout.html",
+      "internal/middleware/access_token_middleware.go",
+      "internal/middleware/active_session_middleware.go",
+      "internal/middleware/context_keys.go",
+      "internal/middleware/csrf_middleware.go",
+      "internal/middleware/middleware.md",
+      "internal/middleware/public_auth_csrf_middleware.go",
+      "internal/middleware/refresh_token_middleware.go",
+      "internal/models/auth_session.go",
+      "internal/models/invite.go",
+      "internal/models/password_reset.go",
+      "internal/models/ticket.go",
+      "internal/models/ticket_comment.go",
+      "internal/models/user.go",
+      "internal/repositories/auth_session_repository.go",
+      "internal/repositories/invite_repository.go",
+      "internal/repositories/password_reset_repository.go",
+      "internal/repositories/repositories.md",
+      "internal/repositories/ticket_comment_repository.go",
+      "internal/repositories/ticket_repository.go",
+      "internal/repositories/user_repository.go",
+      "internal/requests/auth.go",
+      "internal/requests/invite.go",
+      "internal/requests/ticket.go",
+      "internal/requests/ticket_comment.go",
+      "internal/requests/user.go",
+      "internal/response/response.go",
+      "internal/routes/routes.go",
+      "internal/routes/routes.md",
+      "internal/services/auth_service.go",
+      "internal/services/invite_service.go",
+      "internal/services/services.md",
+      "internal/services/ticket_service.go",
+      "internal/services/user_service.go",
+      "makefile",
+      "migrations/20260401152020_create_users_table.sql",
+      "migrations/20260403084814_create_auth_sessions_table.sql",
+      "migrations/20260405120000_create_tickets_table.sql",
+      "migrations/20260405123000_create_ticket_comments_table.sql",
+      "migrations/20260406140000_create_invites_table.sql",
+      "migrations/20260407120000_create_password_resets_table.sql",
+      "migrations/20260407130021_add_ticket_uuid.sql",
+      "migrations/20260407130100_add_ticket_comment_uuid.sql",
+      "seed/seeder.go",
+      "seed/seeds/ca/comments.go",
+      "seed/seeds/ca/helpers.go",
+      "seed/seeds/ca/seed.go",
+      "seed/seeds/ca/staff.go",
+      "seed/seeds/ca/tickets.go",
+      "seed/seeds/ca/user.go",
+      "seed/seeds/users.go"
+    ]
+  },
+  "time": {
+    "rules": [],
+    "rules_parse_time": 0.7511270046234131,
+    "profiling_times": {
+      "config_time": 2.3815131187438965,
+      "core_time": 1.429332971572876,
+      "ignores_time": 0.0007967948913574219,
+      "total_time": 3.820868968963623
+    },
+    "parsing_time": {
+      "total_time": 0.0,
+      "per_file_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_files": []
+    },
+    "scanning_time": {
+      "total_time": 1.062166452407837,
+      "per_file_time": {
+        "mean": 0.004638281451562608,
+        "std_dev": 0.00017298592491300769
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_files": []
+    },
+    "matching_time": {
+      "total_time": 0.0,
+      "per_file_and_rule_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_rules_on_files": []
+    },
+    "tainting_time": {
+      "total_time": 0.0,
+      "per_def_and_rule_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_rules_on_defs": []
+    },
+    "fixpoint_timeouts": [],
+    "prefiltering": {
+      "project_level_time": 0.0,
+      "file_level_time": 0.0,
+      "rules_with_project_prefilters_ratio": 0.0,
+      "rules_with_file_prefilters_ratio": 0.999888876541838,
+      "rules_selected_ratio": 0.024002666962995887,
+      "rules_matched_ratio": 0.024002666962995887
+    },
+    "targets": [],
+    "total_bytes": 0,
+    "max_memory_bytes": 1390695168
+  },
+  "engine_requested": "OSS",
+  "skipped_rules": [],
+  "profiling_results": []
+}

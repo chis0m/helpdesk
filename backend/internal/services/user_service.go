@@ -143,4 +143,3 @@ func (s *UserService) CreateStaffFromRequest(actorRole models.UserRole, req requ
 
 	return s.userRepo.Create(input)
 }
-

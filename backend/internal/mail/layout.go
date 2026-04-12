@@ -3,9 +3,7 @@ package mail
 import (
 	"bytes"
 	"embed"
-	"html"
 	"html/template"
-	"strings"
 	"sync"
 )
 
@@ -15,7 +13,8 @@ import (
 type EmailLayout struct {
 	AppName     string
 	Badge       string
-	Body        template.HTML
+	BodyIntro   template.HTML
+	BodyMuted   string
 	ButtonLabel string
 	ButtonURL   string
 	LinkHint    string
@@ -47,12 +46,14 @@ func renderEmailLayout(d EmailLayout) (string, error) {
 }
 
 // MailBody is a short helper for the usual two paragraphs (HTML intro + plain muted line).
-func MailBody(htmlLine template.HTML, mutedPlain string) template.HTML {
-	var b strings.Builder
-	b.WriteString(`<p style="margin:0 0 16px;font-size:15.2px;color:#111111;">`)
-	b.WriteString(string(htmlLine))
-	b.WriteString(`</p><p style="margin:0 0 20px;font-size:14px;color:#5c5c5c;">`)
-	b.WriteString(html.EscapeString(mutedPlain))
-	b.WriteString(`</p>`)
-	return template.HTML(b.String())
-}
+// func MailBody(htmlLine template.HTML, mutedPlain string) template.HTML {
+// 	var b strings.Builder
+// 	b.WriteString(`<p style="margin:0 0 16px;font-size:15.2px;color:#111111;">`)
+// 	b.WriteString(string(htmlLine))
+// 	b.WriteString(`</p><p style="margin:0 0 20px;font-size:14px;color:#5c5c5c;">`)
+// 	b.WriteString(html.EscapeString(mutedPlain))
+// 	b.WriteString(`</p>`)
+// 	// I intentionally ignored because the MailBody template does not receive any user input.
+// 	// nosemgrep
+// 	return template.HTML(b.String())
+// }

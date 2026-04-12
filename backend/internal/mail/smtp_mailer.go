@@ -46,7 +46,8 @@ func (s *SMTPMailer) SendStaffInvite(toEmail, inviteURL string) error {
 	bodyHTML, err := renderEmailLayout(EmailLayout{
 		AppName:     app,
 		Badge:       "Staff invite",
-		Body:        MailBody(template.HTML(`<strong>You’re invited</strong> to join the team. Use the button below to accept this invitation and set your password.`), "This link expires based on your organisation’s policy."),
+		BodyIntro:   template.HTML(`<strong>You’re invited</strong> to join the team. Use the button below to accept this invitation and set your password.`),
+		BodyMuted:   "This link expires in 15 minutes.",
 		ButtonLabel: "Accept invitation",
 		ButtonURL:   inviteURL,
 		LinkHint:    "If the button doesn’t work, paste this URL into your browser:",
@@ -87,12 +88,13 @@ func (s *SMTPMailer) SendPasswordReset(toEmail, resetURL string) error {
 	bodyHTML, err := renderEmailLayout(EmailLayout{
 		AppName:     app,
 		Badge:       "Password reset",
-		Body:        MailBody(template.HTML(`We received a request to <strong>reset your password</strong>. Click the button to choose a new password.`), "If you didn’t ask for this, no action is needed — your password will stay the same."),
+		BodyIntro:   template.HTML(`We received a request to <strong>reset your password</strong>. Click the button to choose a new password.`),
+		BodyMuted:   "If you didn’t ask for this, no action is needed — your password will stay the same.",
 		ButtonLabel: "Reset password",
 		ButtonURL:   resetURL,
 		LinkHint:    "Or open:",
 		LinkURL:     resetURL,
-		Footer:      "For security, this link expires after a short time. Never share this email with anyone.",
+		Footer:      "For security, this link expires in 7 minutes. Never share this email with anyone.",
 	})
 	if err != nil {
 		logger.L().Error().Err(err).

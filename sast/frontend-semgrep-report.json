@@ -1,0 +1,171 @@
+{
+  "version": "1.159.0",
+  "results": [],
+  "errors": [],
+  "paths": {
+    "scanned": [
+      ".env.example",
+      ".eslintignore",
+      ".eslintrc.cjs",
+      ".gitignore",
+      ".vscode/extensions.json",
+      "README.md",
+      "index.html",
+      "package-lock.json",
+      "package.json",
+      "public/vite.svg",
+      "src/App.vue",
+      "src/api/admin.ts",
+      "src/api/api.md",
+      "src/api/auth-refresh-internal.ts",
+      "src/api/auth.ts",
+      "src/api/base-url.ts",
+      "src/api/client.ts",
+      "src/api/health.ts",
+      "src/api/http-dev-log.ts",
+      "src/api/invites.ts",
+      "src/api/refresh_token.md",
+      "src/api/session-fetch.ts",
+      "src/api/session-refresh.ts",
+      "src/api/tickets.ts",
+      "src/api/types.ts",
+      "src/api/users.ts",
+      "src/assets/vue.svg",
+      "src/components/HelloWorld.vue",
+      "src/components/admin/AdminStaffTable.vue",
+      "src/components/admin/AdminSubnav.vue",
+      "src/components/admin/AdminUserTable.vue",
+      "src/components/components.md",
+      "src/components/icons/IconChart.vue",
+      "src/components/icons/IconGear.vue",
+      "src/components/icons/IconHome.vue",
+      "src/components/icons/IconPulse.vue",
+      "src/components/icons/IconTicket.vue",
+      "src/components/icons/IconUser.vue",
+      "src/components/layout/AppHeader.vue",
+      "src/components/layout/AppSidebar.vue",
+      "src/components/layout/SidebarLink.vue",
+      "src/components/tickets/TicketStatusBadge.vue",
+      "src/components/tickets/TicketStatusEditor.vue",
+      "src/components/ui/CategoryBadge.vue",
+      "src/components/ui/DetailField.vue",
+      "src/components/ui/PageHeader.vue",
+      "src/components/ui/TicketIdChip.vue",
+      "src/constants/routes.ts",
+      "src/layouts/AppLayout.vue",
+      "src/layouts/AuthLayout.vue",
+      "src/main.ts",
+      "src/router/index.ts",
+      "src/stores/auth-session.ts",
+      "src/stores/store.md",
+      "src/style.css",
+      "src/types/directory-user.ts",
+      "src/types/ticket.ts",
+      "src/types/types.md",
+      "src/utils/admin-access.ts",
+      "src/utils/auth-error-message.ts",
+      "src/utils/date-format.ts",
+      "src/utils/logger.ts",
+      "src/utils/perform-logout.ts",
+      "src/utils/ticket-ui.ts",
+      "src/utils/user-display.ts",
+      "src/utils/utils.md",
+      "src/views/DashboardView.vue",
+      "src/views/LandingView.vue",
+      "src/views/LoginView.vue",
+      "src/views/SignupView.vue",
+      "src/views/account/ProfileView.vue",
+      "src/views/account/SessionsView.vue",
+      "src/views/admin/AdminStaffListView.vue",
+      "src/views/admin/AdminStaffView.vue",
+      "src/views/admin/AdminUsersListView.vue",
+      "src/views/auth/AcceptInviteView.vue",
+      "src/views/auth/ChangePasswordRequiredView.vue",
+      "src/views/auth/ForgotPasswordView.vue",
+      "src/views/auth/ResetPasswordView.vue",
+      "src/views/tickets/TicketCreateView.vue",
+      "src/views/tickets/TicketDetailView.vue",
+      "src/views/tickets/TicketsListView.vue",
+      "src/views/views.md",
+      "src/vite-env.d.ts",
+      "src/vue-router.d.ts",
+      "tsconfig.app.json",
+      "tsconfig.json",
+      "tsconfig.node.json",
+      "vite.config.ts"
+    ]
+  },
+  "time": {
+    "rules": [],
+    "rules_parse_time": 0.7694120407104492,
+    "profiling_times": {
+      "config_time": 1.9851891994476318,
+      "core_time": 1.336021900177002,
+      "ignores_time": 0.0007650852203369141,
+      "total_time": 3.3313941955566406
+    },
+    "parsing_time": {
+      "total_time": 0.0,
+      "per_file_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_files": []
+    },
+    "scanning_time": {
+      "total_time": 1.2038652896881104,
+      "per_file_time": {
+        "mean": 0.005599373440409813,
+        "std_dev": 0.00032731523116475705
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_files": []
+    },
+    "matching_time": {
+      "total_time": 0.0,
+      "per_file_and_rule_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_rules_on_files": []
+    },
+    "tainting_time": {
+      "total_time": 0.0,
+      "per_def_and_rule_time": {
+        "mean": 0.0,
+        "std_dev": 0.0
+      },
+      "very_slow_stats": {
+        "time_ratio": 0.0,
+        "count_ratio": 0.0
+      },
+      "very_slow_rules_on_defs": []
+    },
+    "fixpoint_timeouts": [],
+    "prefiltering": {
+      "project_level_time": 0.0,
+      "file_level_time": 0.0,
+      "rules_with_project_prefilters_ratio": 0.0,
+      "rules_with_file_prefilters_ratio": 0.9881669771009094,
+      "rules_selected_ratio": 0.02925386216719623,
+      "rules_matched_ratio": 0.02925386216719623
+    },
+    "targets": [],
+    "total_bytes": 0,
+    "max_memory_bytes": 1453450112
+  },
+  "engine_requested": "OSS",
+  "skipped_rules": [],
+  "profiling_results": []
+}
