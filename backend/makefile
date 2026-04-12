@@ -1,7 +1,7 @@
 GOOSE_DRIVER ?= mysql
 GOOSE_DIR ?= migrations
 DB_HOST ?= localhost
-DB_DATABASE ?= vuln_helpdesk
+DB_DATABASE ?= helpdesk
 DB_USERNAME ?= admin
 DB_PASSWORD ?= password
 DB_PORT ?= 3306
