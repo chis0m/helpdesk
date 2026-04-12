@@ -22,7 +22,7 @@ A full-stack **ticketing / helpdesk** web application for managing support reque
 
 | Objective | How the project addresses it |
 |-----------|------------------------------|
-| **Strong authentication** | Argon2id password hashes; rate limiting on login/signup/forgot-password |
+| **Strong authentication** | Argon2id password hashes |
 | **Session integrity** | Short-lived access token + long refresh tokens; sessions and CSRF tokens (for update/post/delete requests) stored together in database |
 | **Authorization** | Role and ownership checks on tickets and admin actions |
 | **Injection & XSS** | Parameterized DB access; validated request DTOs; UI must not treat user text as HTML but as string |
@@ -38,7 +38,6 @@ I intentionally added some features on seperate branch. For example, I added aud
 Vulnerability Branch: [vulnerable-baseline](https://github.com/chis0m/helpdesk/tree/vulnerable-baseline)
 Audit Logging: [add-audit-log-to-track-vuln](https://github.com/chis0m/helpdesk/tree/add-audit-log-to-track-vuln)
 Secure Fix Branch: [secure-fix](https://github.com/chis0m/helpdesk/tree/secure-fix)
-SAST Test Branch: [sast-test](https://github.com/chis0m/helpdesk/tree/sast-test) 
 
 ## Project structure
 
@@ -210,7 +209,6 @@ Summarize **key findings** (pass/fail, severity, file paths) in your report and 
 | Password hashing | [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto/argon2) (Argon2) |
 |Argon2d Implementation|[How to Hash and Verify Passwords with Argon2 in Go](https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go)
 | Tokens | [PASETO](https://github.com/o1egl/paseto)
-|Rate Limiting| [Rate Limiting 101: Implementing in Go](https://medium.com/@sheikhahnafshifat/rate-limiting-101-implementing-in-go-c434675f1fbe), [time rate](https://pkg.go.dev/golang.org/x/time/rate)
 
 **Security guidance (for design and report citations)**
 
