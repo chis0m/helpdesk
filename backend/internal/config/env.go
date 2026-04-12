@@ -10,20 +10,20 @@ import (
 )
 
 type Config struct {
-	Port                  string
-	FrontendURL           string
-	DBHost                string
-	DBDatabase            string
-	DBUsername            string
-	DBPassword            string
-	DBPort                string
-	SeedAdminEmail        string
-	SeedAdminPassword     string
-	SeedAdminFirstName    string
-	SeedAdminMiddleName   string
-	SeedAdminLastName     string
+	Port                string
+	FrontendURL         string
+	DBHost              string
+	DBDatabase          string
+	DBUsername          string
+	DBPassword          string
+	DBPort              string
+	SeedAdminEmail      string
+	SeedAdminPassword   string
+	SeedAdminFirstName  string
+	SeedAdminMiddleName string
+	SeedAdminLastName   string
 	// SeedCA enables CA assessment fixtures (customers, staff, tickets). See SEED_CA env.
-	SeedCA bool
+	SeedCA                bool
 	AppName               string
 	PasetoSymmetricKey    string
 	AccessTokenDuration   string
