@@ -9,7 +9,7 @@ import (
 
 // EmailLayout fills templates/layout.html: shell + main column + optional button + optional URL line.
 // Body is the main column HTML (paragraphs with inline styles). Plain fields are escaped by html/template.
-// No button: leave ButtonLabel and ButtonURL empty. No URL line: leave LinkURL empty.
+// No button: then leave ButtonLabel and ButtonURL empty. No URL line: then leave LinkURL empty.
 type EmailLayout struct {
 	AppName     string
 	Badge       string
@@ -44,16 +44,3 @@ func renderEmailLayout(d EmailLayout) (string, error) {
 	}
 	return buf.String(), nil
 }
-
-// MailBody is a short helper for the usual two paragraphs (HTML intro + plain muted line).
-// func MailBody(htmlLine template.HTML, mutedPlain string) template.HTML {
-// 	var b strings.Builder
-// 	b.WriteString(`<p style="margin:0 0 16px;font-size:15.2px;color:#111111;">`)
-// 	b.WriteString(string(htmlLine))
-// 	b.WriteString(`</p><p style="margin:0 0 20px;font-size:14px;color:#5c5c5c;">`)
-// 	b.WriteString(html.EscapeString(mutedPlain))
-// 	b.WriteString(`</p>`)
-// 	// I intentionally ignored because the MailBody template does not receive any user input.
-// 	// nosemgrep
-// 	return template.HTML(b.String())
-// }
