@@ -142,7 +142,7 @@ func (r *TicketRepository) SearchByKeywordConcatSafe(q string) ([]models.Ticket,
 	p := "%" + q + "%"
 	var tickets []models.Ticket
 	if err := r.db.Raw("SELECT * FROM tickets WHERE deleted_at IS NULL AND (title LIKE ? OR description LIKE ?  OR category LIKE ? ) ORDER BY created_at DESC LIMIT 100",
-		p, p, p,).Scan(&tickets).Error; err != nil {
+		p, p, p).Scan(&tickets).Error; err != nil {
 		return nil, err
 	}
 	return tickets, nil

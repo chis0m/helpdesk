@@ -13,7 +13,8 @@
 <span style="display:inline-block;margin-top:8px;font-size:10.4px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:#0f7a3d;background:#e8f9ef;padding:3px 9px;border-radius:9999px;">{{.Badge}}</span>
 </td></tr>
 <tr><td style="padding:24px 22px 26px;">
-{{.Body}}
+<p style="margin:0 0 16px;font-size:15.2px;color:#111111;">{{ .BodyIntro }}</p>
+<p style="margin:0 0 20px;font-size:14px;color:#5c5c5c;">{{ .BodyMuted }}</p>
 {{if and .ButtonLabel .ButtonURL}}
 <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px;"><tr><td>
 <a href="{{.ButtonURL}}" style="display:inline-block;background:#2ed06e;color:#0a0a0a !important;text-decoration:none;font-weight:600;font-size:14.4px;padding:10px 22px;border-radius:9999px;box-shadow:0 1px 2px rgba(17,17,17,0.06);">{{.ButtonLabel}}</a>

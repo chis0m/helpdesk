@@ -28,19 +28,19 @@
           aria-hidden="true"
         />
         <div class="relative">
-        <p class="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-          Open &amp; in progress
-        </p>
-        <p class="mt-2 flex flex-wrap items-baseline gap-2">
-          <span class="text-4xl font-bold tabular-nums tracking-tight text-[var(--text-primary)] lg:text-5xl">
-            {{ loading ? '…' : openTicketCount }}
-          </span>
-          <span class="text-sm font-medium text-[var(--text-secondary)]">tickets needing attention</span>
-        </p>
-        <p class="mt-3 text-sm text-[var(--text-muted)]">
-          Count includes <strong class="font-semibold text-[var(--text-secondary)]">Open</strong> and
-          <strong class="font-semibold text-[var(--text-secondary)]">In progress</strong>.
-        </p>
+          <p class="text-xs font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+            Open &amp; in progress
+          </p>
+          <p class="mt-2 flex flex-wrap items-baseline gap-2">
+            <span class="text-4xl font-bold tabular-nums tracking-tight text-[var(--text-primary)] lg:text-5xl">
+              {{ loading ? '…' : openTicketCount }}
+            </span>
+            <span class="text-sm font-medium text-[var(--text-secondary)]">tickets needing attention</span>
+          </p>
+          <p class="mt-3 text-sm text-[var(--text-muted)]">
+            Count includes <strong class="font-semibold text-[var(--text-secondary)]">Open</strong> and
+            <strong class="font-semibold text-[var(--text-secondary)]">In progress</strong>.
+          </p>
         </div>
       </div>
       <div class="flex shrink-0 flex-col justify-center gap-2 sm:flex-row sm:items-center lg:flex-col lg:items-stretch">
@@ -143,10 +143,10 @@
           </p>
         </div>
         <div class="mt-8">
-        <RouterLink
-          :to="paths.dashboard.ticketNew"
-          class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] py-3.5 text-sm font-bold text-[var(--text-on-green)] shadow-[var(--shadow-card)] transition hover:brightness-[1.02] active:scale-[0.99]"
-        >
+          <RouterLink
+            :to="paths.dashboard.ticketNew"
+            class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--brand-green)] py-3.5 text-sm font-bold text-[var(--text-on-green)] shadow-[var(--shadow-card)] transition hover:brightness-[1.02] active:scale-[0.99]"
+          >
             <span class="text-lg leading-none">+</span>
             Create ticket
           </RouterLink>
@@ -377,7 +377,10 @@ const recentGroups = computed(() => {
   }
   return Array.from(map.entries()).map(([date, rows]) => ({
     date,
-    items: rows.map(({ updated_at: _u, ...rest }) => rest),
+    items: rows.map((row) => ({
+      ...row,
+      updated_at: formatDateTime(row.updated_at),
+    })),
   }))
 })
 </script>

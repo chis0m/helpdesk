@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
@@ -66,7 +67,7 @@ func VerifyPassword(password, encodedHash string) (bool, error) {
 		cfg.Iterations,
 		cfg.Memory,
 		cfg.Parallelism,
-		uint32(len(hashBytes)),
+		cfg.KeyLength,
 	)
 
 	return subtle.ConstantTimeCompare(hashToCompare, hashBytes) == 1, nil
@@ -98,13 +99,32 @@ func decodeHash(encodedHash string) (Argon2IDParams, []byte, []byte, error) {
 	if err != nil {
 		return Argon2IDParams{}, nil, nil, fmt.Errorf("invalid salt: %w", err)
 	}
-	cfg.SaltLength = uint32(len(saltBytes))
+	cfg.SaltLength, err = lenUint32(len(saltBytes))
+	if err != nil {
+		return Argon2IDParams{}, nil, nil, fmt.Errorf("invalid salt length: %w", err)
+	}
 
 	hashBytes, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
 		return Argon2IDParams{}, nil, nil, fmt.Errorf("invalid hash: %w", err)
 	}
-	cfg.KeyLength = uint32(len(hashBytes))
+
+	cfg.KeyLength, err = lenUint32(len(hashBytes))
+	if err != nil {
+		return Argon2IDParams{}, nil, nil, fmt.Errorf("invalid hash length: %w", err)
+	}
 
 	return cfg, saltBytes, hashBytes, nil
+}
+
+// TO ensure that the length is not too large for uint32
+func lenUint32(n int) (uint32, error) {
+	if n < 0 {
+		return 0, errors.New("negative length")
+	}
+	u := uint64(n)
+	if u > uint64(math.MaxUint32) {
+		return 0, fmt.Errorf("length does not fit uint32: %d", n)
+	}
+	return uint32(u), nil
 }

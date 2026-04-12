@@ -1,0 +1,76 @@
+{
+	"Golang errors": {},
+	"Issues": [
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e uint32",
+			"file": "/Users/chisom/NCI/golang/helpdesk/backend/internal/auth/argon2id.go",
+			"code": "106: \t}\n107: \tcfg.KeyLength = uint32(len(hashBytes))\n108: \n",
+			"line": "107",
+			"column": "24",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e uint32",
+			"file": "/Users/chisom/NCI/golang/helpdesk/backend/internal/auth/argon2id.go",
+			"code": "100: \t}\n101: \tcfg.SaltLength = uint32(len(saltBytes))\n102: \n",
+			"line": "101",
+			"column": "25",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "HIGH",
+			"confidence": "MEDIUM",
+			"cwe": {
+				"id": "190",
+				"url": "https://cwe.mitre.org/data/definitions/190.html"
+			},
+			"rule_id": "G115",
+			"details": "integer overflow conversion int -\u003e uint32",
+			"file": "/Users/chisom/NCI/golang/helpdesk/backend/internal/auth/argon2id.go",
+			"code": "68: \t\tcfg.Parallelism,\n69: \t\tuint32(len(hashBytes)),\n70: \t)\n",
+			"line": "69",
+			"column": "9",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "MEDIUM",
+			"confidence": "LOW",
+			"cwe": {
+				"id": "79",
+				"url": "https://cwe.mitre.org/data/definitions/79.html"
+			},
+			"rule_id": "G203",
+			"details": "The used method does not auto-escape HTML. This can potentially lead to 'Cross-site Scripting' vulnerabilities, in case the attacker controls the input.",
+			"file": "/Users/chisom/NCI/golang/helpdesk/backend/internal/mail/layout.go",
+			"code": "58: \t// nosemgrep\n59: \treturn template.HTML(b.String())\n60: }\n",
+			"line": "59",
+			"column": "9",
+			"nosec": false,
+			"suppressions": null
+		}
+	],
+	"Stats": {
+		"files": 60,
+		"lines": 6551,
+		"nosec": 0,
+		"found": 4
+	},
+	"GosecVersion": "dev"
+}
