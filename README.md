@@ -35,9 +35,9 @@ A full-stack **ticketing / helpdesk** web application for managing support reque
 ## Github Branch Stragety
 I intentionally added some features on seperate branch. For example, I added audit logging to the app in vulnerable state, before implementing the secure fix. This is so that I can show how proper Audit Logging can help with easy detection.
 
-Vulnerability Branch: [vulnerable-baseline](https://github.com/chis0m/helpdesk/tree/vulnerable-baseline)
-Audit Logging: [add-audit-log-to-track-vuln](https://github.com/chis0m/helpdesk/tree/add-audit-log-to-track-vuln)
-Secure Fix Branch: [secure-fix](https://github.com/chis0m/helpdesk/tree/secure-fix)
+- Vulnerability Branch: [vulnerable-baseline](https://github.com/chis0m/helpdesk/tree/vulnerable-baseline)
+- Audit Logging: [add-audit-log-to-track-vuln](https://github.com/chis0m/helpdesk/tree/add-audit-log-to-track-vuln)
+- Secure Fix Branch: [secure-fix](https://github.com/chis0m/helpdesk/tree/secure-fix)
 
 ## Project structure
 
