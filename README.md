@@ -76,18 +76,6 @@ helpdesk/
 └── README.md                # Setup Instruction and general app info
 ```
 
-**Important files**
-
-| Path | Purpose |
-|------|---------|
-| `backend/internal/routes/routes.go` | All API routes and middleware chains |
-| `backend/internal/middleware/csrf_middleware.go` | CSRF verification for session-backed mutations |
-| `backend/internal/controllers/auth_cookie.go` | Sets/clears auth cookies (flags are a key hardening point) |
-| `backend/internal/repositories/ticket_repository.go` | Ticket persistence and search (must stay injection-safe) |
-| `frontend/src/api/client.ts` | Fetch-based helpers, `credentials: 'include'`, CSRF header name |
-
----
-
 ## Setup and installation
 
 ### Prerequisites
@@ -113,31 +101,17 @@ FLUSH PRIVILEGES;
 From `backend/`:
 
 ```bash
-cp .env.example .env   # if your repo provides .env.example; otherwise create .env
+cp .env.example .env
 ```
 
-Set at minimum (defaults exist in `internal/config/env.go` but **override for production**):
-
-| Variable | Purpose |
-|----------|---------|
-| `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | MySQL connection |
-| `PASETO_SYMMETRIC_KEY` | **32-byte** secret for PASETO (generate a random value; never use the dev default in production) |
-| `FRONTEND_URL` | SPA origin for CORS (e.g. `http://localhost:3000`) |
-| `GO_ENV` | `development` vs `production` (affects logging and future cookie security toggles) |
-
-Run migrations:
-
-```bash
-cd backend
-make gu    # goose up — requires goose on PATH and DB_* env / makefile defaults
-```
+Setup variables on you can rely on the defaults at `internal/config/env.go`
 
 Start the API:
 
 ```bash
-make serve
-# or: go run ./cmd/server
+cd backend/ && make serve
 ```
+This also runs migrations, and it runs the default seed if `SEED_CA` is set to true
 
 Default API port is **`8080`** unless `PORT` is set.
 
@@ -148,7 +122,9 @@ cd frontend
 npm install
 ```
 
-Optional: `frontend/.env` — `VITE_PORT` (default **3000** per `vite.config.ts`), `VITE_API_URL` if your client reads it.
+Make sure the `VITE_PORT` and `VITE_API_BASE_URL` matches the backend records.
+VITE_PORT is frontend port, which should match `FRONTEND_URL` in the `.env.go`
+VITE_API_BASE_URL is the backend url
 
 ```bash
 npm run dev      # development server
@@ -156,19 +132,17 @@ npm run build    # production build
 npm run lint     # ESLint
 ```
 
-Open the URL printed by Vite (typically `http://localhost:3000`). Ensure `FRONTEND_URL` in the backend matches this origin so cookies and CORS behave correctly.
+Open the URL printed by Vite (typically `http://localhost:3000`).
 
 ---
 
 ## Usage guidelines
 
-1. **Register / log in** — Use the auth flows from the landing/login views. After login, the browser stores **HttpOnly** session cookies once remediation flags are enabled (see security section).
+1. **Register / log in** — login through /login in the UI e.g http://127.0.0.1:3000/login. If you set `SEED_CA` to true, then use `cassey.admin@secweb.ie` to login and `password` as password. Or you can just signup.
 2. **Tickets** — Create a ticket from the dashboard; open a ticket to view details, status, assignment, and comments.
 3. **Search** — Use ticket search; the server must bind search parameters safely (no raw string concatenation into SQL).
 4. **Profile & sessions** — Update profile where allowed; review and revoke other sessions from the sessions view.
 5. **Admin / staff** — Elevated actions (invites, role changes, staff creation) require an appropriate role; all checks are enforced **on the server**, not only in the UI.
-
-**Note:** If you run the API on port `8080` and the SPA on port `3000`, that is a **cross-origin** setup: the frontend must call the API with **credentials included**, and the backend CORS configuration must allow the frontend origin. Adjust `FRONTEND_URL` and CORS settings if you change ports.
 
 ---
 
