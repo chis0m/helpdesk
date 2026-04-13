@@ -3,7 +3,7 @@
  *
  * VULN-01: Mutating/session requests use `credentials: 'include'` (see callers) — session cookies are
  * issued by the backend with weak flags; the SPA stores/sends them as the browser allows.
- * VULN-05: `CSRF_HEADER` — client sends `X-CSRF-Token`; broken comparison / validation is server middleware.
+ * VULN-04: `CSRF_HEADER` — client sends `X-CSRF-Token`; broken comparison / validation is server middleware.
  */
 import { getApiBaseUrl } from './base-url'
 

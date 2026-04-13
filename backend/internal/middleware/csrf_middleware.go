@@ -105,7 +105,7 @@ func CSRFRequired(sessionRepo *repositories.AuthSessionRepository, headerName st
 			return
 		}
 
-		// VULN-05: Broken CSRF (session token not verified) — header not compared to session.CSRFToken; any non-empty value passes.
+		// VULN-04: Broken CSRF (session token not verified) — header not compared to session.CSRFToken; any non-empty value passes.
 		c.Next()
 	}
 }

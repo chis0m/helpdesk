@@ -177,7 +177,7 @@
 </template>
 
 <script setup lang="ts">
-// VULN-05: Public CSRF + POST body; broken CSRF verification is server-side (see backend middleware).
+// VULN-04: Public CSRF + POST body; broken CSRF verification is server-side (see backend middleware).
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchPublicCsrfToken, signupRequest } from '@/api/auth'

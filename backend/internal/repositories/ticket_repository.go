@@ -130,7 +130,7 @@ func (r *TicketRepository) DeleteByID(ticketID uint64) error {
 	return r.db.Delete(&models.Ticket{}, "id = ?", ticketID).Error
 }
 
-// VULN-07: SQL injection (ticket keyword search) — q concatenated into Raw SQL without parameter binding.
+// VULN-06: SQL injection (ticket keyword search) — q concatenated into Raw SQL without parameter binding.
 func (r *TicketRepository) SearchByKeywordConcatUnsafe(q string) ([]models.Ticket, error) {
 	//nolint:gosec // G201
 	sqlStr := fmt.Sprintf(

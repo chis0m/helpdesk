@@ -112,7 +112,7 @@ func (s *TicketService) GetByID(ticketID uint64) (*models.Ticket, error) {
 	return s.ticketRepo.GetByID(ticketID)
 }
 
-// VULN-07: SQL injection (ticket keyword search) — forwards q to Raw SQL built with string concatenation.
+// VULN-06: SQL injection (ticket keyword search) — forwards q to Raw SQL built with string concatenation.
 func (s *TicketService) SearchTicketsUnsafe(keyword string) ([]models.Ticket, error) {
 	keyword = strings.TrimSpace(keyword)
 	if keyword == "" {

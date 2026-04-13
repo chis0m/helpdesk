@@ -1,5 +1,5 @@
 // VULN-02: `PATCH /api/admin/users/:user_id/role` uses numeric id in the path (API contract; see backend).
-// VULN-05: Admin mutating routes send `X-CSRF-Token`; weak verification is backend CSRF middleware.
+// VULN-04: Admin mutating routes send `X-CSRF-Token`; weak verification is backend CSRF middleware.
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
