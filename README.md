@@ -210,7 +210,7 @@ gosec -fmt json -out ../sast/gosec-report-vuln-fixed.json ./...
 ```bash
 cd frontend
 npm audit --json > ../sast/frontend-npm-audit-vuln.json
-npm audit fix
+npm audit fix --force
 npm audit --json > ../sast/frontend-npm-audit-vuln-fix.json
 npm run lint
 # To fix lint issues
