@@ -1,8 +1,8 @@
 # Secure Web Helpdesk
 
-A full-stack **ticketing / helpdesk** web application for managing support requests, users, and staff workflows. It is built for the **National College of Ireland — Secure Web Development** module: the **primary security focus** is applying **defence in depth** across authentication, session handling, authorization, input/output handling, CSRF protection, safe database access, and operational logging.
+A full-stack **ticketing / helpdesk** web application for managing support requests, users, and staff workflows. It is built for the **National College of Ireland — Secure Web Development** module: the **primary security focus** is applying **defence in depth** across authentication, session handling, authorization, input/output handling, CSRF protection, safe database access, and operational audit logging.
 
-**Stack:** Vue 3 + TypeScript (SPA) · Go (Gin) REST API · MySQL · PASETO-based sessions in **HttpOnly** cookies (with explicit cookie-flag hardening in remediation) · **Argon2id** password hashing · **zerolog** structured logging.
+**Stack:** Vue 3 + TypeScript (SPA) + Tailwind CSS, Golang (Gin) REST API, MySQL (GORM, Goose), PASETO-based sessions tokens in **HttpOnly** cookies, **Argon2id** password hashing, **zerolog** structured logging.
 
 ---
 
@@ -13,24 +13,31 @@ A full-stack **ticketing / helpdesk** web application for managing support reque
 | Area | What users can do |
 |------|-------------------|
 | **Accounts** | Sign up, log in, log out, change password, list/revoke sessions, password reset (mail/log driver) |
-| **Roles** | Multiple roles (e.g. customer, staff, admin / super_admin) with **server-side** checks on sensitive routes |
+| **Roles** | Multiple roles (e.g. user(customer), staff, admin, super_admin) with **server-side** checks on sensitive routes |
 | **Tickets** | Create, list, search, view, update, assign, change status, delete (within policy) |
 | **Comments** | Add, list, update, delete ticket comments |
-| **Admin** | Staff invites, user listing, role changes (where implemented) |
+| **Admin** | Staff invites, user listing, role changes |
 
 ### Security objectives (mapped to implementation themes)
 
 | Objective | How the project addresses it |
 |-----------|------------------------------|
-| **Strong authentication** | Argon2id password hashes; rate limiting on login/signup/forgot-password |
-| **Session integrity** | Short-lived access token + refresh; sessions stored server-side; CSRF tokens for mutating requests |
-| **Authorization** | Role and ownership checks on tickets and admin actions (see **Security improvements**) |
-| **Injection & XSS** | Parameterized DB access; validated request DTOs; UI must not treat user text as HTML |
-| **CSRF** | `X-CSRF-Token` on protected and public-auth routes where middleware applies |
+| **Strong authentication** | Argon2id password hashes |
+| **Session integrity** | Short-lived access token + long refresh tokens; sessions and CSRF tokens (for update/post/delete requests) stored together in database |
+| **Authorization** | Role and ownership checks on tickets and admin actions |
+| **Injection & XSS** | Parameterized DB access; validated request DTOs; UI must not treat user text as HTML but as string |
+| **CSRF** | `X-CSRF-Token` on protected and public-auth routes as the case may be |
 | **Observability** | Structured logs; audit/append-only logging targeted in remediation docs |
 | **Configuration** | Environment-driven secrets and DB settings (never commit real `.env` secrets) |
 
 ---
+
+## Github Branch Stragety
+I intentionally added some features on seperate branch. For example, I added audit logging to the app in vulnerable state, before implementing the secure fix. This is so that I can show how proper Audit Logging can help with easy detection.
+
+Vulnerability Branch: [vulnerable-baseline](https://github.com/chis0m/helpdesk/tree/vulnerable-baseline)
+Audit Logging: [add-audit-log-to-track-vuln](https://github.com/chis0m/helpdesk/tree/add-audit-log-to-track-vuln)
+Secure Fix Branch: [secure-fix](https://github.com/chis0m/helpdesk/tree/secure-fix)
 
 ## Project structure
 
