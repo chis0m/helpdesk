@@ -2,7 +2,7 @@
 
 A full-stack **ticketing / helpdesk** web application for managing support requests, users, and staff workflows. It is built for the **National College of Ireland — Secure Web Development** module: the **primary security focus** is applying **defence in depth** across authentication, session handling, authorization, input/output handling, CSRF protection, safe database access, and operational audit logging.
 
-**Stack:** Vue 3 + TypeScript (SPA) + Tailwind CSS, Golang (Gin) REST API, MySQL (GORM, Goose), PASETO-based sessions tokens in **HttpOnly** cookies, **Argon2id** password hashing, **zerolog** structured logging.
+**Stack:** Vue 3 + TypeScript (SPA) + Tailwind CSS, Golang (Gin) REST API, MySQL (GORM, Goose), PASETO-based sessions tokens in **HttpOnly** cookies, **Argon2id** password hashing, **zerolog** structured logging. **Notification** used Mailpit Local Mail Server
 
 ---
 
