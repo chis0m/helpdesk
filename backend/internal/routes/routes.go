@@ -1,8 +1,6 @@
 package routes
 
 import (
-	"time"
-
 	"github.com/gin-gonic/gin"
 
 	"helpdesk/backend/internal/auth"
@@ -11,11 +9,6 @@ import (
 )
 
 func Register(r *gin.Engine, c *container.Container) {
-	loginRateLimiter := middleware.NewIPRateLimiter(10, time.Minute)
-	signupRateLimiter := middleware.NewIPRateLimiter(5, time.Minute)
-	forgotPasswordRateLimiter := middleware.NewIPRateLimiter(5, time.Minute)
-	invitePublicRateLimiter := middleware.NewIPRateLimiter(30, time.Minute)
-
 	r.GET("/", func(ctx *gin.Context) {
 		ctx.JSON(200, gin.H{
 			"message": "welcome to secure web helpdesk",
@@ -26,12 +19,12 @@ func Register(r *gin.Engine, c *container.Container) {
 	{
 		api.GET("/health", c.HealthController.Ping)
 		api.GET("/auth/public-csrf-token", c.AuthController.PublicAuthCSRFToken)
-		api.POST("/auth/login", loginRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Login)
-		api.POST("/auth/signup", signupRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Signup)
-		api.POST("/auth/forgot-password", forgotPasswordRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.ForgotPassword)
-		api.POST("/auth/reset-password", forgotPasswordRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.ResetPassword)
-		api.GET("/invites/verify", invitePublicRateLimiter.Middleware(), c.InviteController.VerifyInvite)
-		api.POST("/invites/accept", invitePublicRateLimiter.Middleware(), middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.InviteController.AcceptInvite)
+		api.POST("/auth/login", middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Login)
+		api.POST("/auth/signup", middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Signup)
+		api.POST("/auth/forgot-password", middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.ForgotPassword)
+		api.POST("/auth/reset-password", middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.ResetPassword)
+		api.GET("/invites/verify", c.InviteController.VerifyInvite)
+		api.POST("/invites/accept", middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.InviteController.AcceptInvite)
 		api.POST("/auth/refresh", middleware.RefreshTokenRequired(c.TokenMaker, auth.RefreshCookieName), middleware.CSRFRequired(c.SessionRepo, auth.CSRFHeaderName), c.AuthController.Refresh)
 
 		// VULN-06: Insufficient security / audit logging — no audit middleware; sensitive routes use ad-hoc logs only.
