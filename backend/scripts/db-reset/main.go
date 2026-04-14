@@ -1,4 +1,4 @@
-// Local development only: loads .env, runs goose down-to-0 then up. Refuses to run unless GO_ENV is development or local.
+// Local development only: rolls back all applied migrations (Laravel migrate:reset; same as goose CLI `reset` / `make gr`).
 // Run from the backend module root (e.g. go run ./scripts/db-reset) so migrations/ resolves.
 package main
 

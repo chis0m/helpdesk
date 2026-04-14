@@ -25,8 +25,10 @@ gd: # goose_down
 gr: # goose_down_all
 	goose -dir $(GOOSE_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" reset
 
-dbr: # db_reset — goose down-to-0 + up (local dev only; run from backend/)
+dbr: # db_reset — roll back all migrations like `make gr` (local dev only; run from backend/)
 	go run ./scripts/db-reset
+
+dbrf: # db_refresh — roll back all then migrate up again,
 
 dbm: # db_migrate — goose up (local dev only; run from backend/)
 	go run ./scripts/db-migrate
@@ -41,4 +43,4 @@ check:
 tidy:
 	go mod tidy
 
-.PHONY: gm gs gu guo gd gr dbr dbm serve check tidy
+.PHONY: gm gs gu guo gd gr dbr dbrf dbm serve check tidy
