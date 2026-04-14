@@ -2,7 +2,7 @@
  * Small console logger: verbose traces in dev (and optional VITE_DEBUG), warn/error always.
  *
  * `logger.debug` is stripped from production builds unless VITE_DEBUG=true. API modules log
- * full envelopes and CSRF values in dev for vulnerable-baseline / coursework visibility;
+ * full envelopes and CSRF values in dev for secure-fix / coursework visibility;
  * redact those debug calls when hardening for production.
  */
 

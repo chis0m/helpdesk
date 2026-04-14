@@ -1,5 +1,5 @@
 // SEC-02: Profile uses GET/PATCH `/api/users/me` only — no user id in the path (session-scoped).
-// VULN-05: PATCH sends `X-CSRF-Token`; weak verification is backend CSRF middleware.
+// SEC-04: PATCH sends `X-CSRF-Token`; weak verification is backend CSRF middleware.
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'

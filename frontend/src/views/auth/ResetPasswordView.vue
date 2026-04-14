@@ -25,7 +25,7 @@
       class="mt-8 space-y-5"
       @submit.prevent="onSubmit"
     >
-      <!-- VULN-05: Public CSRF + POST. -->
+      <!-- SEC-04: Public CSRF + POST; Public CSRF is validated by backend CSRF middleware. -->
       <div
         v-if="errorMessage"
         class="rounded-2xl border border-red-200/80 bg-red-50/90 px-4 py-3 text-sm text-red-900"

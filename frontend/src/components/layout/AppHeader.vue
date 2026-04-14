@@ -53,7 +53,6 @@
 </template>
 
 <script setup lang="ts">
-// VULN-02: Profile link targets `/dashboard/profile/${session user_id}` — user can navigate to any id manually (IDOR demo).
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { paths } from '@/constants/routes'

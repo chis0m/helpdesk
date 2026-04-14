@@ -106,6 +106,7 @@ func CSRFRequired(sessionRepo *repositories.AuthSessionRepository, headerName st
 			return
 		}
 
+		// SEC-04: CSRF token comparison is done with constant-time equality.
 		stored := *session.CSRFToken
 		headerBytes := []byte(token)
 		storedBytes := []byte(stored)

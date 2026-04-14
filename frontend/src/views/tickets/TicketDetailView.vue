@@ -141,7 +141,7 @@
       @update:status="onStatusUpdate"
     />
 
-    <!-- VULN-02: Assign/unassign/delete use ticket id from the URL only — backend IDOR completes unauthorized access. -->
+    <!-- SEC-02: Assign/unassign/delete uses backend policy to check if the user has permission to assign/unassign/delete the ticket. -->
     <section
       v-if="isApiTicket"
       class="rounded-2xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-black/[0.03]"

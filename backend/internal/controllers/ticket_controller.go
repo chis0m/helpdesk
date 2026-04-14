@@ -145,6 +145,7 @@ func (t *TicketController) List(c *gin.Context) {
 	}, "tickets fetched")
 }
 
+// SEC-06: SQL injection (ticket keyword search) fix by paramaetrizing '%%%s%%'  to "%" + q + "%" and got rid of fmt.Sprintf
 func (t *TicketController) Search(c *gin.Context) {
 	log := logger.L()
 

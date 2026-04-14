@@ -1,5 +1,5 @@
 // SECURE-01: Session uses HttpOnly cookies from the API (`credentials: 'include'`); Secure flag when backend uses HTTPS/production.
-// VULN-05: Public vs session CSRF tokens sent here; weak verification is backend CSRF middleware.
+// SEC-04: Public vs session CSRF tokens sent here;
 import { postAuthRefresh, type RefreshResponseData } from './auth-refresh-internal'
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'
@@ -182,7 +182,7 @@ export async function logoutRequest(
   return { ok: true, data: env.data }
 }
 
-/** SECURE-01: Session cookies via `credentials: 'include'` (HttpOnly; not visible in `document.cookie`). VULN-05: `X-CSRF-Token` on POST. */
+/** SECURE-01: Session cookies via `credentials: 'include'` (HttpOnly; not visible in `document.cookie`). SEC-04: `X-CSRF-Token` on POST. */
 export type ChangePasswordBody = {
   current_password: string
   new_password: string
@@ -215,7 +215,7 @@ export async function changePasswordRequest(
   return { ok: true }
 }
 
-/** VULN-05: Public CSRF + POST; weak verification is backend middleware. */
+/** SEC-04: Public CSRF + POST; compared to session row on the server (SEC-04 remediated). */
 export async function forgotPasswordRequest(
   email: string,
   publicCsrf: string,
@@ -240,7 +240,6 @@ export async function forgotPasswordRequest(
   return { ok: true }
 }
 
-/** VULN-05: Public CSRF + POST. */
 export async function resetPasswordRequest(
   token: string,
   newPassword: string,
@@ -275,7 +274,7 @@ export async function resetPasswordRequest(
   return { ok: true, data: env.data }
 }
 
-/** SECURE-01: `refresh_token` HttpOnly cookie. VULN-05: session CSRF on POST. Uses raw `fetch` via `postAuthRefresh`. */
+/** SECURE-01: `refresh_token` HttpOnly cookie set to HttpOnly flag. SEC-04: session CSRF on POST. Uses raw `fetch` via `postAuthRefresh`. */
 export type { RefreshResponseData }
 
 export async function refreshRequest(
@@ -313,7 +312,7 @@ export async function fetchSessionCsrfToken(): Promise<
   return { ok: true, data: env.data }
 }
 
-/** SECURE-01: Session cookie; response includes numeric `user_id` (VULN-02 baseline). */
+/** SECURE-01: Session cookie; response includes numeric `user_id` (SEC-02). */
 export interface AuthMeData {
   user_id: number
   user_uuid: string
@@ -384,7 +383,7 @@ export async function fetchAuthSessions(): Promise<
   return { ok: true, items }
 }
 
-/** VULN-05: Session CSRF on POST. */
+/** SEC-04: Session CSRF on POST. */
 export async function revokeMyOtherSessionsRequest(
   sessionCsrf: string,
 ): Promise<{ ok: true } | { ok: false; status: number; message: string }> {
@@ -406,7 +405,7 @@ export async function revokeMyOtherSessionsRequest(
   return { ok: true }
 }
 
-/** VULN-05: Session CSRF on DELETE. */
+/** SEC-04: Session CSRF on DELETE. */
 export async function revokeAuthSession(
   sessionId: string,
   sessionCsrf: string,

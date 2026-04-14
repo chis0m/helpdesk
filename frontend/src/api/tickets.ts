@@ -1,7 +1,7 @@
 // SEC-02: Ticket API paths use opaque `ticket_uuid` (no numeric ticket id in URLs).
 // SEC-03: Create/update ticket text is trimmed server-side (outer whitespace); ticket detail renders description/comments as escaped text (no v-html).
-// Mutating ticket calls send `X-CSRF-Token`; compared to session row on the server (VULN-04 remediated).
-// VULN-07: `GET /api/tickets/search?q=` forwards `q` into unsafe SQL on the server (see backend `TicketController.Search`).
+// SEC-04: Mutating ticket calls send `X-CSRF-Token`; compared to session row on the server (SEC-04 remediated).
+// SEC-06: `GET /api/tickets/search?q=` forwards `q` into unsafe SQL on the server (see backend `TicketController.Search`).
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
@@ -277,6 +277,7 @@ export async function fetchTicketList(opts?: {
   return { ok: true, items, pagination }
 }
 
+/** SEC-06: `q` is parameterized using gorm query builder. */
 export async function fetchTicketSearch(q: string): Promise<
   | { ok: true; items: ApiTicketRow[]; queryEcho: string }
   | { ok: false; status: number; message: string }

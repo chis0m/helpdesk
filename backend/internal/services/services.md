@@ -38,6 +38,6 @@ Ticket and comment operations backed by `TicketRepository`, `TicketCommentReposi
 
 - **`ListForActor`** — **authorization for listing**: admins see all (subject to filters); non-admins are scoped to tickets they **report** or are **assigned** to. This is the main non-trivial policy method.
 - **By-id methods** (`GetByID`, updates, comments, etc.) — repository lookups by id; baseline intentionally **does not** re-check reporter/assignee on every by-id call (see VULN-02 in `Vulnerability.md`).
-- **Search** — delegates to repository search implementation (baseline may use unsafe SQL — see VULN-07).
+- **Search** — delegates to repository search implementation (baseline may use unsafe SQL — see VULN-06).
 
 Domain errors: invalid status transition, forbidden comment action, forbidden list filters.
