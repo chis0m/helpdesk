@@ -9,20 +9,23 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"helpdesk/backend/internal/audit"
 	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/middleware"
 	"helpdesk/backend/internal/models"
+	"helpdesk/backend/internal/repositories"
 	"helpdesk/backend/internal/requests"
 	"helpdesk/backend/internal/response"
 	"helpdesk/backend/internal/services"
 )
 
 type UserController struct {
-	userService *services.UserService
+	userService  *services.UserService
+	auditLogRepo *repositories.AuditLogRepository
 }
 
-func NewUserController(userService *services.UserService) *UserController {
-	return &UserController{userService: userService}
+func NewUserController(userService *services.UserService, auditLogRepo *repositories.AuditLogRepository) *UserController {
+	return &UserController{userService: userService, auditLogRepo: auditLogRepo}
 }
 
 // SEC-02: Self-service profile — identity from session/JWT only (`/users/me`), no user id in the path.
@@ -101,6 +104,19 @@ func (u *UserController) PatchMe(c *gin.Context) {
 		return
 	}
 
+	rid := user.ID
+	audit.Write(c, u.auditLogRepo, audit.Event{
+		Action:       audit.ActionUserProfileUpdate,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeUser),
+		ResourceID:   &rid,
+		Metadata: map[string]interface{}{
+			"email":     user.Email,
+			"role":      user.Role,
+			"is_active": user.IsActive,
+		},
+	})
+
 	response.Success(c, http.StatusOK, gin.H{
 		"user_id":     user.ID,
 		"user_uuid":   user.UUID.String(),
@@ -161,6 +177,17 @@ func (u *UserController) UpdateRoleByUserID(c *gin.Context) {
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
+
+	rid := user.ID
+	audit.Write(c, u.auditLogRepo, audit.Event{
+		Action:       audit.ActionAdminRoleUpdate,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeUser),
+		ResourceID:   &rid,
+		Metadata: map[string]interface{}{
+			"new_role": user.Role,
+		},
+	})
 
 	response.Success(c, http.StatusOK, gin.H{
 		"user_id":   user.ID,
@@ -285,6 +312,19 @@ func (u *UserController) CreateStaff(c *gin.Context) {
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
+
+	nid := user.ID
+	audit.Write(c, u.auditLogRepo, audit.Event{
+		Action:       audit.ActionAdminStaffCreate,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeUser),
+		ResourceID:   &nid,
+		Metadata: map[string]interface{}{
+			"email":  user.Email,
+			"role":   user.Role,
+			"method": "password",
+		},
+	})
 
 	response.Success(c, http.StatusCreated, gin.H{
 		"user_id":   user.ID,

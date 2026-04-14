@@ -9,10 +9,12 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"helpdesk/backend/internal/audit"
 	"helpdesk/backend/internal/auth"
 	"helpdesk/backend/internal/config"
 	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/middleware"
+	"helpdesk/backend/internal/repositories"
 	"helpdesk/backend/internal/requests"
 	"helpdesk/backend/internal/response"
 	"helpdesk/backend/internal/services"
@@ -22,17 +24,20 @@ type AuthController struct {
 	cfg            config.Config
 	authService    *services.AuthService
 	publicAuthCSRF *auth.PublicAuthCSRFStore
+	auditLogRepo   *repositories.AuditLogRepository
 }
 
 func NewAuthController(
 	cfg config.Config,
 	authService *services.AuthService,
 	publicAuthCSRF *auth.PublicAuthCSRFStore,
+	auditLogRepo *repositories.AuditLogRepository,
 ) *AuthController {
 	return &AuthController{
 		cfg:            cfg,
 		authService:    authService,
 		publicAuthCSRF: publicAuthCSRF,
+		auditLogRepo:   auditLogRepo,
 	}
 }
 
@@ -55,6 +60,14 @@ func (a *AuthController) Login(c *gin.Context) {
 			log.Warn().
 				Str("email", strings.TrimSpace(req.Email)).
 				Msg("login failed: invalid credentials")
+			audit.Write(c, a.auditLogRepo, audit.Event{
+				Action:    audit.ActionAuthLoginFailure,
+				Success:   false,
+				ErrorCode: "invalid_credentials",
+				Metadata: map[string]interface{}{
+					"email": req.Email,
+				},
+			})
 			response.FailureWithAbort(c, http.StatusUnauthorized, "invalid email or password", "invalid email or password")
 			return
 		}
@@ -65,6 +78,20 @@ func (a *AuthController) Login(c *gin.Context) {
 
 	// SECURE-01: HttpOnly + Secure when configured — see setAuthCookies.
 	setAuthCookies(c, a.cfg, result.Tokens)
+
+	uid := result.User.ID
+	uu := result.User.UUID.String()
+	audit.Write(c, a.auditLogRepo, audit.Event{
+		Action:        audit.ActionAuthLoginSuccess,
+		Success:       true,
+		ActorUserUUID: &uu,
+		ResourceType:  audit.Str(audit.ResourceTypeUser),
+		ResourceID:    &uid,
+		Metadata: map[string]interface{}{
+			"email": req.Email,
+			"role":  string(result.User.Role),
+		},
+	})
 
 	// user_id: exposed for vulnerable baseline (browser uses numeric id in routes/state, e.g. VULN-02 demos).
 	// Secure remediation: prefer user_uuid only in client and UUID-based routes.
