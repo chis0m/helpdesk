@@ -7,10 +7,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 
+	"helpdesk/backend/internal/audit"
 	"helpdesk/backend/internal/config"
 	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/middleware"
 	"helpdesk/backend/internal/models"
+	"helpdesk/backend/internal/repositories"
 	"helpdesk/backend/internal/requests"
 	"helpdesk/backend/internal/response"
 	"helpdesk/backend/internal/services"
@@ -20,13 +22,15 @@ type InviteController struct {
 	cfg           config.Config
 	inviteService *services.InviteService
 	userService   *services.UserService
+	auditLogRepo  *repositories.AuditLogRepository
 }
 
-func NewInviteController(cfg config.Config, inviteService *services.InviteService, userService *services.UserService) *InviteController {
+func NewInviteController(cfg config.Config, inviteService *services.InviteService, userService *services.UserService, auditLogRepo *repositories.AuditLogRepository) *InviteController {
 	return &InviteController{
 		cfg:           cfg,
 		inviteService: inviteService,
 		userService:   userService,
+		auditLogRepo:  auditLogRepo,
 	}
 }
 
@@ -101,6 +105,25 @@ func (ic *InviteController) CreateStaffInvite(c *gin.Context) {
 		return
 	}
 
+	delivery := "log"
+	if ic.cfg.UseSMTPMail() {
+		delivery = "smtp"
+	}
+	iid := inv.ID
+	au := actor.UUID.String()
+	audit.Write(c, ic.auditLogRepo, audit.Event{
+		Action:        audit.ActionInviteStaffCreate,
+		Success:       true,
+		ActorUserUUID: &au,
+		ResourceType:  audit.Str(audit.ResourceTypeInvite),
+		ResourceID:    &iid,
+		Metadata: map[string]interface{}{
+			"target_email": inv.Email,
+			"target_role":  string(inv.TargetRole),
+			"delivery":     delivery,
+		},
+	})
+
 	payload := gin.H{
 		"invite_id":      inv.ID,
 		"email":          inv.Email,
@@ -174,6 +197,21 @@ func (ic *InviteController) AcceptInvite(c *gin.Context) {
 		}
 		return
 	}
+
+	uid := user.ID
+	uu := user.UUID.String()
+	audit.Write(c, ic.auditLogRepo, audit.Event{
+		Action:        audit.ActionInviteAccepted,
+		Success:       true,
+		ActorUserUUID: &uu,
+		ResourceType:  audit.Str(audit.ResourceTypeUser),
+		ResourceID:    &uid,
+		Metadata: map[string]interface{}{
+			"email":  user.Email,
+			"role":   user.Role,
+			"method": "invite",
+		},
+	})
 
 	response.Success(c, http.StatusCreated, gin.H{
 		"user_id":     user.ID,

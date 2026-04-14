@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"helpdesk/backend/internal/audit"
 	"helpdesk/backend/internal/logger"
 	"helpdesk/backend/internal/middleware"
 	"helpdesk/backend/internal/models"
@@ -22,10 +23,12 @@ import (
 type TicketController struct {
 	ticketService *services.TicketService
 	userRepo      *repositories.UserRepository
+	auditLogRepo  *repositories.AuditLogRepository
+	ticketRepo    *repositories.TicketRepository
 }
 
-func NewTicketController(ticketService *services.TicketService, userRepo *repositories.UserRepository) *TicketController {
-	return &TicketController{ticketService: ticketService, userRepo: userRepo}
+func NewTicketController(ticketService *services.TicketService, userRepo *repositories.UserRepository, auditLogRepo *repositories.AuditLogRepository, ticketRepo *repositories.TicketRepository) *TicketController {
+	return &TicketController{ticketService: ticketService, userRepo: userRepo, auditLogRepo: auditLogRepo, ticketRepo: ticketRepo}
 }
 
 func (t *TicketController) Create(c *gin.Context) {
@@ -69,6 +72,22 @@ func (t *TicketController) Create(c *gin.Context) {
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
+
+	// SEC-05: Audit log for ticket creation
+	rid := ticket.ID
+	uu := userUUIDStr
+	audit.Write(c, t.auditLogRepo, audit.Event{
+		Action:        audit.ActionTicketCreate,
+		Success:       true,
+		ActorUserUUID: &uu,
+		ResourceType:  audit.Str(audit.ResourceTypeTicket),
+		ResourceID:    &rid,
+		Metadata: map[string]interface{}{
+			"title":    ticket.Title,
+			"category": ticket.Category,
+		},
+	})
+
 	response.Success(c, http.StatusCreated, formatTicket(ticket, users), "ticket created")
 }
 
@@ -188,6 +207,19 @@ func (t *TicketController) Search(c *gin.Context) {
 		result = append(result, formatTicket(&tk, users))
 	}
 
+	// SEC-05: Audit log for ticket search
+	n := len(tickets)
+	audit.Write(c, t.auditLogRepo, audit.Event{
+		Action:       audit.ActionTicketSearch,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeTicket),
+		Metadata: map[string]interface{}{
+			"q":            audit.TruncateQuery(q, 256),
+			"result_count": n,
+			"has_results":  n > 0,
+		},
+	})
+
 	response.Success(c, http.StatusOK, gin.H{
 		"items": result,
 		"query": q,
@@ -294,6 +326,21 @@ func (t *TicketController) UpdateByID(c *gin.Context) {
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
+
+	// SEC-05: Audit log for ticket update
+	rid := ticket.ID
+	audit.Write(c, t.auditLogRepo, audit.Event{
+		Action:       audit.ActionTicketUpdate,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeTicket),
+		ResourceID:   &rid,
+		Metadata: map[string]interface{}{
+			"title":    ticket.Title,
+			"category": ticket.Category,
+			"status":   ticket.Status,
+		},
+	})
+
 	response.Success(c, http.StatusOK, formatTicket(ticket, users), "ticket updated")
 }
 
@@ -354,6 +401,19 @@ func (t *TicketController) UpdateStatus(c *gin.Context) {
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
+
+	// SEC-05: Audit log for ticket status update
+	rid := ticket.ID
+	audit.Write(c, t.auditLogRepo, audit.Event{
+		Action:       audit.ActionTicketStatusUpdate,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeTicket),
+		ResourceID:   &rid,
+		Metadata: map[string]interface{}{
+			"status": ticket.Status,
+		},
+	})
+
 	response.Success(c, http.StatusOK, formatTicket(ticket, users), "ticket status updated")
 }
 
@@ -409,6 +469,20 @@ func (t *TicketController) Assign(c *gin.Context) {
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
+
+	// SEC-05: Audit log for ticket assignment
+	rid := ticket.ID
+	meta := map[string]interface{}{
+		"assigned_user_id": ticket.AssignedUserID,
+	}
+	audit.Write(c, t.auditLogRepo, audit.Event{
+		Action:       audit.ActionTicketAssign,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeTicket),
+		ResourceID:   &rid,
+		Metadata:     meta,
+	})
+
 	response.Success(c, http.StatusOK, formatTicket(ticket, users), "ticket assignment updated")
 }
 
@@ -449,6 +523,25 @@ func (t *TicketController) DeleteByID(c *gin.Context) {
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
+
+	ticket, err := t.ticketRepo.GetByUUID(ticketUUID)
+	if err != nil {
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("delete ticket failed: get ticket")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+	rid := ticket.ID
+	audit.Write(c, t.auditLogRepo, audit.Event{
+		Action:       audit.ActionTicketDelete,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeTicket),
+		ResourceID:   &rid,
+		Metadata: map[string]interface{}{
+			"title":            ticket.Title,
+			"reporter_user_id": ticket.ReporterUserID,
+			"assigned_user_id": ticket.AssignedUserID,
+		},
+	})
 
 	response.Success(c, http.StatusOK, gin.H{"ticket_uuid": ticketUUID.String()}, "ticket deleted")
 }
@@ -498,6 +591,27 @@ func (t *TicketController) AddComment(c *gin.Context) {
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
+
+	ticket, err := t.ticketRepo.GetByUUID(ticketUUID)
+	if err != nil {
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("add ticket comment failed: get ticket")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	// SEC-05: Audit log for ticket comment creation
+	cid := comment.ID
+	audit.Write(c, t.auditLogRepo, audit.Event{
+		Action:       audit.ActionTicketCommentCreate,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeTicketComment),
+		ResourceID:   &cid,
+		Metadata: map[string]interface{}{
+			"ticket_id":      ticket.ID,
+			"author_user_id": comment.AuthorUserID,
+			"body_len":       len(comment.Body),
+		},
+	})
 
 	response.Success(c, http.StatusCreated, gin.H{
 		"comment_id":     comment.ID,
@@ -613,6 +727,26 @@ func (t *TicketController) UpdateComment(c *gin.Context) {
 		return
 	}
 
+	ticket, err := t.ticketRepo.GetByUUID(ticketUUID)
+	if err != nil {
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("update ticket comment failed: get ticket")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	// SEC-05: Audit log for ticket comment update
+	cid := comment.ID
+	audit.Write(c, t.auditLogRepo, audit.Event{
+		Action:       audit.ActionTicketCommentUpdate,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeTicketComment),
+		ResourceID:   &cid,
+		Metadata: map[string]interface{}{
+			"ticket_id": ticket.ID,
+			"body_len":  len(comment.Body),
+		},
+	})
+
 	response.Success(c, http.StatusOK, gin.H{
 		"comment_id":     comment.ID,
 		"comment_uuid":   comment.UUID.String(),
@@ -673,6 +807,24 @@ func (t *TicketController) DeleteComment(c *gin.Context) {
 		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
 		return
 	}
+	ticket, err := t.ticketRepo.GetByUUID(ticketUUID)
+	if err != nil {
+		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("delete ticket comment failed: get ticket")
+		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
+		return
+	}
+
+	// SEC-05: Audit log for ticket comment deletion
+	cid := commentID
+	audit.Write(c, t.auditLogRepo, audit.Event{
+		Action:       audit.ActionTicketCommentDelete,
+		Success:      true,
+		ResourceType: audit.Str(audit.ResourceTypeTicketComment),
+		ResourceID:   &cid,
+		Metadata: map[string]interface{}{
+			"ticket_id": ticket.ID,
+		},
+	})
 
 	response.Success(c, http.StatusOK, gin.H{"comment_id": commentID, "ticket_uuid": ticketUUID.String()}, "ticket comment deleted")
 }
