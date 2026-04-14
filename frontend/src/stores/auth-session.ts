@@ -1,5 +1,5 @@
 // VULN-02: Snapshot stores numeric `user_id` for routes/state (pairs with IDOR on GET/PATCH /users/:id).
-// VULN-05: Session CSRF token held for mutating API calls; server-side check is flawed (see backend VULN-05).
+// VULN-04: Session CSRF token held for mutating API calls; server-side check is flawed (see backend VULN-04).
 import type { AuthMeData, LoginResponseData } from '@/api/auth'
 
 import type { RefreshResponseData } from '@/api/auth-refresh-internal'
@@ -93,7 +93,7 @@ export function setSessionCsrfPair(token: string, expiresAtUtc: string): void {
   }
 }
 
-/** After `GET /api/auth/me` — update `must_change_password` and identity fields (TASK.md §8.3). */
+/** After `GET /api/auth/me` — update `must_change_password` and identity fields */
 export function mergeAuthUserFromMe(data: AuthMeData): void {
   if (typeof sessionStorage === 'undefined')
     return

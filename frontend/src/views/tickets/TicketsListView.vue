@@ -1,5 +1,5 @@
 <template>
-  <!-- VULN-07: Search calls `GET /api/tickets/search?q=` — `q` is passed to unsafe SQL on the server (see backend TicketController.Search). -->
+  <!-- VULN-06: Search calls `GET /api/tickets/search?q=` — `q` is passed to unsafe SQL on the server (see backend TicketController.Search). -->
   <div class="space-y-6">
     <PageHeader
       kicker="Tickets"
@@ -128,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-// VULN-07: Uses `fetchTicketSearch` / `fetchTicketList` — search path exercises unsafe SQL on the server.
+// VULN-06: Uses `fetchTicketSearch` / `fetchTicketList` — search path exercises unsafe SQL on the server.
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import CategoryBadge from '@/components/ui/CategoryBadge.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'

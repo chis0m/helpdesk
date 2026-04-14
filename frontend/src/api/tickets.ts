@@ -1,7 +1,7 @@
 // VULN-03: Create ticket sends title/description/category as JSON — weak sanitization server-side; UI may render with v-html (see TicketDetailView).
 // VULN-02: Ticket id in URL/path for get/update/assign/delete/comments — no client-side authorization (backend IDOR).
-// VULN-05: Mutating ticket calls send `X-CSRF-Token`; weak verification is backend CSRF middleware.
-// VULN-07: `GET /api/tickets/search?q=` forwards `q` into unsafe SQL on the server (see backend `TicketController.Search`).
+// VULN-04: Mutating ticket calls send `X-CSRF-Token`; weak verification is backend CSRF middleware.
+// VULN-06: `GET /api/tickets/search?q=` forwards `q` into unsafe SQL on the server (see backend `TicketController.Search`).
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'
@@ -272,7 +272,7 @@ export async function fetchTicketList(opts?: {
   return { ok: true, items, pagination }
 }
 
-/** VULN-07: `q` is URL-encoded only; server interpolates into raw SQL (unsafe). */
+/** 6: `q` is URL-encoded only; server interpolates into raw SQL (unsafe). */
 export async function fetchTicketSearch(q: string): Promise<
   | { ok: true; items: ApiTicketRow[]; queryEcho: string }
   | { ok: false; status: number; message: string }

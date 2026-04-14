@@ -163,7 +163,7 @@ func (t *TicketController) List(c *gin.Context) {
 	}, "tickets fetched")
 }
 
-// VULN-07: SQL injection (ticket keyword search) — forwards q to repository Raw SQL without parameter binding.
+// VULN-06: SQL injection (ticket keyword search) — forwards q to repository Raw SQL without parameter binding.
 func (t *TicketController) Search(c *gin.Context) {
 	log := logger.L()
 
