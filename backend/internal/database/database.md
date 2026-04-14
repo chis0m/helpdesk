@@ -5,7 +5,8 @@ Two responsibilities: **schema migrations** (Goose) and the **runtime GORM conne
 ## Migrations — `migrate.go`
 
 - **`RunMigrations(dsn)`** — opens a dedicated `database/sql` connection with the MySQL driver, runs `goose.Up` on the **`migrations`** directory, then closes the connection. Called from `boot.NewApp()` before `Connect`.
-- **`ResetDb(dsn)`** — `goose.DownTo(..., 0)` then `goose.Up` — useful for local wipe/rebuild (often invoked via Makefile/scripts, not production).
+- **`ResetDb(dsn)`** — `goose.Reset` — rolls back all applied migrations and not reapply.
+- **`RefreshDb(dsn)`** — `goose.DownTo(..., 0)` then `goose.Up` — Resets adn Reapply.
 
 ### Goose filesystem
 
