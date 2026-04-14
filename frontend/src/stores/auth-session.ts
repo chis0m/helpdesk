@@ -93,7 +93,7 @@ export function setSessionCsrfPair(token: string, expiresAtUtc: string): void {
   }
 }
 
-/** After `GET /api/auth/me` — update `must_change_password` and identity fields (TASK.md §8.3). */
+/** After `GET /api/auth/me` — update `must_change_password` and identity fields */
 export function mergeAuthUserFromMe(data: AuthMeData): void {
   if (typeof sessionStorage === 'undefined')
     return

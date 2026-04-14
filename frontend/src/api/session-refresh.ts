@@ -1,6 +1,5 @@
 /**
  * Proactive `POST /api/auth/refresh` before access expiry + mutex for concurrent refresh.
- * See backend TASK.md §8.1–8.2.
  */
 import { postAuthRefresh } from './auth-refresh-internal'
 import {
