@@ -7,8 +7,6 @@ DB_PASSWORD ?= password
 DB_PORT ?= 3306
 GOOSE_DBSTRING ?= $(DB_USERNAME):$(DB_PASSWORD)@tcp($(DB_HOST):$(DB_PORT))/$(DB_DATABASE)?parseTime=true
 
-goose_operations: gm gs gu guo gd gr
-
 gm: # goose_migration
 	goose -dir $(GOOSE_DIR) create $(name) sql
 
@@ -27,6 +25,14 @@ gd: # goose_down
 gr: # goose_down_all
 	goose -dir $(GOOSE_DIR) $(GOOSE_DRIVER) "$(GOOSE_DBSTRING)" reset
 
+dbr: # db_reset — roll back all migrations like `make gr` (local dev only; run from backend/)
+	go run ./scripts/db-reset
+
+dbrf: # db_refresh — roll back all then migrate up again,
+
+dbm: # db_migrate — goose up (local dev only; run from backend/)
+	go run ./scripts/db-migrate
+
 serve: # serve_application
 	go run ./cmd/server
 
@@ -37,4 +43,4 @@ check:
 tidy:
 	go mod tidy
 
-.PHONY: goose_operations gm gs gu guo gd gr serve check tidy
+.PHONY: gm gs gu guo gd gr dbr dbrf dbm serve check tidy
