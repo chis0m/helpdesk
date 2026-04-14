@@ -1,5 +1,5 @@
-// VULN-02: Snapshot stores numeric `user_id` for routes/state (pairs with IDOR on GET/PATCH /users/:id).
-// Session CSRF token for mutating API calls; compared to `auth_sessions.csrf_token` on the server (VULN-04 remediated).
+// SEC-02: User profile api call uses session-scoped user_uuid instead of user_id e.g GET /api/users/me instead of GET /api/users/:id.
+// SEC-04: Session CSRF token for mutating API calls; compared to `auth_sessions.csrf_token` on the server (SEC-04 remediated).
 import type { AuthMeData, LoginResponseData } from '@/api/auth'
 
 import type { RefreshResponseData } from '@/api/auth-refresh-internal'
@@ -93,7 +93,7 @@ export function setSessionCsrfPair(token: string, expiresAtUtc: string): void {
   }
 }
 
-/** After `GET /api/auth/me` — update `must_change_password` and identity fields (TASK.md §8.3). */
+/** After `GET /api/auth/me` — update `must_change_password` and identity fields */
 export function mergeAuthUserFromMe(data: AuthMeData): void {
   if (typeof sessionStorage === 'undefined')
     return

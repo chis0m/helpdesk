@@ -1,4 +1,4 @@
-// VULN-05: `POST /api/invites/accept` uses public CSRF (same weak middleware as signup/login).
+// SEC-04: `POST /api/invites/accept` uses public CSRF, validated by backend CSRF middleware.
 import { apiUrl, CSRF_HEADER, readJson } from './client'
 import { fetchWithSessionRefresh } from './session-fetch'
 import type { ApiErrorEnvelope, ApiSuccessEnvelope } from './types'

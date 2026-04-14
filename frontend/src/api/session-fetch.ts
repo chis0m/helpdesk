@@ -1,5 +1,5 @@
 /**
- * Session access refresh after 401 (TASK.md §8.1) + session CSRF rotation before unsafe requests.
+ * Session access refresh after 401 + session CSRF rotation before mutating requests.
  * Server CSRF TTL is independent of access token TTL; without rotation, mutating calls can 403 while still logged in.
  */
 import { apiUrl, CSRF_HEADER, readJson } from './client'

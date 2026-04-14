@@ -1,4 +1,4 @@
-<!-- TASK.md §8.3 — forced password change before dashboard access. -->
+<!-- Forced password change before dashboard access. -->
 <template>
   <div>
     <p

@@ -1,5 +1,5 @@
 /**
- * SECURE-01: `refresh_token` HttpOnly cookie; VULN-05: session CSRF on POST.
+ * SECURE-01: `refresh_token` HttpOnly cookie; SEC-04: session CSRF on POST.
  * Uses raw `fetch` so `session-fetch` never wraps this (avoids 401→refresh loops).
  */
 import { apiUrl, CSRF_HEADER, readJson } from './client'

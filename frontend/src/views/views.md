@@ -6,7 +6,7 @@
 
 - **`LandingView.vue`** — Marketing / entry.
 - **`LoginView.vue`**, **`SignupView.vue`** — Auth; login sets session + starts refresh scheduler.
-- **`views/auth/`** — `AcceptInviteView`, `ForgotPasswordView`, `ResetPasswordView`, **`ChangePasswordRequiredView`** (TASK.md §8.3 — shown when `must_change_password` is true until the user updates their password).
+- **`views/auth/`** — `AcceptInviteView`, `ForgotPasswordView`, `ResetPasswordView`, **`ChangePasswordRequiredView`** (`must_change_password` is true until the user updates their password).
 
 ## Dashboard (inside `AppLayout`)
 
