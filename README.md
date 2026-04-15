@@ -79,14 +79,36 @@ helpdesk/
 
 ## Setup and installation
 
-### Prerequisites
+### Production deployment
+
+The hosted environment runs **Docker** on **EC2**, with **GitHub Actions** building images and deploying on push to `vulnerable-baseline` or `secure-fix`. Configuration, networking, server layout, and GitHub/AWS expectations are documented here:
+
+**[deploy/README.md](deploy/README.md)**
+
+Production URLs (HTTPS, as wired in this repo and the reverse proxy):
+
+| Resource | URL |
+|----------|-----|
+| Vulnerable (UI) | https://vulnweb.chisomejim.site |
+| Vulnerable (API) | https://api.vuln.chisomejim.site |
+| Secure (UI) | https://secweb.chisomejim.site |
+| Secure (API) | https://api.secweb.chisomejim.site |
+| Mail (Mailpit web UI) | https://mail.chisomejim.site |
+
+---
+
+### Local development
+
+The steps below are for running the **stack on your machine** (MySQL + Go API + Vite dev server). They do not replace production deployment.
+
+#### Prerequisites
 
 - **Go** (see `backend/go.mod` for version)
 - **Node.js** (LTS recommended) and **npm**
 - **MySQL** 8.x (or compatible)
 - **Goose** for migrations: `go install github.com/pressly/goose/v3/cmd/goose@latest`
 
-### 1. Database
+#### 1. Database
 
 Create a database and user (example):
 
@@ -97,7 +119,7 @@ GRANT ALL ON helpdesk.* TO 'helpdesk'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-### 2. Backend environment
+#### 2. Backend environment
 
 From `backend/`:
 
@@ -105,27 +127,26 @@ From `backend/`:
 cp .env.example .env
 ```
 
-Setup variables on you can rely on the defaults at `internal/config/env.go`
+Configure variables as needed, or rely on the defaults in `internal/config/env.go`.
 
 Start the API:
 
 ```bash
 cd backend/ && make serve
 ```
-This also runs migrations, and it runs the default seed if `SEED_CA` is set to true
+
+This also runs migrations, and runs the default seed if `SEED_CA` is set to true.
 
 Default API port is **`8080`** unless `PORT` is set.
 
-### 3. Frontend
+#### 3. Frontend
 
 ```bash
 cd frontend
 npm install
 ```
 
-Make sure the `VITE_PORT` and `VITE_API_BASE_URL` matches the backend records.
-VITE_PORT is frontend port, which should match `FRONTEND_URL` in the `.env.go`
-VITE_API_BASE_URL is the backend url
+Ensure `VITE_PORT` and `VITE_API_BASE_URL` match your local backend (`VITE_API_BASE_URL` is the backend base URL; the frontend dev port should align with `FRONTEND_URL` / your `.env`).
 
 ```bash
 npm run dev      # development server
