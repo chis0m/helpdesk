@@ -90,7 +90,7 @@ Production URLs (HTTPS, as wired in this repo and the reverse proxy):
 | Resource | URL |
 |----------|-----|
 | Vulnerable (UI) | https://vulnweb.chisomejim.site |
-| Vulnerable (API) | https://api.vuln.chisomejim.site |
+| Vulnerable (API) | https://api.vulnweb.chisomejim.site |
 | Secure (UI) | https://secweb.chisomejim.site |
 | Secure (API) | https://api.secweb.chisomejim.site |
 | Mail (Mailpit web UI) | https://mail.chisomejim.site |

@@ -36,7 +36,7 @@ The workflow and Compose files assume a fixed production domain (`chisomejim.sit
 | Resource | URL |
 |----------|-----|
 | Vuln (UI) | https://vulnweb.chisomejim.site |
-| Vuln (API) | https://api.vuln.chisomejim.site |
+| Vuln (API) | https://api.vulnweb.chisomejim.site |
 | Secure (UI) | https://secweb.chisomejim.site |
 | Secure (API) | https://api.secweb.chisomejim.site |
 | Mail (Mailpit UI) | https://mail.chisomejim.site |

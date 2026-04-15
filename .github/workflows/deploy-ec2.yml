@@ -32,7 +32,7 @@ jobs:
               echo "env_variant=vuln" >> "$GITHUB_OUTPUT"
               echo "secret_id=HELPDESK/VULN/SECRET" >> "$GITHUB_OUTPUT"
               echo "env_local=.env.vuln.local" >> "$GITHUB_OUTPUT"
-              echo "vite_api_base=https://api.vuln.chisomejim.site" >> "$GITHUB_OUTPUT"
+              echo "vite_api_base=https://api.vulnweb.chisomejim.site" >> "$GITHUB_OUTPUT"
               ;;
             secure-fix)
               echo "stack=secure" >> "$GITHUB_OUTPUT"
