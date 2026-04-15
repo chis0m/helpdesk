@@ -71,3 +71,6 @@ Makefile
 # Optional data / scratch (no embeds in this module today)
 *.csv
 *.txt
+
+docker-compose*.yml
+**/docker-compose*.yml
