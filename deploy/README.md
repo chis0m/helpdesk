@@ -68,7 +68,11 @@ The **mail** stack is updated on every deploy. The **app** stack for the branch 
 
 ## Reverse proxy (Nginx)
 
-`nginx/chisomejim.site.conf` is an example **Nginx** configuration: it maps public hostnames to those localhost ports (separate hosts for each UI, each API, and Mailpit’s web UI). The Docker only listens on the loopback interface.
+**Nginx** terminates HTTPS and proxies to the Docker services on `127.0.0.1` (see `nginx/chisomejim.site.conf` for hostname → port mapping). Containers are not exposed directly on the public internet.
+
+### TLS (SSL)
+
+HTTPS uses **Certbot** with **Let’s Encrypt** (e.g. `certbot --nginx`). Certificates and keys live on the instance under **`/etc/letsencrypt/`**; Nginx `ssl_certificate` / `ssl_certificate_key` paths must matches what **`certbot certificates`** shows.
 
 ---
 
@@ -89,4 +93,4 @@ Backend secrets live in **AWS Secrets Manager** under the IDs referenced in `.gi
 | `mail/docker-compose.yml` | Mailpit service + shared network. |
 | `vuln/docker-compose.yml` | Vulnerable variant: backend + web images and env. |
 | `secure/docker-compose.yml` | Secure variant: backend + web images and env. |
-| `nginx/chisomejim.site.conf` | Example Nginx server blocks for host → localhost port mapping. |
+| `nginx/chisomejim.site.conf` | Example Nginx server blocks for host → localhost port mapping. On EC2, TLS is configured with **Certbot**; certificate paths in the live config follow `/etc/letsencrypt/`. |
