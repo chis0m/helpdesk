@@ -76,8 +76,7 @@ The **mail** stack is updated on every deploy. The **app** stack for the branch 
 
 The workflow expects:
 
-- **Secrets:** AWS credentials (access key, secret, region), SSH private key for deploy.  
-- **Variables:** `SERVER_IP` — the EC2 instance address used for SSH.
+- **Secrets:** AWS credentials (access key, secret, region), SSH private key for deploy, and **`SERVER_IP`** — the EC2 instance address used for SSH.
 
 Backend secrets live in **AWS Secrets Manager** under the IDs referenced in `.github/workflows/deploy-ec2.yml` (one secret per stack).
 

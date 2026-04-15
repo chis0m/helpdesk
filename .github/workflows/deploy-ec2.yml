@@ -98,7 +98,7 @@ jobs:
       - name: Copy compose to EC2 and restart stack
         env:
           SSH_KEY: ${{ secrets.SSH_KEY_PAIR }}
-          HOST: ${{ vars.SERVER_IP }}
+          HOST: ${{ secrets.SERVER_IP }}
           STACK: ${{ steps.meta.outputs.stack }}
         run: |
           test -s "deploy/mail/docker-compose.yml"
