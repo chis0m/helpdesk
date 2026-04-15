@@ -24,7 +24,7 @@
           to="/"
           class="text-xl font-semibold tracking-tight text-[var(--brand-green-dark)] transition hover:opacity-90"
         >
-          SecWeb Helpdesk
+          {{ appName }}
         </RouterLink>
         <div class="flex items-center gap-2 sm:gap-3">
           <span
@@ -55,13 +55,13 @@
           <p
             class="inline-flex rounded-full border border-[var(--border-subtle)] bg-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--text-secondary)] shadow-sm"
           >
-            SecWeb product support
+            {{ brandShort }} product support
           </p>
           <h1
             class="mt-5 text-4xl font-semibold tracking-[-0.02em] text-[var(--text-primary)] lg:text-[2.75rem] lg:leading-[1.12]"
           >
             Get help with
-            <span class="text-[var(--brand-green-dark)]">SecWeb</span>
+            <span class="text-[var(--brand-green-dark)]">{{ brandShort }}</span>
             products — report issues and track fixes.
           </h1>
           <p class="mt-5 text-lg leading-relaxed text-[var(--text-secondary)]">
@@ -136,7 +136,7 @@
       <!-- Bento -->
       <section class="mt-14">
         <h2 class="land-in land-delay-4 text-lg font-semibold text-[var(--text-primary)]">
-          How SecWeb Helpdesk fits your workflow
+          How {{ appName }} fits your workflow
         </h2>
         <p class="land-in land-delay-4 mt-1 text-sm text-[var(--text-secondary)]">
           Simple steps from account to ticket — staff triage and resolve on their side.
@@ -203,7 +203,7 @@
           Testimonials
         </h2>
         <p class="mt-1 text-sm text-[var(--text-secondary)]">
-          What customers say about SecWeb support.
+          What customers say about {{ brandShort }} support.
         </p>
         <div class="mt-6 grid gap-4 md:grid-cols-2">
           <figure
@@ -244,8 +244,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { fetchHealth } from '@/api/health'
+import { brandShortFromAppName, loadAppDetail } from '@/stores/app-detail'
+
+const appName = ref('SecWeb HelpDesk')
+const brandShort = ref('SecWeb')
 
 const healthLoading = ref(true)
 const healthOk = ref(false)
@@ -254,30 +258,35 @@ const healthMessage = ref('')
 const healthError = ref('')
 
 onMounted(async () => {
-  const res = await fetchHealth()
+  const [healthRes] = await Promise.all([
+    fetchHealth(),
+    loadAppDetail().then((d) => {
+      appName.value = d.app_name
+      brandShort.value = brandShortFromAppName(d.app_name)
+    }),
+  ])
   healthLoading.value = false
-  if (res.ok) {
+  if (healthRes.ok) {
     healthOk.value = true
-    healthStatus.value = res.status
-    healthMessage.value = res.message
+    healthStatus.value = healthRes.status
+    healthMessage.value = healthRes.message
   }
   else {
-    healthError.value = res.message
+    healthError.value = healthRes.message
   }
 })
 
-const featured = {
+const featured = computed(() => ({
   title: 'One place for your support requests',
-  body:
-    'You see the tickets you opened and their status; SecWeb staff see the queue on their side. Same calm layout whether you’re reporting a bug or asking for help.',
-}
+  body: `You see the tickets you opened and their status; ${brandShort.value} staff see the queue on their side. Same calm layout whether you’re reporting a bug or asking for help.`,
+}))
 
 const sideCard = {
   title: 'Open a ticket in minutes',
   body: 'Describe the issue, pick a category if needed, and submit. No clutter — just what product support portals are meant to do.',
 }
 
-const bottomCards = [
+const bottomCards = computed(() => [
   {
     title: 'Account required',
     body: 'Every reporter signs in — so we know who to reply to and can keep your history in one place.',
@@ -287,29 +296,27 @@ const bottomCards = [
     body: 'Internal roles assign and resolve tickets; you stay informed as status changes.',
   },
   {
-    title: 'Built for SecWeb CA',
+    title: `Built for ${brandShort.value} CA`,
     body: 'Coursework baseline for Secure Web Development — authentication and tickets use the running API.',
   },
-]
+])
 
-const testimonials = [
+const testimonials = computed(() => [
   {
     name: 'Mark Anthony',
     role: 'Product Manager',
     email: 'mark.anthony@example.com',
     initials: 'MA',
-    quote:
-      'SecWeb customer service has been outstanding — quick responses, clear updates, and they actually follow through until the issue is sorted.',
+    quote: `${brandShort.value} customer service has been outstanding — quick responses, clear updates, and they actually follow through until the issue is sorted.`,
   },
   {
     name: 'Jane Doe',
     role: 'IT Lead',
     email: 'jane.doe@sample.com',
     initials: 'JD',
-    quote:
-      "Our team relies on timely support when integrations act up. SecWeb's helpdesk keeps us moving; escalation feels professional every time.",
+    quote: `Our team relies on timely support when integrations act up. ${brandShort.value}'s helpdesk keeps us moving; escalation feels professional every time.`,
   },
-] as const
+])
 
 function landDelayClass(n: number) {
   return `land-in land-delay-${n}`

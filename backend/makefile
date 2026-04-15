@@ -40,7 +40,14 @@ check:
 	go test ./...
 	go fmt ./...
 
+gocheck:
+	go vet ./...
+	go build -o /dev/null ./cmd/server
+
+govuln:
+	go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
 tidy:
 	go mod tidy
 
-.PHONY: gm gs gu guo gd gr dbr dbrf dbm serve check tidy
+.PHONY: gm gs gu guo gd gr dbr dbrf dbm serve check gocheck govuln tidy
