@@ -1,0 +1,42 @@
+# Frontend CI — lint + npm audit (no AWS).
+
+name: Frontend CI
+
+on:
+  push:
+    branches: [vulnerable-baseline, secure-fix]
+  pull_request:
+    branches: [vulnerable-baseline, secure-fix]
+
+concurrency:
+  group: frontend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm ci
+        working-directory: frontend
+        run: npm ci
+
+      - name: npm run lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: npm run audit
+        working-directory: frontend
+        run: npm run audit

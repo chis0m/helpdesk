@@ -21,7 +21,7 @@
           to="/"
           class="text-xl font-semibold tracking-tight text-[var(--brand-green-dark)] transition hover:opacity-90"
         >
-          SecWeb Helpdesk
+          {{ appName }}
         </RouterLink>
         <div class="flex items-center gap-2 sm:gap-3">
           <span
@@ -69,10 +69,10 @@
             </p>
             <h2 class="mt-5 text-3xl font-semibold tracking-[-0.02em] text-[var(--text-primary)] lg:text-4xl lg:leading-tight">
               Welcome back to
-              <span class="text-[var(--brand-green-dark)]">SecWeb Helpdesk</span>.
+              <span class="text-[var(--brand-green-dark)]">{{ appName }}</span>.
             </h2>
             <p class="mt-4 text-base leading-relaxed text-[var(--text-secondary)]">
-              Track your tickets and replies from the SecWeb team — the same flow as signing in to a product support portal.
+              Track your tickets and replies from the {{ brandShort }} team — the same flow as signing in to a product support portal.
             </p>
           </template>
           <template v-else-if="route.name === 'change-password-required'">
@@ -100,7 +100,7 @@
               <span class="text-[var(--brand-green-dark)]">support account</span>.
             </h2>
             <p class="mt-4 text-base leading-relaxed text-[var(--text-secondary)]">
-              For people using SecWeb products — register once, then sign in to open and follow up on tickets.
+              For people using {{ brandShort }} products — register once, then sign in to open and follow up on tickets.
             </p>
           </template>
         </div>
@@ -119,11 +119,32 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, provide, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { appBrandKey, brandShortFromAppName, loadAppDetail } from '@/stores/app-detail'
 import { performLogout } from '@/utils/perform-logout'
 
 const route = useRoute()
 const router = useRouter()
+
+const appName = ref('SecWeb HelpDesk')
+const brandShort = ref('SecWeb')
+provide(appBrandKey, { appName, brandShort })
+
+async function hydrateBrandIfNeeded() {
+  if (route.name !== 'login' && route.name !== 'signup')
+    return
+  const d = await loadAppDetail()
+  appName.value = d.app_name
+  brandShort.value = brandShortFromAppName(d.app_name)
+}
+
+onMounted(() => {
+  void hydrateBrandIfNeeded()
+})
+watch(() => route.name, () => {
+  void hydrateBrandIfNeeded()
+})
 
 function onSignOut() {
   void performLogout(router)

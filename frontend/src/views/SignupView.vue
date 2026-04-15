@@ -10,7 +10,7 @@
       <span class="text-[var(--brand-green-dark)]">account</span>
     </h1>
     <p class="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-      For customers and users of SecWeb products — a few fields so you can submit tickets when something needs fixing.
+      For customers and users of {{ brandShort }} products — a few fields so you can submit tickets when something needs fixing.
     </p>
 
     <form
@@ -152,7 +152,7 @@
       </fieldset>
 
       <p class="text-center text-xs leading-relaxed text-[var(--text-muted)]">
-        By creating a SecWeb Helpdesk account you agree to our Terms and Privacy Policy (placeholder copy).
+        By creating a {{ appName }} account you agree to our Terms and Privacy Policy (placeholder copy).
       </p>
 
       <button
@@ -178,9 +178,14 @@
 
 <script setup lang="ts">
 // VULN-04: Public CSRF + POST body; broken CSRF verification is server-side (see backend middleware).
-import { computed, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { fetchPublicCsrfToken, signupRequest } from '@/api/auth'
+import { appBrandKey } from '@/stores/app-detail'
+
+const brand = inject(appBrandKey, null)
+const appName = computed(() => brand?.appName.value ?? 'SecWeb HelpDesk')
+const brandShort = computed(() => brand?.brandShort.value ?? 'SecWeb')
 
 const router = useRouter()
 

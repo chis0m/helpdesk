@@ -1,0 +1,73 @@
+# Context is this directory: docker build -t helpdesk-backend .
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (not needed to compile)
+*.md
+docs/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build outputs
+main
+bin/
+dist/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+*.out
+
+# Tests
+*_test.go
+test/
+tests/
+coverage.out
+*.test
+
+# Env: keep dev secrets out; un-ignore files copied in Dockerfile (ARG ENV_VARIANT .env.vuln.local | .env.secure.local)
+.env
+.env.local
+.env.*.local
+!.env.vuln.local
+!.env.secure.local
+*.env
+
+# Dev CLIs only (not imported by cmd/server)
+scripts/
+!scripts/aws/
+!scripts/aws/secret.sh
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+*.tmp
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local notes (see backend/.gitignore)
+TASK.md
+TODO.md
+API.md
+output.txt
+
+# Make (image builds with go build, not make)
+makefile
+Makefile
+
+# Optional data / scratch (no embeds in this module today)
+*.csv
+*.txt

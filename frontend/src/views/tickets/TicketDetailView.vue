@@ -36,19 +36,19 @@
           aria-hidden="true"
         />
         <div class="relative">
-        <div class="flex flex-wrap items-center gap-2">
-          <span
-            class="inline-flex items-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
-          >ID: {{ ticket.id }}</span>
-          <CategoryBadge :category="ticket.category" />
-          <TicketStatusBadge
-            :status="ticket.status"
-            size="md"
-          />
-        </div>
-        <h1 class="mt-4 text-2xl font-bold leading-tight tracking-tight text-[var(--text-primary)] sm:text-3xl">
-          {{ ticket.title }}
-        </h1>
+          <div class="flex flex-wrap items-center gap-2">
+            <span
+              class="inline-flex items-center rounded-lg bg-gradient-to-b from-white to-neutral-100 px-2 py-0.5 font-mono text-[11px] font-bold tabular-nums text-neutral-800 shadow-sm ring-1 ring-inset ring-neutral-200/90"
+            >ID: {{ ticket.id }}</span>
+            <CategoryBadge :category="ticket.category" />
+            <TicketStatusBadge
+              :status="ticket.status"
+              size="md"
+            />
+          </div>
+          <h1 class="mt-4 text-2xl font-bold leading-tight tracking-tight text-[var(--text-primary)] sm:text-3xl">
+            {{ ticket.title }}
+          </h1>
         </div>
       </div>
 
