@@ -1,0 +1,35 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [vulnerable-baseline, secure-fix]
+  pull_request:
+    branches: [vulnerable-baseline, secure-fix]
+
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: make gocheck
+        working-directory: backend
+        run: make gocheck
+
+      - name: make govuln
+        working-directory: backend
+        run: make govuln

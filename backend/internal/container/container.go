@@ -15,6 +15,7 @@ type Container struct {
 	DB *gorm.DB
 
 	HealthController    *controllers.HealthController
+	AppDetailController *controllers.AppDetailController
 	AuthController      *controllers.AuthController
 	UserController      *controllers.UserController
 	InviteController    *controllers.InviteController
@@ -41,14 +42,15 @@ func New(db *gorm.DB, cfg config.Config, tokenMaker auth.MakerInterface) *Contai
 	ticketService := services.NewTicketService(ticketRepo, ticketCommentRepo, userRepo)
 	authService := services.NewAuthService(cfg, tokenMaker, userRepo, sessionRepo, passwordResetRepo, resetNotifier)
 	healthController := controllers.NewHealthController()
+	appDetailController := controllers.NewAppDetailController(cfg)
 	authController := controllers.NewAuthController(cfg, authService, publicAuthCSRFStore, auditLogRepo)
 	userController := controllers.NewUserController(userService, auditLogRepo)
 	inviteController := controllers.NewInviteController(cfg, inviteService, userService, auditLogRepo)
 	ticketController := controllers.NewTicketController(ticketService, userRepo, auditLogRepo, ticketRepo)
-
 	return &Container{
 		DB:                  db,
 		HealthController:    healthController,
+		AppDetailController: appDetailController,
 		AuthController:      authController,
 		UserController:      userController,
 		InviteController:    inviteController,

@@ -1,0 +1,36 @@
+name: helpdesk-vuln
+
+services:
+  backend:
+    image: public.ecr.aws/f8m4k2h6/helpdesk-backend:vuln
+    ports:
+      - "127.0.0.1:9000:8080"
+    environment:
+      PORT: "8080"
+      FRONTEND_URL: "https://vulnweb.chisomejim.site"
+      MAIL_MAILER: "smtp"
+      MAIL_HOST: "mailpit"
+      MAIL_PORT: "1025"
+      MAIL_FROM_ADDRESS: "support@chisomejim.site"
+      MAIL_FROM_NAME: "VulnWeb HelpDesk"
+    networks:
+      - internal
+      - helpdesk-shared
+    restart: unless-stopped
+
+  web:
+    image: public.ecr.aws/f8m4k2h6/helpdesk-frontend:vuln
+    ports:
+      - "127.0.0.1:7000:80"
+    depends_on:
+      - backend
+    networks:
+      - internal
+    restart: unless-stopped
+
+networks:
+  internal:
+    name: helpdesk-vuln-internal
+  helpdesk-shared:
+    name: helpdesk-shared
+    external: true
