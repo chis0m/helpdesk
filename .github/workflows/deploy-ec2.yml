@@ -1,0 +1,114 @@
+name: Deploy EC2
+
+on:
+  push:
+    branches: [vulnerable-baseline, secure-fix]
+
+concurrency:
+  group: deploy-ec2-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  ECR_PUBLIC_REGISTRY: public.ecr.aws/f8m4k2h6
+  ECR_BACKEND_REPO: helpdesk-backend
+  ECR_FRONTEND_REPO: helpdesk-frontend
+
+jobs:
+  build-push-deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: meta
+        run: |
+          case "${{ github.ref_name }}" in
+            vulnerable-baseline)
+              echo "stack=vuln" >> "$GITHUB_OUTPUT"
+              echo "tag=vuln" >> "$GITHUB_OUTPUT"
+              echo "env_variant=vuln" >> "$GITHUB_OUTPUT"
+              echo "secret_id=HELPDESK/VULN/SECRET" >> "$GITHUB_OUTPUT"
+              echo "env_local=.env.vuln.local" >> "$GITHUB_OUTPUT"
+              echo "vite_api_base=https://api.vulnweb.chisomejim.site" >> "$GITHUB_OUTPUT"
+              ;;
+            secure-fix)
+              echo "stack=secure" >> "$GITHUB_OUTPUT"
+              echo "tag=secure" >> "$GITHUB_OUTPUT"
+              echo "env_variant=secure" >> "$GITHUB_OUTPUT"
+              echo "secret_id=HELPDESK/SECURE/SECRET" >> "$GITHUB_OUTPUT"
+              echo "env_local=.env.secure.local" >> "$GITHUB_OUTPUT"
+              echo "vite_api_base=https://api.secweb.chisomejim.site" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported branch" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Fetch backend env from Secrets Manager
+        working-directory: backend
+        env:
+          SECRET_ID: ${{ steps.meta.outputs.secret_id }}
+          ENV_LOCAL: ${{ steps.meta.outputs.env_local }}
+        run: |
+          aws secretsmanager get-secret-value \
+            --secret-id "$SECRET_ID" \
+            --query SecretString \
+            --output text \
+          | jq -r 'to_entries | map("\(.key)=\(.value)") | .[]' > "$ENV_LOCAL"
+
+      - name: Log in to Amazon ECR Public
+        run: |
+          aws ecr-public get-login-password --region us-east-1 \
+            | docker login --username AWS --password-stdin "${{ env.ECR_PUBLIC_REGISTRY }}"
+
+      - name: Build and push backend images
+        working-directory: backend
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          FULL_SHA="${{ github.sha }}"
+          BASE="${{ env.ECR_PUBLIC_REGISTRY }}/${{ env.ECR_BACKEND_REPO }}"
+          docker build --build-arg "ENV_VARIANT=${TAG}" -t "${BASE}:${TAG}" -t "${BASE}:${FULL_SHA}" .
+          docker push "${BASE}:${TAG}"
+          docker push "${BASE}:${FULL_SHA}"
+
+      - name: Build and push frontend images
+        working-directory: frontend
+        env:
+          TAG: ${{ steps.meta.outputs.tag }}
+          VITE_API_BASE_URL: ${{ steps.meta.outputs.vite_api_base }}
+        run: |
+          FULL_SHA="${{ github.sha }}"
+          BASE="${{ env.ECR_PUBLIC_REGISTRY }}/${{ env.ECR_FRONTEND_REPO }}"
+          docker build --build-arg "VITE_API_BASE_URL=${VITE_API_BASE_URL}" -t "${BASE}:${TAG}" -t "${BASE}:${FULL_SHA}" .
+          docker push "${BASE}:${TAG}"
+          docker push "${BASE}:${FULL_SHA}"
+
+      - name: Copy compose to EC2 and restart stack
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY_PAIR }}
+          HOST: ${{ secrets.SERVER_IP }}
+          STACK: ${{ steps.meta.outputs.stack }}
+        run: |
+          test -s "deploy/mail/docker-compose.yml"
+          test -s "deploy/${STACK}/docker-compose.yml"
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # ssh/scp: skip strict host-key check so the runner does not prompt on first connect.
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -l ubuntu "$HOST" "mkdir -p \$HOME/helpdesk/mail/data \$HOME/helpdesk/${STACK}"
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "deploy/mail/docker-compose.yml" "ubuntu@${HOST}:~/helpdesk/mail/docker-compose.yml"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -l ubuntu "$HOST" "cd \$HOME/helpdesk/mail && docker compose -f docker-compose.yml pull && docker compose -f docker-compose.yml up -d --remove-orphans"
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "deploy/${STACK}/docker-compose.yml" "ubuntu@${HOST}:~/helpdesk/${STACK}/docker-compose.yml"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -l ubuntu "$HOST" "cd \$HOME/helpdesk/${STACK} && docker compose -f docker-compose.yml pull && docker compose -f docker-compose.yml up -d --remove-orphans --force-recreate"

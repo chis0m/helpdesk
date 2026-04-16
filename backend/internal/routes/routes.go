@@ -18,6 +18,7 @@ func Register(r *gin.Engine, c *container.Container) {
 	api := r.Group("/api")
 	{
 		api.GET("/health", c.HealthController.Ping)
+		api.GET("/public/app-detail", c.AppDetailController.Get)
 		api.GET("/auth/public-csrf-token", c.AuthController.PublicAuthCSRFToken)
 		api.POST("/auth/login", middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Login)
 		api.POST("/auth/signup", middleware.PublicAuthCSRFRequired(c.PublicAuthCSRFStore, auth.CSRFHeaderName), c.AuthController.Signup)

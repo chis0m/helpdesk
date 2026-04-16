@@ -7,10 +7,10 @@
     </p>
     <h1 class="mt-4 text-2xl font-semibold tracking-[-0.02em] text-[var(--text-primary)] lg:mt-0 lg:text-3xl">
       Sign in to
-      <span class="text-[var(--brand-green-dark)]">SecWeb Helpdesk</span>
+      <span class="text-[var(--brand-green-dark)]">{{ appName }}</span>
     </h1>
     <p class="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-      Use the email tied to your SecWeb products to view your support requests and updates.
+      Use the email tied to your {{ brandShort }} products to view your support requests and updates.
     </p>
 
     <div
@@ -114,12 +114,17 @@
 
 <script setup lang="ts">
 // SECURE-01: Successful login receives HttpOnly session cookies via `credentials: 'include'` (see api/auth).
-import { computed, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchPublicCsrfToken, loginRequest } from '@/api/auth'
 import { scheduleAccessRefresh } from '@/api/session-refresh'
 import { paths } from '@/constants/routes'
+import { appBrandKey } from '@/stores/app-detail'
 import { setAuthSessionFromLogin } from '@/stores/auth-session'
+
+const brand = inject(appBrandKey, null)
+const appName = computed(() => brand?.appName.value ?? 'SecWeb HelpDesk')
+const brandShort = computed(() => brand?.brandShort.value ?? 'SecWeb')
 
 const router = useRouter()
 const route = useRoute()

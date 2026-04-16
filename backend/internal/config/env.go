@@ -25,6 +25,7 @@ type Config struct {
 	// SeedCA enables CA assessment fixtures (customers, staff, tickets). See SEED_CA env.
 	SeedCA                bool
 	AppName               string
+	AppVersion            string
 	PasetoSymmetricKey    string
 	AccessTokenDuration   string
 	RefreshTokenDuration  string
@@ -49,6 +50,7 @@ func Load() Config {
 
 	return Config{
 		AppName:               getEnv("APP_NAME", "SecWeb HelpDesk"),
+		AppVersion:            getEnv("APP_VERSION", "v1.0.0"),
 		Port:                  getEnv("PORT", "8080"),
 		FrontendURL:           getEnv("FRONTEND_URL", "http://127.0.0.1:3000"),
 		GoEnv:                 getEnv("GO_ENV", "development"),

@@ -7,7 +7,6 @@ cd /Users/chisom/NCI/golang/helpdesk/backend
 cp .env.example .env
 go install github.com/pressly/goose/v3/cmd/goose@latest
 make serve
-```
 
 Health check: `GET http://localhost:8080/api/health`
 
@@ -53,8 +52,17 @@ make tidy
 make gs
 make gu
 make gd
-make gr
+make gr OR make dbr
 make gm name=create_users_table
 ```
 
 Set valid DB values (`DB_HOST`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_PORT`) before running goose targets.
+
+## CI (GitHub Actions)
+
+Branches **`vulnerable-baseline`** and **`secure-fix`** run:
+
+- **Backend workflow** (`.github/workflows/backend-ci.yml`): two jobs — **`test`** runs on every PR and push `make gocheck`, `make govuln`. **`push-ecr`** runs only on **`push`** or **`merge`**  to these branches, **after `test` succeeds**. It fetches Secrets Manager JSON, writes the env file, builds, and pushes to **`public.ecr.aws/f8m4k2h6/helpdesk-backend:vuln`** or **`:secure`** as the case may be.
+- **Frontend:** `npm ci`, `npm run lint`, `npm run audit`.
+
+Repository secrets: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`. Store each env bundle in Secrets Manager as a **JSON object** (keys → string values) so the console stays readable.
