@@ -1,0 +1,31 @@
+name: helpdesk-database
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: helpdesk-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_USER: admin
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: vuln_helpdesk
+    volumes:
+      - ./data:/var/lib/mysql
+      - ./init:/docker-entrypoint-initdb.d:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --innodb-buffer-pool-size=128M
+      --performance-schema=OFF
+      --max-connections=100
+    networks:
+      - helpdesk-shared
+    mem_limit: 512m
+
+networks:
+  helpdesk-shared:
+    name: helpdesk-shared
+    external: true
