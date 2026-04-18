@@ -14,6 +14,12 @@ import (
 var ErrInvalidTicketStatusTransition = errors.New("invalid ticket status transition")
 var ErrTicketCommentForbidden = errors.New("forbidden comment action")
 var ErrTicketListForbidden = errors.New("forbidden ticket list filters")
+var ErrTicketAssignForbidden = errors.New("forbidden ticket assignment")
+var ErrTicketAssigneeInvalidRole = errors.New("assignee must be staff or admin")
+var ErrTicketAlreadyAssignedToUser = errors.New("ticket already assigned to this user")
+var ErrTicketAlreadyUnassigned = errors.New("ticket is not assigned")
+var ErrTicketAssignMissingAssigneeID = errors.New("assigned_user_id required")
+var ErrTicketUnassignAssigneeMismatch = errors.New("assigned_user_id does not match ticket assignee")
 
 type TicketService struct {
 	ticketRepo  *repositories.TicketRepository
@@ -141,15 +147,38 @@ func (s *TicketService) UpdateStatus(ticketID uint64, status models.TicketStatus
 	return s.ticketRepo.UpdateStatus(ticketID, status)
 }
 
-func (s *TicketService) Assign(ticketID uint64, assignedUserID *uint64, unassign bool) (*models.Ticket, error) {
+func (s *TicketService) Assign(actorRole models.UserRole, ticketID uint64, assignedUserID *uint64, unassign bool) (*models.Ticket, error) {
+	if actorRole != models.RoleAdmin && actorRole != models.RoleSuperAdmin {
+		return nil, ErrTicketAssignForbidden
+	}
+	ticket, err := s.ticketRepo.GetByID(ticketID)
+	if err != nil {
+		return nil, err
+	}
 	if unassign {
+		if assignedUserID == nil {
+			return nil, ErrTicketAssignMissingAssigneeID
+		}
+		if ticket.AssignedUserID == nil {
+			return nil, ErrTicketAlreadyUnassigned
+		}
+		if *ticket.AssignedUserID != *assignedUserID {
+			return nil, ErrTicketUnassignAssigneeMismatch
+		}
 		return s.ticketRepo.UpdateAssignment(ticketID, nil)
 	}
 	if assignedUserID == nil {
-		return s.ticketRepo.GetByID(ticketID)
+		return nil, ErrTicketAssignMissingAssigneeID
 	}
-	if _, err := s.userRepo.GetByID(*assignedUserID); err != nil {
+	if ticket.AssignedUserID != nil && *ticket.AssignedUserID == *assignedUserID {
+		return nil, ErrTicketAlreadyAssignedToUser
+	}
+	assignee, err := s.userRepo.GetByID(*assignedUserID)
+	if err != nil {
 		return nil, err
+	}
+	if assignee.Role != models.RoleStaff && assignee.Role != models.RoleAdmin {
+		return nil, ErrTicketAssigneeInvalidRole
 	}
 	return s.ticketRepo.UpdateAssignment(ticketID, assignedUserID)
 }

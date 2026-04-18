@@ -306,7 +306,7 @@ export async function fetchTicketSearch(q: string): Promise<
 /** VULN-02: Assignment by ticket id in path — backend IDOR completes unauthorized access. */
 export type AssignTicketBody =
   | { assigned_user_id: number }
-  | { unassign: true }
+  | { unassign: true; assigned_user_id: number }
 
 export async function assignTicket(
   ticketId: number,
@@ -316,7 +316,7 @@ export async function assignTicket(
   const url = apiUrl(`/api/tickets/${ticketId}/assign`)
   const payload =
     'unassign' in body && body.unassign
-      ? { unassign: true as const }
+      ? { unassign: true as const, assigned_user_id: body.assigned_user_id }
       : { assigned_user_id: (body as { assigned_user_id: number }).assigned_user_id }
   const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
