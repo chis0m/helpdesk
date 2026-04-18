@@ -447,10 +447,40 @@ func (t *TicketController) Assign(c *gin.Context) {
 		return
 	}
 
-	ticket, err := t.ticketService.AssignForActor(ticketUUID, actorUUID, role, req.AssignedUserID, req.Unassign)
+	if req.AssignedUserUUID == nil || strings.TrimSpace(*req.AssignedUserUUID) == "" {
+		response.FailureWithAbort(c, http.StatusBadRequest, "assigned_user_uuid required", "assigned_user_uuid required")
+		return
+	}
+	assigneeUUID, err := uuid.Parse(strings.TrimSpace(*req.AssignedUserUUID))
+	if err != nil {
+		response.FailureWithAbort(c, http.StatusBadRequest, "invalid assigned_user_uuid", "invalid assigned_user_uuid")
+		return
+	}
+
+	ticket, err := t.ticketService.AssignForActor(ticketUUID, actorUUID, role, assigneeUUID, req.Unassign)
 	if err != nil {
 		if errors.Is(err, services.ErrTicketAccessDenied) {
 			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
+			return
+		}
+		if errors.Is(err, services.ErrTicketAssignForbidden) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "admin or super_admin required")
+			return
+		}
+		if errors.Is(err, services.ErrTicketAssigneeInvalidRole) {
+			response.FailureWithAbort(c, http.StatusBadRequest, "invalid assignee", "assignee must be staff or admin")
+			return
+		}
+		if errors.Is(err, services.ErrTicketAlreadyAssignedToUser) {
+			response.FailureWithAbort(c, http.StatusBadRequest, "already assigned", "ticket is already assigned to this user")
+			return
+		}
+		if errors.Is(err, services.ErrTicketAlreadyUnassigned) {
+			response.FailureWithAbort(c, http.StatusBadRequest, "not assigned", "ticket has no assignee")
+			return
+		}
+		if errors.Is(err, services.ErrTicketUnassignAssigneeMismatch) {
+			response.FailureWithAbort(c, http.StatusBadRequest, "assignee mismatch", "selected user is not the current assignee")
 			return
 		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -926,16 +956,23 @@ func formatTicket(ticket *models.Ticket, users map[uint64]models.User) gin.H {
 	}
 
 	var assignedUserID any
+	var assignedUserUUID any
 	var assignedDisplay any
 	var assignedEmail any
 	if ticket.AssignedUserID != nil {
 		assignedUserID = *ticket.AssignedUserID
 		if assigneePtr != nil {
+			assignedUserUUID = assigneePtr.UUID.String()
 			assignedDisplay = ticketDisplayName(*assigneePtr)
 			assignedEmail = strings.TrimSpace(assigneePtr.Email)
+		} else if u, ok := users[*ticket.AssignedUserID]; ok {
+			assignedUserUUID = u.UUID.String()
+			assignedDisplay = ticketDisplayName(u)
+			assignedEmail = strings.TrimSpace(u.Email)
 		}
 	} else {
 		assignedUserID = nil
+		assignedUserUUID = nil
 		assignedDisplay = nil
 		assignedEmail = nil
 	}
@@ -953,6 +990,7 @@ func formatTicket(ticket *models.Ticket, users map[uint64]models.User) gin.H {
 		"reporter_display_name": reporterDisplay,
 		"reporter_email":        reporterEmail,
 		"assigned_user_id":      assignedUserID,
+		"assigned_user_uuid":    assignedUserUUID,
 		"assigned_display_name": assignedDisplay,
 		"assigned_email":        assignedEmail,
 		"reporter":              formatTicketUserPublic(reporterPtr),
