@@ -27,18 +27,21 @@
           {{ appName }}
         </RouterLink>
         <div class="flex items-center gap-2 sm:gap-3">
-          <span
-            class="hidden rounded-full bg-[var(--brand-green)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-green)] shadow-sm sm:inline"
-          >Product support</span>
           <RouterLink
             to="/login"
-            class="text-sm font-semibold text-[var(--text-secondary)] transition hover:text-[var(--text-primary)]"
+            class="landing-product-badge hidden rounded-full bg-[var(--brand-green)] px-3 py-1.5 text-xs font-semibold text-[var(--text-on-green)] shadow-sm sm:inline-flex"
+          >
+            Product support
+          </RouterLink>
+          <RouterLink
+            to="/login"
+            class="landing-auth-nav-link text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
           >
             Sign in
           </RouterLink>
           <RouterLink
             to="/signup"
-            class="rounded-full bg-[var(--surface-mint)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-mint-hover)] hover:shadow-sm"
+            class="landing-auth-nav-cta rounded-full bg-[var(--surface-mint)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-mint-hover)]"
           >
             Create account
           </RouterLink>
@@ -70,13 +73,13 @@
           <div class="mt-10 flex flex-wrap items-center gap-3">
             <RouterLink
               to="/signup"
-              class="landing-cta-primary inline-flex items-center justify-center rounded-full bg-[var(--brand-green)] px-6 py-3 text-sm font-semibold text-[var(--text-on-green)] shadow-md transition hover:brightness-95"
+              class="landing-cta-primary landing-auth-hero-pill inline-flex items-center justify-center rounded-full bg-[var(--brand-green)] px-6 py-3 text-sm font-semibold text-[var(--text-on-green)] shadow-md hover:brightness-95"
             >
               Get started
             </RouterLink>
             <RouterLink
               to="/login"
-              class="landing-cta-secondary inline-flex items-center justify-center rounded-full bg-[var(--surface-mint)] px-6 py-3 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-mint-hover)]"
+              class="landing-cta-secondary landing-auth-hero-pill inline-flex items-center justify-center rounded-full bg-[var(--surface-mint)] px-6 py-3 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-mint-hover)]"
             >
               Sign in
             </RouterLink>
@@ -394,20 +397,88 @@ function landDelayClass(n: number) {
 .landing-cta-secondary {
   transform: translateZ(0);
   transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease,
-    filter 0.2s ease,
-    background-color 0.2s ease;
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s ease,
+    filter 0.22s ease,
+    background-color 0.22s ease;
 }
 
 .landing-cta-primary:hover,
 .landing-cta-secondary:hover {
-  transform: scale(1.02);
+  transform: scale(1.03) translateY(-2px);
+  box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.22);
 }
 
 .landing-cta-primary:active,
 .landing-cta-secondary:active {
-  transform: scale(0.98);
+  transform: scale(0.97) translateY(0);
+  transition-duration: 0.08s;
+}
+
+/* Header: Sign in + Create account — hover lift, click press */
+.landing-auth-nav-link {
+  display: inline-block;
+  transform: translateZ(0);
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.2s ease;
+}
+
+.landing-auth-nav-link:hover {
+  transform: translateY(-2px);
+}
+
+.landing-auth-nav-link:active {
+  transform: translateY(0) scale(0.96);
+  transition-duration: 0.08s;
+}
+
+.landing-auth-nav-cta {
+  display: inline-block;
+  transform: translateZ(0);
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.landing-auth-nav-cta:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.2);
+}
+
+.landing-auth-nav-cta:active {
+  transform: scale(0.96);
+  transition-duration: 0.08s;
+}
+
+/* Product support badge → sign in */
+.landing-product-badge {
+  transform: translateZ(0);
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.landing-product-badge:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.25);
+  filter: brightness(1.05);
+}
+
+.landing-product-badge:active {
+  transform: scale(0.96);
+  transition-duration: 0.08s;
+}
+
+/* Hero Get started / Sign in — slightly snappier motion (classes stack with .landing-cta-*) */
+.landing-auth-hero-pill:hover {
+  transform: scale(1.04) translateY(-3px);
+}
+
+.landing-auth-hero-pill:active {
+  transform: scale(0.96) translateY(0);
 }
 
 .landing-card {
