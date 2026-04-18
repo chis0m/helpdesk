@@ -17,6 +17,7 @@ export interface ApiTicketRow {
   reporter_display_name?: string
   reporter_email?: string
   assigned_user_id: number | null
+  assigned_user_uuid?: string | null
   assigned_display_name?: string | null
   assigned_email?: string | null
   title: string
@@ -313,8 +314,8 @@ export async function fetchTicketSearch(q: string): Promise<
 }
 
 export type AssignTicketBody =
-  | { assigned_user_id: number }
-  | { unassign: true }
+  | { assigned_user_uuid: string }
+  | { unassign: true; assigned_user_uuid: string }
 
 export async function assignTicket(
   ticketUuid: string,
@@ -324,8 +325,8 @@ export async function assignTicket(
   const url = apiUrl(`/api/tickets/${encodeURIComponent(ticketUuid)}/assign`)
   const payload =
     'unassign' in body && body.unassign
-      ? { unassign: true as const }
-      : { assigned_user_id: (body as { assigned_user_id: number }).assigned_user_id }
+      ? { unassign: true as const, assigned_user_uuid: body.assigned_user_uuid }
+      : { assigned_user_uuid: (body as { assigned_user_uuid: string }).assigned_user_uuid }
   const res = await fetchWithSessionRefresh(url, {
     method: 'PATCH',
     credentials: 'include',

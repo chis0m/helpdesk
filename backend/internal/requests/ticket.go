@@ -34,8 +34,8 @@ type UpdateTicketStatusRequest struct {
 }
 
 type AssignTicketRequest struct {
-	AssignedUserID *uint64 `json:"assigned_user_id" binding:"omitempty"`
-	Unassign       bool    `json:"unassign" binding:"omitempty"`
+	AssignedUserUUID *string `json:"assigned_user_uuid" binding:"omitempty,uuid"`
+	Unassign         bool    `json:"unassign" binding:"omitempty"`
 }
 
 type ListTicketsQuery struct {
