@@ -52,16 +52,17 @@ Typical paths under the `ubuntu` user’s home directory:
 | Path | Purpose |
 |------|---------|
 | `~/helpdesk/mail/` | **Mailpit** dev smtp server. Persists data under `mail/data/`. |
+| `~/helpdesk/database/` | **MySQL 8** (Docker) for both stacks: small footprint (`innodb_buffer_pool_size` 128M, 512M container cap), hostname **`mysql`** on `helpdesk-shared`. Persist data under `database/data/`. |
 | `~/helpdesk/vuln/` or `~/helpdesk/secure/` | The **app stack** for that variant (backend + web containers). |
 
-The **mail** stack is updated on every deploy. The **app** stack for the branch you pushed is updated the same way.
+The **mail** stack is updated on every deploy, then the **database** stack, then the **app** stack for the branch you pushed.
 
 ---
 
 ## Docker networking
 
 - The **mail** Compose file defines a shared Docker network called **`helpdesk-shared`**.
-- Each **app** stack joins that network as **external** so backends can reach Mailpit by hostname (`mailpit`) on the internal SMTP port.
+- Each **app** stack joins that network as **external** so backends can reach Mailpit by hostname (`mailpit`) on the internal SMTP port and MySQL by hostname **`mysql`** on port **3306**.
 - App HTTP ports are bound to **`127.0.0.1` only** on the host. They are not meant to be reached directly from the internet; traffic is expected to come through a **reverse proxy** on the same machine (see below).
 
 ---
@@ -91,6 +92,7 @@ Backend secrets live in **AWS Secrets Manager** under the IDs referenced in `.gi
 | Path | Role |
 |------|------|
 | `mail/docker-compose.yml` | Mailpit service + shared network. |
+| `database/docker-compose.yml` | MySQL 8 on `helpdesk-shared`; init SQL creates `secure_helpdesk` and grants `admin` access to both app databases. |
 | `vuln/docker-compose.yml` | Vulnerable variant: backend + web images and env. |
 | `secure/docker-compose.yml` | Secure variant: backend + web images and env. |
 | `nginx/chisomejim.site.conf` | Example Nginx server blocks for host → localhost port mapping. On EC2, TLS is configured with **Certbot**; certificate paths in the live config follow `/etc/letsencrypt/`. |

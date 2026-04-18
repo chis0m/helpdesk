@@ -1,0 +1,3 @@
+CREATE DATABASE IF NOT EXISTS secure_helpdesk;
+GRANT ALL PRIVILEGES ON secure_helpdesk.* TO 'admin'@'%';
+FLUSH PRIVILEGES;
