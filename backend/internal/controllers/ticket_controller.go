@@ -299,7 +299,13 @@ func (t *TicketController) UpdateStatus(c *gin.Context) {
 
 func (t *TicketController) Assign(c *gin.Context) {
 	log := logger.L()
-	// VULN-02: IDOR on tickets and comments — no reporter/assignee/admin check on ticket id.
+
+	_, actorRole, authOk := getAuthenticatedUser(c)
+	if !authOk {
+		log.Warn().Msg("assign ticket failed: unauthenticated")
+		response.FailureWithAbort(c, http.StatusUnauthorized, "authentication required", "authentication required")
+		return
+	}
 
 	ticketID, ok := parseUintID(c.Param("id"))
 	if !ok {
@@ -315,8 +321,37 @@ func (t *TicketController) Assign(c *gin.Context) {
 		return
 	}
 
-	ticket, err := t.ticketService.Assign(ticketID, req.AssignedUserID, req.Unassign)
+	if req.AssignedUserID == nil {
+		response.FailureWithAbort(c, http.StatusBadRequest, "assigned_user_id required", "assigned_user_id required")
+		return
+	}
+
+	ticket, err := t.ticketService.Assign(actorRole, ticketID, req.AssignedUserID, req.Unassign)
 	if err != nil {
+		if errors.Is(err, services.ErrTicketAssignForbidden) {
+			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "admin or super_admin required")
+			return
+		}
+		if errors.Is(err, services.ErrTicketAssigneeInvalidRole) {
+			response.FailureWithAbort(c, http.StatusBadRequest, "invalid assignee", "assignee must be staff or admin")
+			return
+		}
+		if errors.Is(err, services.ErrTicketAlreadyAssignedToUser) {
+			response.FailureWithAbort(c, http.StatusBadRequest, "already assigned", "ticket is already assigned to this user")
+			return
+		}
+		if errors.Is(err, services.ErrTicketAlreadyUnassigned) {
+			response.FailureWithAbort(c, http.StatusBadRequest, "not assigned", "ticket has no assignee")
+			return
+		}
+		if errors.Is(err, services.ErrTicketAssignMissingAssigneeID) {
+			response.FailureWithAbort(c, http.StatusBadRequest, "assigned_user_id required", "assigned_user_id required")
+			return
+		}
+		if errors.Is(err, services.ErrTicketUnassignAssigneeMismatch) {
+			response.FailureWithAbort(c, http.StatusBadRequest, "assignee mismatch", "selected user is not the current assignee")
+			return
+		}
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			log.Warn().Uint64("ticket_id", ticketID).Msg("assign ticket failed: ticket or user not found")
 			response.FailureWithAbort(c, http.StatusNotFound, "resource not found", "resource not found")

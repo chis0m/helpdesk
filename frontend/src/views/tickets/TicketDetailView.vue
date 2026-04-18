@@ -140,9 +140,8 @@
       @update:status="onStatusUpdate"
     />
 
-    <!-- VULN-02: Assign/unassign/delete use ticket id from the URL only — backend IDOR completes unauthorized access. -->
     <section
-      v-if="isApiTicket"
+      v-if="isApiTicket && isAdminOrSuperAdmin"
       class="rounded-2xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-black/[0.03]"
     >
       <span class="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Staff</span>
@@ -150,7 +149,7 @@
         Assignment
       </h2>
       <p class="mt-1 text-sm text-[var(--text-secondary)]">
-        Set the staff user id for the assignee (see Admin → Staff for ids), or unassign.
+        Choose a staff or admin user to assign. To unassign, select the ticket's current assignee in the list, then click Unassign.
       </p>
       <div
         v-if="assignDeleteError"
@@ -159,25 +158,34 @@
       >
         {{ assignDeleteError }}
       </div>
-      <div class="mt-3 flex flex-wrap items-end gap-2">
-        <div class="min-w-[8rem] flex-1">
-          <label
-            for="assignee-id"
-            class="mb-1 block text-xs font-medium text-[var(--text-muted)]"
-          >Assignee user id</label>
-          <input
-            id="assignee-id"
-            v-model="assignUserIdInput"
-            type="text"
-            inputmode="numeric"
-            placeholder="e.g. 2"
-            class="w-full rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm text-[var(--text-primary)]"
+      <div class="mt-3 space-y-2">
+        <label
+          for="assignee-select"
+          class="mb-1 block text-xs font-medium text-[var(--text-muted)]"
+        >Assignee</label>
+        <select
+          id="assignee-select"
+          v-model="selectedAssigneeId"
+          class="w-full max-w-md rounded-xl border border-[var(--border-subtle)] bg-white px-3 py-2 text-sm text-[var(--text-primary)] disabled:opacity-60"
+          :disabled="assigning || deleting || assignableLoading"
+        >
+          <option value="">
+            {{ assignableLoading ? 'Loading…' : 'Select user…' }}
+          </option>
+          <option
+            v-for="u in assignableOptions"
+            :key="u.user_id"
+            :value="String(u.user_id)"
           >
-        </div>
+            {{ staffOptionLabel(u) }}
+          </option>
+        </select>
+      </div>
+      <div class="mt-3 flex flex-wrap items-end gap-2">
         <button
           type="button"
           class="rounded-full bg-[var(--brand-green)] px-4 py-2 text-sm font-semibold text-[var(--text-on-green)] shadow-sm transition hover:brightness-95 disabled:opacity-50"
-          :disabled="assigning || deleting || !assignUserIdParsed"
+          :disabled="assigning || deleting || !canSubmitAssign"
           @click="onAssign"
         >
           {{ assigning ? 'Assigning…' : 'Assign' }}
@@ -185,13 +193,26 @@
         <button
           type="button"
           class="rounded-full border border-[var(--border-strong)] bg-white px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition hover:bg-[var(--surface-hover)] disabled:opacity-50"
-          :disabled="assigning || deleting"
+          :disabled="assigning || deleting || !canUnassign"
           @click="onUnassign"
         >
           {{ assigning ? '…' : 'Unassign' }}
         </button>
       </div>
-      <div class="mt-6 border-t border-[var(--border-subtle)] pt-4">
+    </section>
+
+    <section
+      v-if="isApiTicket"
+      class="rounded-2xl border border-[var(--border-subtle)] bg-white p-5 shadow-[var(--shadow-card)] ring-1 ring-black/[0.03]"
+    >
+      <div
+        v-if="deleteTicketError"
+        class="mb-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900"
+        role="alert"
+      >
+        {{ deleteTicketError }}
+      </div>
+      <div>
         <button
           type="button"
           class="rounded-full border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-900 transition hover:bg-red-100 disabled:opacity-50"
@@ -347,6 +368,7 @@
 // VULN-02: Loads ticket/comments by `route.params.id` only — backend IDOR completes unauthorized access.
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { fetchAdminStaffDirectory, type AdminUserListItem } from '@/api/admin'
 import {
   assignTicket,
   createTicketComment,
@@ -412,17 +434,58 @@ const commentSubmitError = ref('')
 const postingComment = ref(false)
 const draft = ref('')
 
-const assignUserIdInput = ref('')
 const assignDeleteError = ref('')
+const deleteTicketError = ref('')
 const assigning = ref(false)
 const deleting = ref(false)
+const assignableOptions = ref<AdminUserListItem[]>([])
+const assignableLoading = ref(false)
+const selectedAssigneeId = ref('')
 
 const isApiTicket = computed(() => fromApi.value !== null)
 
-const assignUserIdParsed = computed(() => {
-  const n = Number.parseInt(assignUserIdInput.value.trim(), 10)
+const isAdminOrSuperAdmin = computed(() => {
+  void fromApi.value
+  const u = getAuthUserSnapshot()
+  return u?.role === 'admin' || u?.role === 'super_admin'
+})
+
+const ticketHasAssignee = computed(() => {
+  const id = fromApi.value?.assigned_user_id
+  return id != null && id !== undefined
+})
+
+const selectedAssigneeNumeric = computed(() => {
+  const n = Number.parseInt(selectedAssigneeId.value, 10)
   return Number.isFinite(n) && n > 0 ? n : null
 })
+
+const canSubmitAssign = computed(() => {
+  const id = selectedAssigneeNumeric.value
+  if (id === null || selectedAssigneeId.value === '')
+    return false
+  const cur = fromApi.value?.assigned_user_id
+  if (cur != null && cur === id)
+    return false
+  return true
+})
+
+const canUnassign = computed(() => {
+  if (!ticketHasAssignee.value)
+    return false
+  const id = selectedAssigneeNumeric.value
+  const cur = fromApi.value?.assigned_user_id
+  if (id === null || cur == null)
+    return false
+  return id === cur
+})
+
+function staffOptionLabel(u: AdminUserListItem): string {
+  const mid = u.middle_name?.trim()
+  const name = [u.first_name, mid, u.last_name].filter(x => x && String(x).length > 0).join(' ')
+  const role = u.role.replace(/_/g, ' ')
+  return name ? `${name} — ${u.email} (${role})` : `${u.email} (${role})`
+}
 
 const statusSaving = ref(false)
 const statusError = ref('')
@@ -447,8 +510,10 @@ watch(
     draft.value = ''
     fromApi.value = null
     loadError.value = ''
-    assignUserIdInput.value = ''
+    selectedAssigneeId.value = ''
     assignDeleteError.value = ''
+    deleteTicketError.value = ''
+    assignableOptions.value = []
     statusError.value = ''
     const id = typeof raw === 'string' ? raw : ''
     if (!id)
@@ -465,6 +530,26 @@ watch(
     }
     fromApi.value = res.data
     await refreshApiComments(n)
+  },
+  { immediate: true },
+)
+
+watch(
+  () => [isAdminOrSuperAdmin.value, fromApi.value?.ticket_id] as const,
+  async ([isAdm, tid]) => {
+    assignableOptions.value = []
+    selectedAssigneeId.value = ''
+    if (!isAdm || tid == null)
+      return
+    assignableLoading.value = true
+    assignDeleteError.value = ''
+    const res = await fetchAdminStaffDirectory()
+    assignableLoading.value = false
+    if (!res.ok) {
+      assignDeleteError.value = res.message
+      return
+    }
+    assignableOptions.value = res.items.filter(u => u.role !== 'super_admin')
   },
   { immediate: true },
 )
@@ -503,9 +588,14 @@ function currentTicketNumericId(): number | null {
 async function onAssign() {
   assignDeleteError.value = ''
   const ticketNum = currentTicketNumericId()
-  const uid = assignUserIdParsed.value
-  if (ticketNum === null || uid === null) {
-    assignDeleteError.value = 'Enter a valid assignee user id.'
+  const uid = selectedAssigneeNumeric.value
+  if (ticketNum === null || uid === null || selectedAssigneeId.value === '') {
+    assignDeleteError.value = 'Select a user to assign.'
+    return
+  }
+  const cur = fromApi.value?.assigned_user_id
+  if (cur != null && cur === uid) {
+    assignDeleteError.value = 'This ticket is already assigned to that user.'
     return
   }
   const csrf = getSessionCsrfToken()
@@ -521,7 +611,7 @@ async function onAssign() {
     return
   }
   fromApi.value = res.data
-  assignUserIdInput.value = ''
+  selectedAssigneeId.value = ''
 }
 
 async function onUnassign() {
@@ -529,13 +619,23 @@ async function onUnassign() {
   const ticketNum = currentTicketNumericId()
   if (ticketNum === null)
     return
+  const cur = fromApi.value?.assigned_user_id
+  if (cur == null) {
+    assignDeleteError.value = 'This ticket has no assignee.'
+    return
+  }
+  const uid = selectedAssigneeNumeric.value
+  if (uid === null || uid !== cur) {
+    assignDeleteError.value = 'Select the current assignee in the list before unassigning.'
+    return
+  }
   const csrf = getSessionCsrfToken()
   if (!csrf) {
     assignDeleteError.value = 'Your session expired. Sign in again.'
     return
   }
   assigning.value = true
-  const res = await assignTicket(ticketNum, { unassign: true }, csrf)
+  const res = await assignTicket(ticketNum, { unassign: true, assigned_user_id: uid }, csrf)
   assigning.value = false
   if (!res.ok) {
     assignDeleteError.value = res.message
@@ -545,7 +645,7 @@ async function onUnassign() {
 }
 
 async function onDeleteTicket() {
-  assignDeleteError.value = ''
+  deleteTicketError.value = ''
   if (!window.confirm('Delete this ticket permanently? This cannot be undone.'))
     return
   const ticketNum = currentTicketNumericId()
@@ -553,14 +653,14 @@ async function onDeleteTicket() {
     return
   const csrf = getSessionCsrfToken()
   if (!csrf) {
-    assignDeleteError.value = 'Your session expired. Sign in again.'
+    deleteTicketError.value = 'Your session expired. Sign in again.'
     return
   }
   deleting.value = true
   const res = await deleteTicket(ticketNum, csrf)
   deleting.value = false
   if (!res.ok) {
-    assignDeleteError.value = res.message
+    deleteTicketError.value = res.message
     return
   }
   await router.push(paths.dashboard.tickets)
