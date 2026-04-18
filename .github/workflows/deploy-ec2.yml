@@ -102,13 +102,17 @@ jobs:
           STACK: ${{ steps.meta.outputs.stack }}
         run: |
           test -s "deploy/mail/docker-compose.yml"
+          test -s "deploy/database/docker-compose.yml"
           test -s "deploy/${STACK}/docker-compose.yml"
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           # ssh/scp: skip strict host-key check so the runner does not prompt on first connect.
-          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -l ubuntu "$HOST" "mkdir -p \$HOME/helpdesk/mail/data \$HOME/helpdesk/${STACK}"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -l ubuntu "$HOST" "mkdir -p \$HOME/helpdesk/mail/data \$HOME/helpdesk/database/data \$HOME/helpdesk/database/init \$HOME/helpdesk/${STACK}"
           scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "deploy/mail/docker-compose.yml" "ubuntu@${HOST}:~/helpdesk/mail/docker-compose.yml"
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -l ubuntu "$HOST" "cd \$HOME/helpdesk/mail && docker compose -f docker-compose.yml pull && docker compose -f docker-compose.yml up -d --remove-orphans"
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "deploy/database/docker-compose.yml" "ubuntu@${HOST}:~/helpdesk/database/docker-compose.yml"
+          scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "deploy/database/init/"*.sql "ubuntu@${HOST}:~/helpdesk/database/init/"
+          ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -l ubuntu "$HOST" "cd \$HOME/helpdesk/database && docker compose -f docker-compose.yml pull && docker compose -f docker-compose.yml up -d --remove-orphans"
           scp -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key "deploy/${STACK}/docker-compose.yml" "ubuntu@${HOST}:~/helpdesk/${STACK}/docker-compose.yml"
           ssh -o StrictHostKeyChecking=no -i ~/.ssh/deploy_key -l ubuntu "$HOST" "cd \$HOME/helpdesk/${STACK} && docker compose -f docker-compose.yml pull && docker compose -f docker-compose.yml up -d --remove-orphans --force-recreate"
