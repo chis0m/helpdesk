@@ -62,6 +62,12 @@
             label="Create staff"
             exact
           />
+          <SidebarLink
+            :to="paths.dashboard.adminAuditLogs"
+            :icon="IconGear"
+            label="Audit logs"
+            exact
+          />
         </div>
       </div>
     </nav>

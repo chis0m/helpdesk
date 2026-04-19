@@ -302,3 +302,59 @@ export async function patchAdminUserRole(
   }
   return { ok: true, data: env.data }
 }
+
+// SEC-05: GET /api/admin/audit-logs — append-only audit viewer (admin / super_admin; enforced server-side).
+export interface AuditLogListItem {
+  id: number
+  created_at: string
+  http_method: string
+  path: string
+  action: string
+  success: boolean
+  error_code?: string
+  resource_type: string | null
+  resource_id: number | null
+  metadata: unknown
+  actor_user_uuid: string | null
+  session_id: string | null
+  ip: string | null
+  user_agent: string | null
+}
+
+export interface AuditLogsListData {
+  items: AuditLogListItem[]
+  pagination: { page: number; limit: number; total: number }
+}
+
+export async function fetchAuditLogs(params?: {
+  page?: number
+  limit?: number
+}): Promise<
+  | { ok: true; data: AuditLogsListData }
+  | { ok: false; status: number; message: string }
+> {
+  const sp = new URLSearchParams()
+  if (params?.page != null && params.page > 0)
+    sp.set('page', String(params.page))
+  if (params?.limit != null && params.limit > 0)
+    sp.set('limit', String(params.limit))
+  const q = sp.toString()
+  const url = apiUrl(`/api/admin/audit-logs${q ? `?${q}` : ''}`)
+  const res = await fetchWithSessionRefresh(url, {
+    method: 'GET',
+    credentials: 'include',
+    headers: { Accept: 'application/json' },
+  })
+  const json = await readJson(res)
+  logger.debug('api:admin', `GET ${url} → ${res.status}`)
+  if (!res.ok) {
+    logger.debug('api:admin', 'audit logs list error', json)
+    return { ok: false, status: res.status, message: errorMessage(json) }
+  }
+  const env = json as ApiSuccessEnvelope<AuditLogsListData>
+  if (!env.data?.items || !env.data.pagination) {
+    logger.debug('api:admin', 'audit logs list invalid shape', json)
+    return { ok: false, status: res.status, message: 'Invalid response' }
+  }
+  return { ok: true, data: env.data }
+}

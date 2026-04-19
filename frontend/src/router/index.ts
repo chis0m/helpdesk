@@ -137,6 +137,12 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminStaffListView.vue'),
         },
         {
+          path: 'admin/audit-logs',
+          name: 'admin-audit-logs',
+          meta: { title: 'Audit logs', requiresAdmin: true },
+          component: () => import('@/views/admin/AdminAuditLogsView.vue'),
+        },
+        {
           path: '',
           name: 'dashboard',
           meta: { title: 'Dashboard' },
