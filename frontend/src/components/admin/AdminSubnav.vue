@@ -28,6 +28,7 @@ const links = computed(() => [
   { to: paths.dashboard.adminUsers, label: 'Users' },
   { to: paths.dashboard.adminStaff, label: 'Staff' },
   { to: paths.dashboard.adminStaffNew, label: 'Create staff' },
+  { to: paths.dashboard.adminAuditLogs, label: 'Audit logs' },
 ])
 
 function isActive(link: { to: string }) {

@@ -19,6 +19,7 @@ const (
 
 	ActionAdminRoleUpdate   = "admin.user.role_update"
 	ActionAdminStaffCreate  = "admin.staff.create"
+	ActionAdminAuditLogList = "admin.audit_log.list"
 	ActionInviteStaffCreate = "admin.invite.staff_create"
 	ActionInviteAccepted    = "invite.accept"
 
@@ -43,4 +44,5 @@ const (
 	ResourceTypeUser          = "user"
 	ResourceTypeTicketComment = "ticket_comment"
 	ResourceTypeInvite        = "invite"
+	ResourceTypeAuditLog      = "audit_log"
 )
