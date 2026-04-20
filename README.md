@@ -110,10 +110,12 @@ The steps below are for running the **stack on your machine** (MySQL + Go API + 
 #### 1. Database
 
 Create a database and user (example):
+Vulnerable Baseline: `vuln_helpdesk`
+Secure Branch: `secure_helpdesk`
 
 ```sql
-CREATE DATABASE helpdesk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'helpdesk'@'localhost' IDENTIFIED BY 'your_password';
+CREATE DATABASE secure_helpdesk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'secure_helpdesk'@'localhost' IDENTIFIED BY 'your_password';
 GRANT ALL ON helpdesk.* TO 'helpdesk'@'localhost';
 FLUSH PRIVILEGES;
 ```
