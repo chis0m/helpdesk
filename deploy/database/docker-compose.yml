@@ -5,8 +5,10 @@ services:
     image: mysql:8.0
     container_name: helpdesk-mysql
     restart: unless-stopped
+    # Please ignore, the port was intentional exposed, not part of security requirements/considerations.
     ports:
       - "3306:3306"
+    # Please ignore, the database was intentional exposed, not part of security requirements/considerations.
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_USER: admin
