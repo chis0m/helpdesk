@@ -1,7 +1,7 @@
 GOOSE_DRIVER ?= mysql
 GOOSE_DIR ?= migrations
 DB_HOST ?= localhost
-DB_DATABASE ?= helpdesk
+DB_DATABASE ?= vuln_helpdesk
 DB_USERNAME ?= admin
 DB_PASSWORD ?= password
 DB_PORT ?= 3306
@@ -29,7 +29,8 @@ dbr: # db_reset — roll back all migrations like `make gr` (local dev only; run
 	go run ./scripts/db-reset
 
 dbrf: # db_refresh — roll back all then migrate up again,
-
+	go run ./scripts/db-refresh
+	
 dbm: # db_migrate — goose up (local dev only; run from backend/)
 	go run ./scripts/db-migrate
 
