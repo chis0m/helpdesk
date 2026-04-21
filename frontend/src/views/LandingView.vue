@@ -308,14 +308,14 @@ const testimonials = computed(() => [
   {
     name: 'Mark Anthony',
     role: 'Product Manager',
-    email: 'mark.anthony@example.com',
+    email: 'mark.anthony@company-a.com',
     initials: 'MA',
     quote: `${brandShort.value} customer service has been outstanding — quick responses, clear updates, and they actually follow through until the issue is sorted.`,
   },
   {
     name: 'Jane Doe',
     role: 'IT Lead',
-    email: 'jane.doe@sample.com',
+    email: 'jane.doe@company-b.com',
     initials: 'JD',
     quote: `Our team relies on timely support when integrations act up. ${brandShort.value}'s helpdesk keeps us moving; escalation feels professional every time.`,
   },
