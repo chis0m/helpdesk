@@ -7,7 +7,7 @@ services:
       - "127.0.0.1:9000:8080"
     environment:
       PORT: "8080"
-      FRONTEND_URL: "https://vulnweb.chisomejim.site"
+      FRONTEND_URL: "http://vulnweb.chisomejim.site"
       MAIL_MAILER: "smtp"
       MAIL_HOST: "mailpit"
       MAIL_PORT: "1025"
