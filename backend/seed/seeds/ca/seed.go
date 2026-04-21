@@ -11,11 +11,12 @@ func SeedAll(db *gorm.DB) error {
 	if err != nil {
 		return fmt.Errorf("ca seed: staff users: %w", err)
 	}
-	uMust, uMark, uJane, err := EnsureCustomerUsers(db)
+	uMust, uMark, uJane, uAlex, err := EnsureCustomerUsers(db)
 	if err != nil {
 		return fmt.Errorf("ca seed: customer users: %w", err)
 	}
-	if err := EnsureTickets(db, uMust, uMark, uJane, staffSam, staffCassey); err != nil {
+	_ = uMust
+	if err := EnsureTickets(db, uAlex, uMark, uJane, staffSam, staffCassey); err != nil {
 		return fmt.Errorf("ca seed: tickets: %w", err)
 	}
 	if err := EnsureTicketComments(db, uMark, uJane, staffSam, staffCassey); err != nil {

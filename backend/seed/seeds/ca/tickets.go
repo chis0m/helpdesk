@@ -12,25 +12,32 @@ import (
 )
 
 const (
-	TicketMarkOpenTitle       = "Sidebar keeps collapsing when I switch between projects"
-	TicketMarkInProgressTitle = "CSV export times out after about 30 seconds"
-	TicketMarkResolvedTitle   = "Cannot log in after password reset — now fixed on my side"
-	TicketJaneOpenTitle       = "Question: how do charges for SecWeb technical services appear on our monthly bill?"
-	TicketJaneOpen2Title      = "Dashboard summary numbers look out of date until I force a full page reload"
-	TicketJaneVPNTitle        = "Can't keep the VPN connected today. I'm out for meetings all day and need remote access to work."
+	TicketMarkOpenTitle        = "Sidebar keeps collapsing when I switch between projects"
+	TicketMarkInProgressTitle  = "CSV export times out after about 30 seconds"
+	TicketMarkResolvedTitle    = "Cannot log in after password reset — now fixed on my side"
+	TicketJaneOpenTitle        = "Question: how do charges for SecWeb technical services appear on our monthly bill?"
+	TicketJaneOpen2Title       = "Dashboard summary numbers look out of date until I force a full page reload"
+	TicketJaneVPNTitle         = "Can't keep the VPN connected today. I'm out for meetings all day and need remote access to work."
+	TicketTechSam1Title        = "M365 shared mailbox: calendar free/busy not updating after SecWeb migration cutover"
+	TicketTechSam2Title        = "DNS: delegated subdomain for customer portal still resolving to old IP after change request"
+	TicketTechSam3Title        = "Endpoint: BitLocker recovery key prompt loop on fleet laptops after SecWeb policy bundle"
+	TicketTechCassey1Title     = "Firewall: need rule review for new outbound SFTP to vendor maintenance subnet"
+	TicketTechCassey2Title     = "Site Wi-Fi: conference wing drops every few minutes — request heatmap and AP tuning"
+	TicketTechCassey3Title     = "SSO/SAML: assertion failures from IdP after certificate rotation — SecWeb SP metadata check"
+	TicketTechUnassigned1Title = "Server monitoring: Hyper-V host CPU pegged post-patch — need SecWeb infra triage window"
+	TicketTechUnassigned2Title = "Managed print queue on print01 not draining jobs — affects finance batch printing"
+	TicketTechUnassigned3Title = "Backup verification job failing on SQL maintenance plan — SecWeb BCDR checklist item"
 )
 
 func EnsureTickets(
 	db *gorm.DB,
-	uMust *models.User,
+	uAlex *models.User,
 	uMark *models.User,
 	uJane *models.User,
 	staffSam *models.User,
 	staffCassey *models.User,
 ) error {
-	_ = uMust
-
-	if uMark == nil || uJane == nil || staffSam == nil || staffCassey == nil {
+	if uMark == nil || uJane == nil || uAlex == nil || staffSam == nil || staffCassey == nil {
 		return fmt.Errorf("EnsureTickets: missing user(s)")
 	}
 
@@ -83,6 +90,70 @@ func EnsureTickets(
 	if err := db.Model(&models.Ticket{}).
 		Where("title = ?", strings.TrimSpace(TicketJaneVPNTitle)).
 		Update("status", models.TicketStatusInProgress).Error; err != nil {
+		return err
+	}
+
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uMark.ID, TicketTechSam1Title,
+		"Finance shared mailbox migrated Friday. Internal users see stale free/busy in Outlook. SecWeb handles our tenant — need engineer to verify connector and replication lag.",
+		"technical", models.TicketStatusOpen, &samID,
+	); err != nil {
+		return err
+	}
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uJane.ID, TicketTechSam2Title,
+		"Submitted DNS change ticket #4412 through the portal. TTL lowered to 300. NS at registrar points to SecWeb DNS but A record still shows previous hosting IP after 24h.",
+		"technical", models.TicketStatusInProgress, &samID,
+	); err != nil {
+		return err
+	}
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uAlex.ID, TicketTechSam3Title,
+		"Several laptops from the rollout group prompt for BitLocker recovery on every cold boot since yesterday’s policy sync. SecWeb MDM shows compliant — need root cause.",
+		"technical", models.TicketStatusOpen, &samID,
+	); err != nil {
+		return err
+	}
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uJane.ID, TicketTechCassey1Title,
+		"Vendor requires outbound SFTP to /24 range for nightly extracts. Security wants SecWeb to validate rule scope and logging before go-live.",
+		"technical", models.TicketStatusOpen, &casseyID,
+	); err != nil {
+		return err
+	}
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uMark.ID, TicketTechCassey2Title,
+		"Users in rooms 201–205 lose Wi-Fi under load. SecWeb manages our Aruba stack — need onsite or remote survey and channel/power recommendations.",
+		"technical", models.TicketStatusInProgress, &casseyID,
+	); err != nil {
+		return err
+	}
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uAlex.ID, TicketTechCassey3Title,
+		"IdP rotated signing cert Sunday. SAML logins to SecWeb-managed apps return invalid signature. Metadata upload may be out of date.",
+		"technical", models.TicketStatusOpen, &casseyID,
+	); err != nil {
+		return err
+	}
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uMark.ID, TicketTechUnassigned1Title,
+		"HV-CL02 running customer workloads. CPU sustained >90% since Feb cumulative updates. Need SecWeb infra team to review guest placement and host patches.",
+		"technical", models.TicketStatusOpen, nil,
+	); err != nil {
+		return err
+	}
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uJane.ID, TicketTechUnassigned2Title,
+		"Print server print01 under SecWeb managed services. Jobs stuck in queue; driver refresh attempted locally without success.",
+		"technical", models.TicketStatusOpen, nil,
+	); err != nil {
+		return err
+	}
+	if _, err := firstOrCreateTicketWithStatus(
+		db, uAlex.ID, TicketTechUnassigned3Title,
+		"Weekly verify-only backup job errors on instance SQL-REP-03. Impacts our BCDR evidence pack for auditors next month.",
+		"technical", models.TicketStatusInProgress, nil,
+	); err != nil {
 		return err
 	}
 
