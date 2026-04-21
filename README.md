@@ -162,7 +162,7 @@ Open the URL printed by Vite (typically `http://localhost:3000`).
 
 ## Usage guidelines
 
-1. **Register / log in** — login through /login in the UI e.g http://127.0.0.1:3000/login. If you set `SEED_CA` to true, then use `cassey.admin@secweb.ie` to login and `password` as password. Or you can just signup.
+1. **Register / log in** — login through /login in the UI e.g http://127.0.0.1:3000/login. If you set `SEED_CA` to true, then use customer account `mark.anthony@company-a.com` or a staff account `cassey.admin@secweb.ie` to login, both with `password` as password. Or you can just signup.
 2. **Tickets** — Create a ticket from the dashboard; open a ticket to view details, status, assignment, and comments.
 3. **Search** — Use ticket search; the server must bind search parameters safely (no raw string concatenation into SQL).
 4. **Profile & sessions** — Update profile where allowed; review and revoke other sessions from the sessions view.
