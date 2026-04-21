@@ -24,6 +24,7 @@ type Config struct {
 	SeedAdminLastName   string
 	// SeedCA enables CA assessment fixtures (customers, staff, tickets). See SEED_CA env.
 	SeedCA                bool
+	CookieDomain          string
 	AppName               string
 	AppVersion            string
 	PasetoSymmetricKey    string
@@ -65,6 +66,9 @@ func Load() Config {
 		SeedAdminMiddleName:   getEnv("SEED_ADMIN_MIDDLE_NAME", ""),
 		SeedAdminLastName:     getEnv("SEED_ADMIN_LAST_NAME", "admin"),
 		SeedCA:                getEnvBool("SEED_CA", true),
+		// SECURE-01: Default empty COOKIE_DOMAIN means host-only API cookies; as opposed to setting parent domain.
+		// SECURE-03: Host-only + HttpOnly keeps session tokens off the UI origin and out of document.cookie.
+		CookieDomain:          getEnvLookup("COOKIE_DOMAIN", ""),
 		PasetoSymmetricKey:    getEnv("PASETO_SYMMETRIC_KEY", "12345678901234567890123456789012"),
 		AccessTokenDuration:   getEnv("ACCESS_TOKEN_DURATION", "15m"),
 		RefreshTokenDuration:  getEnv("REFRESH_TOKEN_DURATION", "168h"),
@@ -99,6 +103,14 @@ func getEnv(key, fallback string) string {
 		return fallback
 	}
 	return v
+}
+
+func getEnvLookup(key, fallbackWhenAbsent string) string {
+	v, ok := os.LookupEnv(key)
+	if !ok {
+		return fallbackWhenAbsent
+	}
+	return strings.TrimSpace(v)
 }
 
 // getEnvBool parses SEED_CA-style flags: true/1/yes/on → true, false/0/no/off → false; empty → fallback.

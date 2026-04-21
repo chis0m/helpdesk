@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +26,7 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 	secureCookie := cfg.CookieSecure()
 	httpOnlyCookie := true
 	cookiePath := "/"
-	cookieDomain := ""
+	cookieDomain := strings.TrimSpace(cfg.CookieDomain)
 	sameSite := http.SameSiteStrictMode
 
 	c.SetSameSite(sameSite)
@@ -38,7 +39,7 @@ func clearAuthCookies(c *gin.Context, cfg config.Config) {
 	secureCookie := cfg.CookieSecure()
 	httpOnlyCookie := true
 	cookiePath := "/"
-	cookieDomain := ""
+	cookieDomain := strings.TrimSpace(cfg.CookieDomain)
 	sameSite := http.SameSiteStrictMode
 
 	c.SetSameSite(sameSite)

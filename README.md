@@ -35,9 +35,8 @@ A full-stack **ticketing / helpdesk** web application for managing support reque
 ## Github Branch Stragety
 I intentionally added some features on seperate branch. For example, I added audit logging to the app in vulnerable state, before implementing the secure fix. This is so that I can show how proper Audit Logging can help with easy detection.
 
-- Vulnerability Branch: [vulnerable-baseline](https://github.com/chis0m/helpdesk/tree/vulnerable-baseline): Where the vulnerabilities were implemented
-- Audit Logging: [add-audit-log-to-track-vuln](https://github.com/chis0m/helpdesk/tree/add-audit-log-to-track-vuln): Audit Log was implemented seperately in the apps vulnerable state to show how auditing can help easily detect attacks
-- Secure Fix Branch: [secure-fix](https://github.com/chis0m/helpdesk/tree/secure-fix): The branch were all the vulnerabilities were fixed
+Vulnerability Branch: [vulnerable-baseline](https://github.com/chis0m/helpdesk/tree/vulnerable-baseline)
+Secure Fix Branch: [secure-fix](https://github.com/chis0m/helpdesk/tree/secure-fix)
 
 ## Project structure
 
@@ -88,8 +87,8 @@ Production URLs (HTTPS, as wired in this repo and the reverse proxy):
 
 | Resource | URL |
 |----------|-----|
-| Vulnerable (UI) | https://vulnweb.chisomejim.site |
-| Vulnerable (API) | https://api.vulnweb.chisomejim.site |
+| Vulnerable (Insecure UI) | http://vulnweb.chisomejim.site |
+| Vulnerable (Insecure API) | http://api.vulnweb.chisomejim.site |
 | Secure (UI) | https://secweb.chisomejim.site |
 | Secure (API) | https://api.secweb.chisomejim.site |
 | Mail (Mailpit web UI) | https://mail.chisomejim.site |
