@@ -12,15 +12,16 @@ import (
 )
 
 const (
-	EmailMustChange  = "must.change@example.com"
-	EmailMarkAnthony = "mark.anthony@example.com"
-	EmailJaneDoe     = "jane.doe@sample.com"
+	EmailMustChange  = "must.change@company-a.com"
+	EmailMarkAnthony = "mark.anthony@company-a.com"
+	EmailJaneDoe     = "jane.doe@company-b.com"
+	EmailAlexJones   = "alex.jones@company-b.com"
 )
 
-func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User, error) {
+func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User, *models.User, error) {
 	hash, err := auth.HashPassword(caTestPassword)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	settled := time.Now().UTC().Add(-48 * time.Hour)
 
@@ -35,10 +36,10 @@ func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User,
 		hash,
 	)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	if err := ensureArgon2idPasswordHash(db, uMust, caTestPassword); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	uMark, _, err := firstOrCreateUser(
@@ -52,10 +53,10 @@ func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User,
 		hash,
 	)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	if err := ensureArgon2idPasswordHash(db, uMark, caTestPassword); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	uJane, _, err := firstOrCreateUser(
@@ -69,16 +70,33 @@ func EnsureCustomerUsers(db *gorm.DB) (*models.User, *models.User, *models.User,
 		hash,
 	)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	if err := ensureArgon2idPasswordHash(db, uJane, caTestPassword); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
-	if uMust == nil || uMark == nil || uJane == nil {
-		return nil, nil, nil, fmt.Errorf("EnsureCustomerUsers: missing user(s)")
+	uAlex, _, err := firstOrCreateUser(
+		db,
+		EmailAlexJones,
+		"Alex",
+		"Jones",
+		models.RoleUser,
+		false,
+		&settled,
+		hash,
+	)
+	if err != nil {
+		return nil, nil, nil, nil, err
 	}
-	return uMust, uMark, uJane, nil
+	if err := ensureArgon2idPasswordHash(db, uAlex, caTestPassword); err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	if uMust == nil || uMark == nil || uJane == nil || uAlex == nil {
+		return nil, nil, nil, nil, fmt.Errorf("EnsureCustomerUsers: missing user(s)")
+	}
+	return uMust, uMark, uJane, uAlex, nil
 }
 
 func ensureArgon2idPasswordHash(db *gorm.DB, u *models.User, plaintext string) error {
