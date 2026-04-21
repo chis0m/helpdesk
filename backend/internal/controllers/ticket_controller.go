@@ -539,7 +539,8 @@ func (t *TicketController) DeleteByID(c *gin.Context) {
 		return
 	}
 
-	if err := t.ticketService.DeleteForActor(ticketUUID, actorUUID, role); err != nil {
+	deletedTicket, err := t.ticketService.DeleteForActor(ticketUUID, actorUUID, role)
+	if err != nil {
 		if errors.Is(err, services.ErrTicketAccessDenied) {
 			response.FailureWithAbort(c, http.StatusForbidden, "forbidden", "forbidden")
 			return
@@ -554,22 +555,16 @@ func (t *TicketController) DeleteByID(c *gin.Context) {
 		return
 	}
 
-	ticket, err := t.ticketRepo.GetByUUID(ticketUUID)
-	if err != nil {
-		log.Error().Err(err).Str("ticket_uuid", ticketUUID.String()).Msg("delete ticket failed: get ticket")
-		response.FailureWithAbort(c, http.StatusInternalServerError, "internal server error", "internal server error")
-		return
-	}
-	rid := ticket.ID
+	rid := deletedTicket.ID
 	audit.Write(c, t.auditLogRepo, audit.Event{
 		Action:       audit.ActionTicketDelete,
 		Success:      true,
 		ResourceType: audit.Str(audit.ResourceTypeTicket),
 		ResourceID:   &rid,
 		Metadata: map[string]interface{}{
-			"title":            ticket.Title,
-			"reporter_user_id": ticket.ReporterUserID,
-			"assigned_user_id": ticket.AssignedUserID,
+			"title":            deletedTicket.Title,
+			"reporter_user_id": deletedTicket.ReporterUserID,
+			"assigned_user_id": deletedTicket.AssignedUserID,
 		},
 	})
 

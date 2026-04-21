@@ -219,12 +219,15 @@ func (s *TicketService) AssignForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID
 	return s.ticketRepo.UpdateAssignment(ticket.ID, &assigneeID)
 }
 
-func (s *TicketService) DeleteForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole) error {
+func (s *TicketService) DeleteForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole) (*models.Ticket, error) {
 	ticket, err := s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return s.ticketRepo.DeleteByID(ticket.ID)
+	if err := s.ticketRepo.DeleteByID(ticket.ID); err != nil {
+		return nil, err
+	}
+	return ticket, nil
 }
 
 func (s *TicketService) AddCommentForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole, body string) (*models.TicketComment, error) {
