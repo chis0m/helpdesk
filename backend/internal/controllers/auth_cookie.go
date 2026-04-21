@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -11,8 +12,6 @@ import (
 )
 
 func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
-	_ = cfg
-
 	accessMaxAge := int(time.Until(tokens.AccessExpires).Seconds())
 	if accessMaxAge < 0 {
 		accessMaxAge = 0
@@ -27,7 +26,7 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 	secureCookie := false
 	httpOnlyCookie := false
 	cookiePath := "/"
-	cookieDomain := ""
+	cookieDomain := strings.TrimSpace(cfg.CookieDomain)
 	sameSite := http.SameSiteStrictMode
 
 	c.SetSameSite(sameSite)
@@ -35,12 +34,12 @@ func setAuthCookies(c *gin.Context, cfg config.Config, tokens auth.TokenPair) {
 	c.SetCookie(auth.RefreshCookieName, tokens.RefreshToken, refreshMaxAge, cookiePath, cookieDomain, secureCookie, httpOnlyCookie)
 }
 
-func clearAuthCookies(c *gin.Context) {
+func clearAuthCookies(c *gin.Context, cfg config.Config) {
 	// VULN-01: Match setAuthCookies — same Path/Domain/SameSite so the browser clears the session cookies.
 	secureCookie := false
 	httpOnlyCookie := false
 	cookiePath := "/"
-	cookieDomain := ""
+	cookieDomain := strings.TrimSpace(cfg.CookieDomain)
 	sameSite := http.SameSiteStrictMode
 
 	c.SetSameSite(sameSite)

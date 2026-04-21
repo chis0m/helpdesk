@@ -238,7 +238,7 @@ func (a *AuthController) Logout(c *gin.Context) {
 		return
 	}
 
-	clearAuthCookies(c)
+	clearAuthCookies(c, a.cfg)
 	response.Success(c, http.StatusOK, gin.H{
 		"redirect_to": "/login",
 	}, "logout successful")
@@ -490,7 +490,7 @@ func (a *AuthController) RevokeSession(c *gin.Context) {
 	}
 
 	if isCurrent {
-		clearAuthCookies(c)
+		clearAuthCookies(c, a.cfg)
 	}
 
 	response.Success(c, http.StatusOK, gin.H{

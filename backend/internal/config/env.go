@@ -24,6 +24,7 @@ type Config struct {
 	SeedAdminLastName   string
 	// SeedCA enables CA assessment fixtures (customers, staff, tickets). See SEED_CA env.
 	SeedCA                bool
+	CookieDomain          string
 	AppName               string
 	AppVersion            string
 	PasetoSymmetricKey    string
@@ -49,22 +50,25 @@ func Load() Config {
 	_ = godotenv.Load()
 
 	return Config{
-		AppName:               getEnv("APP_NAME", "SecWeb HelpDesk"),
-		AppVersion:            getEnv("APP_VERSION", "v1.0.0"),
-		Port:                  getEnv("PORT", "8080"),
-		FrontendURL:           getEnv("FRONTEND_URL", "http://localhost:3000"),
-		GoEnv:                 getEnv("GO_ENV", "development"),
-		DBHost:                getEnv("DB_HOST", "localhost"),
-		DBDatabase:            getEnv("DB_DATABASE", "helpdesk"),
-		DBUsername:            getEnv("DB_USERNAME", "admin"),
-		DBPassword:            getEnv("DB_PASSWORD", "password"),
-		DBPort:                getEnv("DB_PORT", "3306"),
-		SeedAdminEmail:        getEnv("SEED_ADMIN_EMAIL", "super.admin@secweb.ie"),
-		SeedAdminPassword:     getEnv("SEED_ADMIN_PASSWORD", "password"),
-		SeedAdminFirstName:    getEnv("SEED_ADMIN_FIRST_NAME", "super"),
-		SeedAdminMiddleName:   getEnv("SEED_ADMIN_MIDDLE_NAME", ""),
-		SeedAdminLastName:     getEnv("SEED_ADMIN_LAST_NAME", "admin"),
-		SeedCA:                getEnvBool("SEED_CA", true),
+		AppName:             getEnv("APP_NAME", "SecWeb HelpDesk"),
+		AppVersion:          getEnv("APP_VERSION", "v1.0.0"),
+		Port:                getEnv("PORT", "8080"),
+		FrontendURL:         getEnv("FRONTEND_URL", "http://localhost:3000"),
+		GoEnv:               getEnv("GO_ENV", "development"),
+		DBHost:              getEnv("DB_HOST", "localhost"),
+		DBDatabase:          getEnv("DB_DATABASE", "helpdesk"),
+		DBUsername:          getEnv("DB_USERNAME", "admin"),
+		DBPassword:          getEnv("DB_PASSWORD", "password"),
+		DBPort:              getEnv("DB_PORT", "3306"),
+		SeedAdminEmail:      getEnv("SEED_ADMIN_EMAIL", "super.admin@secweb.ie"),
+		SeedAdminPassword:   getEnv("SEED_ADMIN_PASSWORD", "password"),
+		SeedAdminFirstName:  getEnv("SEED_ADMIN_FIRST_NAME", "super"),
+		SeedAdminMiddleName: getEnv("SEED_ADMIN_MIDDLE_NAME", ""),
+		SeedAdminLastName:   getEnv("SEED_ADMIN_LAST_NAME", "admin"),
+		SeedCA:              getEnvBool("SEED_CA", true),
+		// VULN-01: Wider Domain shares session cookies across UI + API hosts (weak with HttpOnly false).
+		// VULN-03: Same scope lets XSS on the UI read tokens via document.cookie when not host-only.
+		CookieDomain:          getEnvLookup("COOKIE_DOMAIN", "vulnweb.chisomejim.site"),
 		PasetoSymmetricKey:    getEnv("PASETO_SYMMETRIC_KEY", "12345678901234567890123456789012"),
 		AccessTokenDuration:   getEnv("ACCESS_TOKEN_DURATION", "15m"),
 		RefreshTokenDuration:  getEnv("REFRESH_TOKEN_DURATION", "168h"),
@@ -99,6 +103,14 @@ func getEnv(key, fallback string) string {
 		return fallback
 	}
 	return v
+}
+
+func getEnvLookup(key, fallbackWhenAbsent string) string {
+	v, ok := os.LookupEnv(key)
+	if !ok {
+		return fallbackWhenAbsent
+	}
+	return strings.TrimSpace(v)
 }
 
 // getEnvBool parses SEED_CA-style flags: true/1/yes/on → true, false/0/no/off → false; empty → fallback.
