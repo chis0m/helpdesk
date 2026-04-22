@@ -5,7 +5,7 @@
         Your profile
       </h2>
       <p class="mt-1 text-sm text-[var(--text-secondary)]">
-        Update the details on your SecWeb Helpdesk account.
+        Update the details on your {{ appName }} account.
       </p>
     </header>
 
@@ -227,13 +227,17 @@
 
 <script setup lang="ts">
 // SEC-02: Loads and saves via `/api/users/me` only (no user id in URL).
-import { reactive, ref, watch } from 'vue'
+import { computed, inject, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { changePasswordRequest } from '@/api/auth'
 import { fetchMe, patchMe } from '@/api/users'
+import { appBrandKey } from '@/stores/app-detail'
 import { getSessionCsrfToken } from '@/stores/auth-session'
 
 const route = useRoute()
+
+const brand = inject(appBrandKey, null)
+const appName = computed(() => brand?.appName.value ?? 'SecWeb HelpDesk')
 
 const loading = ref(true)
 const loadError = ref('')
