@@ -8,7 +8,7 @@
         Users
       </h1>
       <p class="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--text-secondary)]">
-        Customer and portal accounts that use SecWeb Helpdesk.
+        Customer and portal accounts that use {{ appName }}.
       </p>
     </header>
 
@@ -38,11 +38,15 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
 import { adminUserToPortalUser, fetchAdminUsers } from '@/api/admin'
 import AdminSubnav from '@/components/admin/AdminSubnav.vue'
 import AdminUserTable from '@/components/admin/AdminUserTable.vue'
+import { appBrandKey } from '@/stores/app-detail'
 import type { PortalUser } from '@/types/directory-user'
+
+const brand = inject(appBrandKey, null)
+const appName = computed(() => brand?.appName.value ?? 'SecWeb HelpDesk')
 
 const users = ref<PortalUser[]>([])
 const loading = ref(true)

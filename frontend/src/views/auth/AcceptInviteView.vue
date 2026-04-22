@@ -10,7 +10,7 @@
       <span class="text-[var(--brand-green-dark)]">invite</span>
     </h1>
     <p class="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
-      Set a password to activate your SecWeb Helpdesk account. Use the full link from your invitation email.
+      Set a password to activate your {{ appName }} account. Use the full link from your invitation email.
     </p>
 
     <div
@@ -113,14 +113,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchPublicCsrfToken } from '@/api/auth'
 import { acceptInviteRequest, fetchInviteVerify, type InviteVerifyValid } from '@/api/invites'
 import { paths } from '@/constants/routes'
+import { appBrandKey } from '@/stores/app-detail'
 
 const route = useRoute()
 const router = useRouter()
+
+const brand = inject(appBrandKey, null)
+const appName = computed(() => brand?.appName.value ?? 'SecWeb HelpDesk')
 
 const token = computed(() => {
   const q = route.query.token

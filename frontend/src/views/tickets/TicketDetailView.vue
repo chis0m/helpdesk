@@ -268,7 +268,7 @@
               <span
                 v-if="c.isStaff"
                 class="rounded-full bg-[var(--surface-mint)] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--brand-green-dark)] ring-1 ring-[var(--brand-green)]/25"
-              >SecWeb support</span>
+              >{{ brandShort }} support</span>
               <span
                 v-else
                 class="rounded-full bg-neutral-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-neutral-700 ring-1 ring-neutral-200/90"
@@ -366,7 +366,7 @@
 
 <script setup lang="ts">
 // VULN-02: Loads ticket/comments by `route.params.id` only — backend IDOR completes unauthorized access.
-import { computed, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { fetchAdminStaffDirectory, type AdminUserListItem } from '@/api/admin'
 import {
@@ -383,6 +383,7 @@ import CategoryBadge from '@/components/ui/CategoryBadge.vue'
 import TicketStatusEditor from '@/components/tickets/TicketStatusEditor.vue'
 import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
+import { appBrandKey } from '@/stores/app-detail'
 import { getAuthUserSnapshot, getSessionCsrfToken } from '@/stores/auth-session'
 import { formatDateTime } from '@/utils/date-format'
 import { assigneeDisplayLabel, reporterDisplayLabel } from '@/utils/ticket-ui'
@@ -390,6 +391,9 @@ import type { Ticket, TicketComment, TicketStatus } from '@/types/ticket'
 
 const route = useRoute()
 const router = useRouter()
+
+const brand = inject(appBrandKey, null)
+const brandShort = computed(() => brand?.brandShort.value ?? 'SecWeb')
 
 const fromApi = ref<ApiTicketRow | null>(null)
 const loadingTicket = ref(false)
