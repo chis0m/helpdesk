@@ -8,7 +8,7 @@
     >
       <span
         class="text-xl font-semibold tracking-tight text-[var(--brand-green-dark)]"
-      >SecWeb Helpdesk</span>
+      >{{ appName }}</span>
     </RouterLink>
 
     <nav class="flex flex-col gap-0.5">
@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import SidebarLink from '@/components/layout/SidebarLink.vue'
 import IconHome from '@/components/icons/IconHome.vue'
@@ -94,9 +94,13 @@ import IconTicket from '@/components/icons/IconTicket.vue'
 import IconUser from '@/components/icons/IconUser.vue'
 import IconGear from '@/components/icons/IconGear.vue'
 import { paths } from '@/constants/routes'
+import { appBrandKey } from '@/stores/app-detail'
 import { getAuthUserSnapshot } from '@/stores/auth-session'
 import { isAdminPortalRole } from '@/utils/admin-access'
 import { performLogout } from '@/utils/perform-logout'
+
+const brand = inject(appBrandKey, null)
+const appName = computed(() => brand?.appName.value ?? 'SecWeb HelpDesk')
 
 const router = useRouter()
 const route = useRoute()
