@@ -106,7 +106,7 @@
             type="email"
             required
             autocomplete="email"
-            placeholder="new.staff@secweb.internal"
+            placeholder="new.staff@example.internal"
             class="w-full rounded-2xl border border-[var(--border-subtle)] bg-white px-4 py-3 text-sm outline-none ring-[var(--brand-green)] focus:border-transparent focus:ring-2"
           >
         </div>
