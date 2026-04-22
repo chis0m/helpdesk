@@ -6,7 +6,7 @@
         Your profile
       </h2>
       <p class="mt-1 text-sm text-[var(--text-secondary)]">
-        User ID {{ userId }} — update the details on your SecWeb Helpdesk account.
+        User ID {{ userId }} — update the details on your {{ appName }} account.
       </p>
     </header>
 
@@ -228,13 +228,17 @@
 
 <script setup lang="ts">
 // VULN-02: fetch/patch user by numeric id from route — pairs with backend GET/PATCH /users/:id IDOR.
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, inject, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { changePasswordRequest } from '@/api/auth'
 import { fetchUser, patchUser } from '@/api/users'
+import { appBrandKey } from '@/stores/app-detail'
 import { getSessionCsrfToken } from '@/stores/auth-session'
 
 const route = useRoute()
+
+const brand = inject(appBrandKey, null)
+const appName = computed(() => brand?.appName.value ?? 'SecWeb HelpDesk')
 
 const userId = computed(() => {
   const raw = route.params.userId

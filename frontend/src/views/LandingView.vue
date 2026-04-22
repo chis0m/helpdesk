@@ -108,7 +108,7 @@
               <div
                 class="ml-3 flex-1 rounded-lg border border-[var(--border-subtle)] bg-white px-3 py-1.5 text-center text-xs text-[var(--text-muted)]"
               >
-                support.secweb · My requests
+                {{ supportHostLabel }} · My requests
               </div>
             </div>
             <div class="space-y-4 p-5">
@@ -253,6 +253,11 @@ import { brandShortFromAppName, loadAppDetail } from '@/stores/app-detail'
 
 const appName = ref('SecWeb HelpDesk')
 const brandShort = ref('SecWeb')
+
+const supportHostLabel = computed(() => {
+  const t = brandShort.value.trim().toLowerCase()
+  return `support.${t || 'helpdesk'}`
+})
 
 const healthLoading = ref(true)
 const healthOk = ref(false)

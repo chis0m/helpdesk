@@ -260,21 +260,25 @@
     </section>
 
     <p class="text-center text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
-      SecWeb Helpdesk
+      {{ appName }}
     </p>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, inject, onMounted, ref } from 'vue'
 import CategoryBadge from '@/components/ui/CategoryBadge.vue'
 import PageHeader from '@/components/ui/PageHeader.vue'
 import TicketStatusBadge from '@/components/tickets/TicketStatusBadge.vue'
 import { paths } from '@/constants/routes'
 import { fetchTicketList, type ApiTicketRow } from '@/api/tickets'
+import { appBrandKey } from '@/stores/app-detail'
 import type { TicketStatus } from '@/types/ticket'
 import { formatDateTime } from '@/utils/date-format'
 import { formatTicketCategoryLabel } from '@/utils/ticket-ui'
+
+const brand = inject(appBrandKey, null)
+const appName = computed(() => brand?.appName.value ?? 'SecWeb HelpDesk')
 
 const loading = ref(true)
 const loadError = ref('')
