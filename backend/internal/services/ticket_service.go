@@ -49,6 +49,7 @@ func (s *TicketService) loadTicketForActor(ticketUUID uuid.UUID, actorUUID uuid.
 	if err != nil {
 		return nil, err
 	}
+	// SEC-02: Central ticket authorization ensures only authorized users can access tickets.
 	if !policy.CanAccessTicket(actor, actorRole, ticket) {
 		return nil, ErrTicketAccessDenied
 	}
@@ -125,6 +126,7 @@ func (s *TicketService) ListForActor(actorUserUUID string, actorRole models.User
 	return s.ticketRepo.List(filter)
 }
 
+// SEC-02: Uses loadTicketForActor which implements the central ticket authorization.
 func (s *TicketService) GetForActor(ticketUUID uuid.UUID, actorUUID uuid.UUID, actorRole models.UserRole) (*models.Ticket, error) {
 	return s.loadTicketForActor(ticketUUID, actorUUID, actorRole)
 }
